@@ -1,1 +1,1 @@
-# AbFold2
+# AlphaFold

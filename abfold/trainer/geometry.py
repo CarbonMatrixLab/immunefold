@@ -62,27 +62,44 @@ def calpha3_to_frames(calpha_pos, calpha_mask=None):
   prev2_calpha_pos = F.pad(calpha_pos[:, :-2], [0, 0, 2, 0])
   
   next_calpha_pos = F.pad(calpha_pos[:, 1:], [0, 0, 0, 1])
+  next2_calpha_pos = F.pad(calpha_pos[:, 2:], [0, 0, 0, 2])
 
   # (b, l, 3x3), (b, l, 3)
-  gt_frames = r3.rigids_from_3_points(
+  left_gt_frames = r3.rigids_from_3_points(
           point_on_neg_x_axis=prev_calpha_pos,
           origin=calpha_pos,
           point_on_xy_plane=prev2_calpha_pos)
 
-  forth_atom_rel_pos = r3.rigids_mul_vecs(
+  left_forth_atom_rel_pos = r3.rigids_mul_vecs(
           r3.invert_rigids(gt_frames),
           next_calpha_pos)
+  
+  right_gt_frames = r3.rigids_from_3_points(
+          point_on_neg_x_axis=next_calpha_pos,
+          origin=calpha_pos,
+          point_on_xy_plane=next2_calpha_pos)
+
+  right_forth_atom_rel_pos = r3.rigids_mul_vecs(
+          r3.invert_rigids(gt_frames),
+          prev_calpha_pos)
 
   ret = {
-      'gt_calpha3_frame_positions': forth_atom_rel_pos,
+      'left_gt_calpha3_frame_positions': left_forth_atom_rel_pos,
+      'right_gt_calpha3_frame_positions': right_forth_atom_rel_pos,
       }
   
   if calpha_mask is not None:
       prev_calpha_mask = F.pad(calpha_mask[:, :-1], [1, 0])
       prev2_calpha_mask = F.pad(calpha_mask[:, :-2], [2, 0])
       next_calpha_mask = F.pad(calpha_mask[:, 1:], [0, 1])
-      gt_frame_exists = torch.all(torch.stack([prev2_calpha_mask, prev_calpha_mask, calpha_mask, next_calpha_mask], dim=-1), dim=-1)
-      ret['gt_calpha3_frame_position_exists'] = gt_frame_exists
+      next2_calpha_mask = F.pad(calpha_mask[:, 2:], [0, 2])
+      
+      ret.update(
+              left_gt_calpha3_frame_position_exists = torch.all(
+                  torch.stack([prev2_calpha_mask, prev_calpha_mask, calpha_mask, next_calpha_mask], dim=-1), dim=-1),
+              right_gt_calpha3_frame_position_exists = torch.all(
+                  torch.stack([prev_calpha_mask, calpha_mask, next_calpha_mask, next_calpha2_mask], dim=-1), dim=-1)
+              )
 
   return ret
 

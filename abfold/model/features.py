@@ -10,7 +10,6 @@ from abfold.common import residue_constants
 
 from abfold.data.esm import ESMEmbeddingExtractor
 from abfold.data.abrep import AbRepExtractor
-from abfold.data.template import Template
 from abfold.utils import default,exists
 from abfold.data.utils import pad_for_batch
 from abfold.model.utils import batched_select

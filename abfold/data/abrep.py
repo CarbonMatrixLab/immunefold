@@ -5,12 +5,14 @@ import numpy as np
 import torch
 from einops import rearrange
 
-from bert.model.model import ProteinBertModel as AbRep
-from bert.train.schema import Schema
-
-from bert.model.data import Alphabet
-import bert.train.config as config
-
+try:
+    from bert.model.model import ProteinBertModel as AbRep
+    from bert.train.schema import Schema
+    from bert.model.data import Alphabet
+    import bert.train.config as config
+except:
+    pass
+    
 _extractor_dict = {}
 
 class AbRepExtractor(object):

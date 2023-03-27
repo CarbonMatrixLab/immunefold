@@ -143,10 +143,8 @@ def compute_calpha_local_loss(batch, value, config):
     epsilon = 1e-8
     c = config
 
-    pred_fouth_calpha_pos = geometry.calpha3_to_frames(value['final_atom14_positions'][:,:,1])['gt_calpha3_frame_positions']
 
-    def _fape(gt_fouth_calpha_pos, gt_fouth_calpha_exists):
-
+    def _fape(gt_fouth_calpha_pos, gt_fouth_calpha_exists, pred_fouth_calpha_pos):
         dist_err = torch.sqrt(torch.sum(torch.square(gt_fouth_calpha_pos - pred_fouth_calpha_pos), dim=-1) + epsilon)
         dist_err = torch.clip(dist_err, c.local_fape.fape_min, c.local_fape.clamp_distance)
         dist_err = torch.sum(gt_fouth_calpha_exists * dist_err)
@@ -155,9 +153,13 @@ def compute_calpha_local_loss(batch, value, config):
         
         return loss
     
+    pred_frame_positions = geometry.calpha3_to_frames(value['final_atom14_positions'][:,:,1])
+    left_pred_fouth_calpha_pos = pred_frame_positions['left_gt_calpha3_frame_positions']
+    right_pred_fouth_calpha_pos = pred_frame_positions['right_gt_calpha3_frame_positions']
+    
     return 0.5 * (
-            _fape(batch['left_gt_calpha3_frame_positions'], batch['left_gt_calpha3_frame_position_exists']) +
-            _fape(batch['right_gt_calpha3_frame_positions'], batch['right_gt_calpha3_frame_position_exists']))
+            _fape(batch['left_gt_calpha3_frame_positions'], batch['left_gt_calpha3_frame_position_exists'], left_pred_fouth_calpha_pos) +
+            _fape(batch['right_gt_calpha3_frame_positions'], batch['right_gt_calpha3_frame_position_exists'], right_pred_fouth_calpha_pos))
 
 def compute_chi_loss(batch, value, config):
     device = batch['seq'].device

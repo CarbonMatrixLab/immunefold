@@ -71,7 +71,7 @@ def calpha3_to_frames(calpha_pos, calpha_mask=None):
           point_on_xy_plane=prev2_calpha_pos)
 
   left_forth_atom_rel_pos = r3.rigids_mul_vecs(
-          r3.invert_rigids(gt_frames),
+          r3.invert_rigids(left_gt_frames),
           next_calpha_pos)
   
   right_gt_frames = r3.rigids_from_3_points(
@@ -80,7 +80,7 @@ def calpha3_to_frames(calpha_pos, calpha_mask=None):
           point_on_xy_plane=next2_calpha_pos)
 
   right_forth_atom_rel_pos = r3.rigids_mul_vecs(
-          r3.invert_rigids(gt_frames),
+          r3.invert_rigids(right_gt_frames),
           prev_calpha_pos)
 
   ret = {
@@ -98,7 +98,7 @@ def calpha3_to_frames(calpha_pos, calpha_mask=None):
               left_gt_calpha3_frame_position_exists = torch.all(
                   torch.stack([prev2_calpha_mask, prev_calpha_mask, calpha_mask, next_calpha_mask], dim=-1), dim=-1),
               right_gt_calpha3_frame_position_exists = torch.all(
-                  torch.stack([prev_calpha_mask, calpha_mask, next_calpha_mask, next_calpha2_mask], dim=-1), dim=-1)
+                  torch.stack([prev_calpha_mask, calpha_mask, next_calpha_mask, next2_calpha_mask], dim=-1), dim=-1)
               )
 
   return ret

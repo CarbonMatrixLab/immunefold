@@ -74,6 +74,12 @@ def folding_loss(batch, value, config):
     c = config
     assert 'folding' in value['heads']
     value = value['heads']['folding']
+    
+    backbone_fape_loss = compute_backbone_loss(batch, value, config)
+    
+    calpha_local_fape_loss = compute_calpha_local_loss(batch, value, config)
+    
+    chi_loss, chi_loss_items= compute_chi_loss(batch, value, config)
    
     if config.use_full_atom:
         if 'renamed_atom14_gt_positions' not in value:
@@ -82,12 +88,7 @@ def folding_loss(batch, value, config):
         sc_fape_loss = compute_sidechain_loss(batch, value, config)
     else:
         sc_fape_loss = compute_final_backbone_loss(batch, value, config)
-
-    backbone_fape_loss = compute_backbone_loss(batch, value, config)
     
-    chi_loss, chi_loss_items= compute_chi_loss(batch, value, config)
-    
-    calpha_local_fape_loss = compute_calpha_local_loss(batch, value, config)
 
     violation_loss, violation_loss_items = between_residue_bond_loss(
             value['final_atom14_positions'],
@@ -142,11 +143,15 @@ def predicted_lddt_loss(batch, value, config):
 def compute_calpha_local_loss(batch, value, config):
     epsilon = 1e-8
     c = config
-
-
+    
     def _fape(gt_fouth_calpha_pos, gt_fouth_calpha_exists, pred_fouth_calpha_pos):
         dist_err = torch.sqrt(torch.sum(torch.square(gt_fouth_calpha_pos - pred_fouth_calpha_pos), dim=-1) + epsilon)
         dist_err = torch.clip(dist_err, c.local_fape.fape_min, c.local_fape.clamp_distance)
+
+        if c.local_fape.loop_weight.enabled:
+            loop_mask = torch.eq(batch['cdr_def'], 5).to(dtype=dist_err.dtype, device=dist_err.device)
+            dist_err = dist_err * ((1. - loop_mask) + loop_mask * c.local_fape.loop_weight.weight)
+
         dist_err = torch.sum(gt_fouth_calpha_exists * dist_err)
 
         loss = dist_err / torch.sum(gt_fouth_calpha_exists + epsilon) / c.local_fape.loss_unit_distance
@@ -241,7 +246,7 @@ def compute_final_backbone_loss(batch, value, config):
     gt_frame_mask = batch['rigidgroups_group_exists'][:,:,:frame_n]
     gt_positions = batch['atom14_gt_positions'][:,:,:atom_n]
     gt_position_mask = batch['atom14_gt_exists'][:,:,:atom_n]
-
+        
     fape = frame_aligned_point_error(
         pred_frames=pred_frames,
         target_frames=gt_frames,

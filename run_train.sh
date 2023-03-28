@@ -12,7 +12,7 @@ local_world_size=1; python -m torch.distributed.launch\
     --lr_decay poly \
     --prefix ./studies/f0\
     --model_features ./config/config_data_ab_esm_antiberty.json \
-    --model_config ./config/config_model_ab_esm_dropout_noinp_antiberty.json \
+    --model_config ./config/config_model_ab_esm_antiberty_weight.json \
     --train_name_idx ../ab_data/data/sabdab_20230511/list/S2_train_cluster0.99.idx \
     --train_data ../ab_data/data/sabdab_20230511/npz \
     --general_data_gpu_ratio 0. \

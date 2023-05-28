@@ -3,58 +3,73 @@ import pandas as pd
 import numpy as np
 import argparse
 import logging
+import json
+import subprocess
+import random
+
+random.seed(2023)
 
 def main(args):
+    
+    train_resol_thres = 5.0
+    test_resol_thres = 2.5
+    overlap_seq_id = 0.95
+    train_seq_id = 0.95
+    test_seq_id = 0.95
+
+    out_dir = f'{args.out_dir}/train_resol{train_resol_thres}_test_resol{test_resol_thres}_overlap{overlap_seq_id}_train{train_seq_id}_test{test_seq_id}'
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
     df = pd.read_csv(args.summary_file, sep='\t', parse_dates=['date'])
-    print('orignal', df.shape[0])
+
+    df = df[df['method'].isin(['X-RAY DIFFRACTION', 'ELECTRON MICROSCOPY'])]
     
     df = df.fillna({'Hchain':'', 'Lchain':''})
+    df = df[df['Hchain'] != '']
+    
     df['name'] = df.apply((lambda x : '_'.join([x['pdb'], x['Hchain'], x['Lchain']])), axis=1)
-    
     df = df[df['name'].apply(lambda x: os.path.exists(os.path.join(args.data_dir, x + '.npz')))]
-    print('data', df.shape[0])
+
+    def _resolution(pdb):
+        path = os.path.join(args.data_dir, pdb + '.json')
+        if not os.path.exists(path):
+            return np.nan
+        
+        with open(path) as f:
+            info = json.load(f)
+        return info['resolution']
+
+    df['resolution'] = df['pdb'].apply(lambda x : _resolution(x))
+
+    df = df[~df['resolution'].isna()]
+    df = df[df['resolution'] < train_resol_thres]
     
-    df = df[df['resolution'] != 'NOT']
-    print('with resolution', df.shape[0])
+    print(f'resolution <= {test_resol_thres}', df.shape[0])
 
-    df['resolution'] = df['resolution'].apply(lambda x: min(map(float, str(x).split(','))))
-
-    resol_thres = 5.
-    df = df[df['resolution'] <= resol_thres]
-    print(f'resolution <= {resol_thres}', df.shape[0])
-
-    def _cdrh3(name):
+    def _cdrh3_seq_len(name):
         data = np.load(os.path.join(args.data_dir, name + '.npz'))
-        
-        heavy_str_seq, light_str_seq, cdrh3_seq = '', '', ''
-        
-        if 'heavy_str_seq'  in data:
-            cdr_def = data['heavy_cdr_def']
-            heavy_str_seq = str(data['heavy_str_seq'])
-            cdrh3_seq = ''.join([s for c, s in zip(cdr_def, heavy_str_seq) if c == 5])
-        
-        if 'light_str_seq'  in data:
-            light_str_seq = str(data['light_str_seq'])
+        cdr_def = data['heavy_cdr_def']
 
-        return heavy_str_seq, light_str_seq, cdrh3_seq
+        cdrh3_seq_len = np.sum(cdr_def == 5)
 
-    cdrh3_len_thres = 80
-    df['heavy_str_seq'], df['light_str_seq'], df['cdrh3_seq'] = zip(*df['name'].apply(_cdrh3))
+        return cdrh3_seq_len
 
-    df = df[df['cdrh3_seq'].apply(lambda x : len(x) <= cdrh3_len_thres)]
+    cdrh3_len_thres = 25
+    df['cdrh3_seq_len'] = df['name'].apply(_cdrh3_seq_len)
+
+    df = df[df['cdrh3_seq_len'] <= cdrh3_len_thres]
     print(f'cdrh3 len <= {cdrh3_len_thres}', df.shape[0])
-
     
-    df.to_csv(os.path.join(args.out_dir, 'S1_summary_filter.csv'), sep='\t', index=False)
+    df.to_csv(os.path.join(out_dir, 'S1_summary_filter.csv'), sep='\t', index=False)
 
     test = df[df['date'] >= '2022-01-01']
-    #test = test[test['resolution'] < 5.]
+    test = test[test['resolution'] < test_resol_thres]
     
     train = df[df['date'] < '2022-01-01']
-    #train = train[train['resolution'] < 5.]
     
-    train[['name']].to_csv(os.path.join(args.out_dir, 'S1_train.idx'), index=False, header=False)
-    test[['name']].to_csv(os.path.join(args.out_dir, 'S1_test.idx'), index=False, header=False)
+    train[['name']].to_csv(os.path.join(out_dir, 'S1_train.idx'), index=False, header=False)
+    test[['name']].to_csv(os.path.join(out_dir, 'S1_test.idx'), index=False, header=False)
     print('train and test', train.shape[0], test.shape[0])
 
     def _save_fasta(save_path, df, concat=False):
@@ -70,12 +85,69 @@ def main(args):
                 fw.write(f'>{name}\n{heavy_str_seq}{light_str_seq}\n')
         with open(save_path, 'w') as fw:
             df.apply((lambda x: _save(fw, x)), axis=1)
-
-    _save_fasta(os.path.join(args.out_dir, f'S1_train.fasta'), train)
-    _save_fasta(os.path.join(args.out_dir, f'S1_test.fasta'), test)
     
-    _save_fasta(os.path.join(args.out_dir, f'S1_train_concat.fasta'), train, concat=True)
-    _save_fasta(os.path.join(args.out_dir, f'S1_test_concat.fasta'), test, concat=True)
+    def _save_heavy_fasta(save_path, df, concat=False):
+        with open(save_path, 'w') as fw:
+            for idx, r in df.iterrows():
+                name = r['name']
+                heavy_str_seq = np.load(os.path.join(args.data_dir, name + '.npz'))['heavy_str_seq']
+                fw.write(f'>{name}\n{heavy_str_seq}\n')
+
+    train_file = os.path.join(out_dir, f'S1_train.fasta')
+    test_file = os.path.join(out_dir, f'S1_test.fasta')
+    _save_heavy_fasta(train_file, train)
+    _save_heavy_fasta(test_file, test)
+
+    out_file = os.path.join(out_dir, 'test_search_train')
+    tmp_dir = os.path.join(out_dir, 'tmp_search')
+    subprocess.run(
+            ['mmseqs', 'easy-search', 
+            '--min-seq-id', str(overlap_seq_id),
+            '--seq-id-mode', '2',
+            test_file, train_file, out_file, tmp_dir], shell=False)
+
+    overlap_test_names = list(pd.read_csv(out_file, header=None, sep='\t')[0].drop_duplicates())
+    print('overlap', len(overlap_test_names))
+
+    test = test[~test['name'].isin(overlap_test_names)]
+    print('test, fiter overlap', test.shape)
+
+    # cluster the train list
+    out_file = os.path.join(out_dir, 'cluster_train')
+    tmp_dir = os.path.join(out_dir, 'tmp_cluster_train')
+    subprocess.run(
+            ['mmseqs', 'easy-cluster', 
+            '--min-seq-id', str(train_seq_id),
+            '--cov-mode', '1',
+            '--seq-id-mode', '2',
+            train_file, out_file, tmp_dir, 
+            '--cluster-reassign'], shell=False)
+    
+    df = pd.read_csv(out_file + '_cluster.tsv', header=None, names=['n1', 'n2'], sep='\t')
+
+    train_cluster_file = os.path.join(out_dir, 'train_cluster.idx')
+    with open(train_cluster_file, 'w') as fw:
+        for c, g in df.groupby('n1'):
+            n2 = list(g['n2'])
+            random.shuffle(n2)
+            fw.write(' '.join(n2) + '\n')
+
+    # cluster the test list
+    test_file = os.path.join(out_dir, 'S2_test.fasta')
+    _save_heavy_fasta(test_file, test)
+    out_file = os.path.join(out_dir, 'cluster_test')
+    tmp_dir = os.path.join(out_dir, 'tmp_cluster_test')
+    subprocess.run(
+            ['mmseqs', 'easy-cluster', 
+            '--min-seq-id', str(test_seq_id),
+            '--cov-mode', '1',
+            '--seq-id-mode', '2',
+            test_file, out_file, tmp_dir, 
+            '--cluster-reassign'], shell=False)
+    
+    df = pd.read_csv(out_file + '_cluster.tsv', header=None, names=['n1', 'n2'], sep='\t')
+    df['n1'].drop_duplicates().to_csv(os.path.join(out_dir, 'test.idx'), index=False, header=None)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

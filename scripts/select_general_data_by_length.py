@@ -15,7 +15,6 @@ def main(args):
     def process_one(name, data):
         seq = str(data['seq'])
         struc_len  = np.sum(data['coord_mask'][:,1])
-    
         return name, len(seq), struc_len
     
     data = []

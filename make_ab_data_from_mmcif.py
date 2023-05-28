@@ -21,11 +21,18 @@ def parse_list(path):
         names = [n.strip() for n in f]
     
     df = pd.read_csv(path, sep='\t')
-    df = df[df['pdb'].isin(['7pi3'])]
+    df = df[df['method'].isin(['X-RAY DIFFRACTION', 'ELECTRON MICROSCOPY'])]
     
     logging.info(f'all pairs: {df.shape[0]}')
+    
     df = df.fillna({'Hchain':'', 'Lchain':''})
-    logging.info(f'number of complete pairs: {df.shape[0]}')
+    df = df[df['Hchain'] != '']
+    logging.info(f'number of H chains: {df.shape[0]}')
+
+    df = df[df['model'] == 0]
+    
+    logging.info(f'number of model 0: {df.shape[0]}')
+   
    
     for code, r in df.groupby(by='pdb'):
         chain_list = list(zip(r['Hchain'], r['Lchain']))

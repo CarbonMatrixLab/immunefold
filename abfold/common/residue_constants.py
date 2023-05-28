@@ -205,8 +205,8 @@ rigid_group_atom_positions = load_rigid_schema()
 
 restype_atom14_to_atom37 = np.zeros([21, 14], dtype=np.int32)  # mapping (restype, atom14) --> atom37
 restype_atom37_to_atom14 = np.zeros([21, 37], dtype=np.int32)  # mapping (restype, atom37) --> atom14
-restype_atom14_mask = np.zeros([21, 14], dtype=np.bool)
-restype_atom37_mask = np.zeros([21, 37], dtype=np.bool)
+restype_atom14_mask = np.zeros([21, 14], dtype=np.bool_)
+restype_atom37_mask = np.zeros([21, 37], dtype=np.bool_)
 
 def _make_atom14_atom37_map():
     for rt, rt_idx in restype_order.items():
@@ -242,13 +242,13 @@ def _make_rigid_transformation_4x4(ex, ey, translation):
     return m
 
 # rigid groups
-restype_atom37_to_rigid_group = np.zeros([21, 37], dtype=np.int)
+restype_atom37_to_rigid_group = np.zeros([21, 37], dtype=np.int32)
 restype_atom37_rigid_group_positions = np.zeros([21, 37, 3], dtype=np.float32)
-restype_atom14_to_rigid_group = np.zeros([21, 14], dtype=np.int)
+restype_atom14_to_rigid_group = np.zeros([21, 14], dtype=np.int32)
 restype_atom14_rigid_group_positions = np.zeros([21, 14, 3], dtype=np.float32)
 restype_rigid_group_default_frame = np.zeros([21, 8, 4, 4], dtype=np.float32)
 
-restype_rigidgroup_mask = np.zeros([21, 8], dtype=np.bool)
+restype_rigidgroup_mask = np.zeros([21, 8], dtype=np.bool_)
 restype_rigidgroup_base_atom37_idx = np.zeros([21, 8, 3], np.int32)
 restype_rigidgroup_base_atom14_idx = np.zeros([21, 8, 3], np.int32)
 
@@ -342,10 +342,10 @@ def _make_rigid_group_constants():
 
 _make_rigid_group_constants()
   
-restype_rigidgroup_is_ambiguous = np.zeros([21, 8], dtype=np.bool)
+restype_rigidgroup_is_ambiguous = np.zeros([21, 8], dtype=np.bool_)
 restype_rigidgroup_rots = np.tile(np.eye(3, dtype=np.float32), [21, 8, 1, 1])
 restype_ambiguous_atoms_swap_index = np.tile(np.arange(14), (21, 1))
-restype_atom14_is_ambiguous = np.zeros((21, 14), dtype=np.bool)
+restype_atom14_is_ambiguous = np.zeros((21, 14), dtype=np.bool_)
 
 def _make_ambiguous():
     for resname, swap in residue_atom_renaming_swaps.items():

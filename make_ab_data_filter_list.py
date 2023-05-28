@@ -9,10 +9,80 @@ import random
 
 random.seed(2023)
 
-def main(args):
+def _save_heavy_fasta(save_path, df, concat=False):
+    with open(save_path, 'w') as fw:
+        for idx, r in df.iterrows():
+            name = r['name']
+            heavy_str_seq = np.load(os.path.join(args.data_dir, name + '.npz'))['heavy_str_seq']
+            fw.write(f'>{name}\n{heavy_str_seq}\n')
+
+
+def _save_glycine_fasta(save_path, df, concat=True):
+    with open(save_path, 'w') as fw:
+        for idx, r in df.iterrows():
+            name = r['name']
+            x = np.load(os.path.join(args.data_dir, name + '.npz'))
+            heavy_str_seq, light_str_seq = x.get('heavy_str_seq',''), x.get('light_str_seq', '')
+            if heavy_str_seq and light_str_seq:
+                if concat:
+                    fw.write(f'>{name}\n{heavy_str_seq}{"G" * 50}{light_str_seq}\n')
+                else:
+                    fw.write(f'>{name} heavy \n{heavy_str_seq}\n>{name} light\n{light_str_seq}\n')
+            else:
+                fw.write(f'>{name}\n{heavy_str_seq}\n')
+
+def _save_seperate_fasta(save_dir, df, concat=False):
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
+    for idx, r in df.iterrows():
+        name = r['name']
+        save_path = os.path.join(save_dir, name + '.fasta') 
+        with open(save_path, 'w') as fw:
+            x = np.load(os.path.join(args.data_dir, name + '.npz'))
+            heavy_str_seq, light_str_seq = x.get('heavy_str_seq',''), x.get('light_str_seq', '')
+            if heavy_str_seq and light_str_seq:
+                if concat:
+                    fw.write(f'>{name}\n{heavy_str_seq}{"G" * 50}{light_str_seq}\n')
+                else:
+                    fw.write(f'>{name}heavy \n{heavy_str_seq}\n>{name} light\n{light_str_seq}\n')
+            else:
+                fw.write(f'>{name}\n{heavy_str_seq}\n')
+
+def cluster(df, out_dir, suffix, seq_id, save_fasta=False):
+    # cluster the train list
+    seq_file = os.path.join(out_dir, f'{suffix}_H.fasta')
+    _save_heavy_fasta(seq_file, df)
     
+    out_file = os.path.join(out_dir, 'cluster_' + suffix)
+    tmp_dir = os.path.join(out_dir, 'tmp_cluster_' + suffix)
+    subprocess.run(
+            ['mmseqs', 'easy-cluster', 
+            '--min-seq-id', str(seq_id),
+            '--cov-mode', '1',
+            '--seq-id-mode', '2',
+            seq_file, out_file, tmp_dir, 
+            '--cluster-reassign'], shell=False)
+    
+    out_df = pd.read_csv(out_file + '_cluster.tsv', header=None, names=['n1', 'n2'], sep='\t')
+
+    cluster_file = os.path.join(out_dir, f'{suffix}_cluster.idx')
+    with open(cluster_file, 'w') as fw:
+        for c, g in out_df.groupby('n1'):
+            n2 = list(g['n2'])
+            random.shuffle(n2)
+            fw.write(' '.join(n2) + '\n')
+
+    out_df = pd.read_csv(out_file + '_cluster.tsv', header=None, names=['n1', 'n2'], sep='\t')
+    out_df['n1'].drop_duplicates().to_csv(os.path.join(out_dir, suffix + '.idx'), index=False, header=None)
+    
+    if save_fasta:
+        df = df[df['name'].isin(list(out_df['n1'].drop_duplicates()))]
+        _save_glycine_fasta(os.path.join(out_dir, f'{suffix}_glycine.fasta'), df)
+        _save_seperate_fasta(os.path.join(out_dir, f'{suffix}_fasta'), df)
+
+def main(args):
     train_resol_thres = 5.0
-    test_resol_thres = 2.5
+    test_resol_thres = 3.0
     overlap_seq_id = 0.95
     train_seq_id = 0.95
     test_seq_id = 0.95
@@ -72,27 +142,6 @@ def main(args):
     test[['name']].to_csv(os.path.join(out_dir, 'S1_test.idx'), index=False, header=False)
     print('train and test', train.shape[0], test.shape[0])
 
-    def _save_fasta(save_path, df, concat=False):
-        def _save(fw, x):
-            name = x['name']
-            heavy_str_seq, light_str_seq = x['heavy_str_seq'], x['light_str_seq']
-            if heavy_str_seq and light_str_seq:
-                if concat:
-                    fw.write(f'>{name}\n{heavy_str_seq}{"G" * 20}{light_str_seq}\n')
-                else:
-                    fw.write(f'>{name}heavy \n{heavy_str_seq}\n>{name} light\n{light_str_seq}\n')
-            else:
-                fw.write(f'>{name}\n{heavy_str_seq}{light_str_seq}\n')
-        with open(save_path, 'w') as fw:
-            df.apply((lambda x: _save(fw, x)), axis=1)
-    
-    def _save_heavy_fasta(save_path, df, concat=False):
-        with open(save_path, 'w') as fw:
-            for idx, r in df.iterrows():
-                name = r['name']
-                heavy_str_seq = np.load(os.path.join(args.data_dir, name + '.npz'))['heavy_str_seq']
-                fw.write(f'>{name}\n{heavy_str_seq}\n')
-
     train_file = os.path.join(out_dir, f'S1_train.fasta')
     test_file = os.path.join(out_dir, f'S1_test.fasta')
     _save_heavy_fasta(train_file, train)
@@ -112,42 +161,15 @@ def main(args):
     test = test[~test['name'].isin(overlap_test_names)]
     print('test, fiter overlap', test.shape)
 
-    # cluster the train list
-    out_file = os.path.join(out_dir, 'cluster_train')
-    tmp_dir = os.path.join(out_dir, 'tmp_cluster_train')
-    subprocess.run(
-            ['mmseqs', 'easy-cluster', 
-            '--min-seq-id', str(train_seq_id),
-            '--cov-mode', '1',
-            '--seq-id-mode', '2',
-            train_file, out_file, tmp_dir, 
-            '--cluster-reassign'], shell=False)
+    cluster(train, out_dir, 'train', train_seq_id, save_fasta=False)
     
-    df = pd.read_csv(out_file + '_cluster.tsv', header=None, names=['n1', 'n2'], sep='\t')
-
-    train_cluster_file = os.path.join(out_dir, 'train_cluster.idx')
-    with open(train_cluster_file, 'w') as fw:
-        for c, g in df.groupby('n1'):
-            n2 = list(g['n2'])
-            random.shuffle(n2)
-            fw.write(' '.join(n2) + '\n')
-
-    # cluster the test list
-    test_file = os.path.join(out_dir, 'S2_test.fasta')
-    _save_heavy_fasta(test_file, test)
-    out_file = os.path.join(out_dir, 'cluster_test')
-    tmp_dir = os.path.join(out_dir, 'tmp_cluster_test')
-    subprocess.run(
-            ['mmseqs', 'easy-cluster', 
-            '--min-seq-id', str(test_seq_id),
-            '--cov-mode', '1',
-            '--seq-id-mode', '2',
-            test_file, out_file, tmp_dir, 
-            '--cluster-reassign'], shell=False)
+    cluster(test, out_dir, 'test', test_seq_id, save_fasta=True)
     
-    df = pd.read_csv(out_file + '_cluster.tsv', header=None, names=['n1', 'n2'], sep='\t')
-    df['n1'].drop_duplicates().to_csv(os.path.join(out_dir, 'test.idx'), index=False, header=None)
+    test_pair = test[test['Lchain'] != ''] 
+    test_heavy = test[test['Lchain'] == ''] 
 
+    cluster(test_pair, out_dir, 'test_pair', test_seq_id, save_fasta=True)
+    cluster(test_heavy, out_dir, 'test_heavy', test_seq_id, save_fasta=True)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

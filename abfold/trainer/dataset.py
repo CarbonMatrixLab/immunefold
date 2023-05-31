@@ -118,12 +118,12 @@ class IgStructureDataset(StructureDataset):
             struc.get('heavy_coords', np.zeros((0, num_atoms, 3), dtype=np.float32)),
             struc.get('light_coords', np.zeros((0, num_atoms, 3), dtype=np.float32))], axis=0))
         coord_mask = torch.from_numpy(np.concatenate([
-            struc.get('heavy_coord_mask', np.zeros((0, num_atoms), dtype=np.bool)),
-            struc.get('light_coord_mask', np.zeros((0, num_atoms), dtype=np.bool))], axis=0))
+            struc.get('heavy_coord_mask', np.zeros((0, num_atoms), dtype=np.bool_)),
+            struc.get('light_coord_mask', np.zeros((0, num_atoms), dtype=np.bool_))], axis=0))
 
         cdr_def = torch.from_numpy(np.concatenate([
-            struc.get('heavy_cdr_def', np.zeros((0,), dtype=np.int)),
-            struc.get('light_cdr_def', np.zeros((0,), dtype=np.int))], axis=0))
+            struc.get('heavy_cdr_def', np.zeros((0,), dtype=np.int32)),
+            struc.get('light_cdr_def', np.zeros((0,), dtype=np.int32))], axis=0))
         region_embed = cdr_def + 1
 
         str_heavy_seq = str(struc.get('heavy_str_seq', ''))
@@ -142,8 +142,8 @@ class IgStructureDataset(StructureDataset):
             torch.ones(len(str_light_seq), dtype=torch.int32)], axis=-1)
                 
         mask = torch.cat([
-            torch.ones(len(str_heavy_seq), dtype=np.bool), 
-            torch.ones(len(str_light_seq), dtype=np.bool)], dim=-1)
+            torch.ones(len(str_heavy_seq), dtype=torch.bool), 
+            torch.ones(len(str_light_seq), dtype=torch.bool)], dim=-1)
 
         seq = torch.cat([heavy_seq, light_seq], dim=-1)
 

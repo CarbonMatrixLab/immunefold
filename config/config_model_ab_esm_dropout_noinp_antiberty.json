@@ -10,13 +10,13 @@
          "max_relative_feature" : 32,
          "esm1b" : {
             "enabled" : true,
-            "embed_channel" : 2560,
+            "embed_channel" : 5120,
 	    "norm":false,
             "pair_enabled" : false,
             "embed_pair_channel" : 660
          },
 	 "antiberty": {
-	    "enabled" : true,
+	    "enabled" : false,
 	    "norm":false,
 	    "embed_channel" :512
 	 },

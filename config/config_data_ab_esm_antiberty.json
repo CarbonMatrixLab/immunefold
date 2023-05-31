@@ -8,6 +8,5 @@
   ["make_torsion_angles", {}],
   ["make_pseudo_beta", {}],
   ["make_calpha3_frames", {}],
-  ["make_esm_embed", {"return_attnw": false, "repr_layer":36, "device":"%(device)s", "model_path":"../ab_data/esm2/esm2_t36_3B_UR50D.pt"}],
-  ["make_antiberty_embed", {"model_path":"../ab_data/antiberty/AntiBERTy_md_smooth/", "vocab_path":"../ab_data/antiberty/vocab.txt", "device":"%(device)s"}]
+  ["make_esm_embed", {"return_attnw": false, "repr_layer":48, "device":"%(device)s", "model_path":"../abdata_2023/esm2/esm2_t48_15B_UR50D.pt"}]
 ]

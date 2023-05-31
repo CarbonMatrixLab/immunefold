@@ -5,15 +5,15 @@ local_world_size=1; python -m torch.distributed.launch\
     train.py  \
     --device gpu \
     --max_seq_len 256 \
-    --batch_size 1 \
+    --batch_size 2 \
     --num_epoch 1024 \
     --warmup_steps 0 \
     --flat_steps 16384 \
     --learning_rate 0.0003 \
     --lr_decay poly \
-    --prefix ./studies/f0\
-    --model_features ./config/config_data_ab_esm_antiberty.json \
-    --model_config ./config/config_model_ab_esm_dropout_noinp_antiberty.json \
+    --prefix ./studies/15b_v1\
+    --model_features ./config/config_data_pair.json \
+    --model_config ./config/config_model_pair.json \
     --train_name_idx ../abdata_2023/sabdab/train_cluster.idx \
     --train_data ../abdata_2023/sabdab/npz \
     --general_data_gpu_ratio 0. \

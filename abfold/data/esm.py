@@ -46,6 +46,7 @@ class ESMEmbeddingExtractor:
 
         if model_path not in _extractor_dict:
             obj = ESMEmbeddingExtractor(model_path)
+            print('build esm')
             if exists(device):
                 obj.model.to(device=device)
             _extractor_dict[model_path] = obj

@@ -49,7 +49,7 @@ def make_restype_atom_constants(batch, is_training=False):
     return batch
 
 @take1st
-def make_esm_embed(protein, model_path, repr_layer=None, max_seq_len=None, device=None, return_attnw=False, field='esm1b_embed', is_training=True):
+def make_esm_embed(protein, model_path, sep_pad_num=0, repr_layer=None, max_seq_len=None, device=None, return_attnw=False, field='esm_embed', is_training=True):
     esm_extractor = ESMEmbeddingExtractor.get(model_path, device=device)
 
     def _one(key):
@@ -67,10 +67,19 @@ def make_esm_embed(protein, model_path, repr_layer=None, max_seq_len=None, devic
 
         return protein
     elif data_type == 'ig':
-        heavy_embed = _one('str_heavy_seq')
-        light_embed = _one('str_light_seq')
+        if sep_pad_num == 0:
+            heavy_embed = _one('str_heavy_seq')
+            light_embed = _one('str_light_seq')
 
-        embed = [torch.cat([heavy_embed['single'][k,:len(x)], light_embed['single'][k,:len(y)]], dim=0) for k, (x,y) in enumerate(zip(protein['str_heavy_seq'],protein['str_light_seq']))]
+            embed = [torch.cat([heavy_embed['single'][k,:len(x)], light_embed['single'][k,:len(y)]], dim=0) for k, (x,y) in enumerate(zip(protein['str_heavy_seq'],protein['str_light_seq']))]
+        else:
+            protein['sep_pad_seq'] = [h + 'G' * sep_pad_num + l for h, l in zip(protein['str_heavy_seq'], protein['str_light_seq'])]
+            embed = _one('sep_pad_seq')
+            embed = [torch.cat([
+                embed['single'][k,:len(x)],
+                embed['single'][k,len(x)+sep_pad_num:len(x)+sep_pad_num+len(y)]],
+                dim=0) for k, (x,y) in enumerate(zip(protein['str_heavy_seq'],protein['str_light_seq']))]
+            
 
         lengths = (e.shape[0] for e in embed)
         batch_length =  max(lengths)

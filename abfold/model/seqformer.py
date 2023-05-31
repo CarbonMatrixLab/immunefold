@@ -37,12 +37,12 @@ class EmbeddingAndSeqformer(nn.Module):
             if c.abrep.pair_enabled:
                 self.proj_abrep_embed_pair = Linear(c.abrep.embed_pair_channel, c.pair_channel, init='final', bias=False)
 
-        if c.esm1b.enabled:
-            self.proj_esm1b_embed = Linear(c.esm1b.embed_channel, c.seq_channel, init='linear', bias=True)
-            if c.esm1b.norm:
-                self.esm1b_norm = LayerNorm(c.seq_channel)
-            if c.esm1b.pair_enabled:
-                self.proj_esm1b_embed_pair = Linear(c.esm1b.embed_pair_channel, c.pair_channel, init='linear', bias=True)
+        if c.esm.enabled:
+            self.proj_esm_embed = Linear(c.esm.embed_channel, c.seq_channel, init='linear', bias=True)
+            if c.esm.norm:
+                self.esm_norm = LayerNorm(c.seq_channel)
+            if c.esm.pair_enabled:
+                self.proj_esm_embed_pair = Linear(c.esm.embed_pair_channel, c.pair_channel, init='linear', bias=True)
         
         if c.antiberty.enabled:
             self.proj_antiberty_embed = Linear(c.antiberty.embed_channel, c.seq_channel, init='linear', bias=True)
@@ -108,14 +108,14 @@ class EmbeddingAndSeqformer(nn.Module):
                 pair_embed = self.proj_abrep_embed_pair(batch['abrep_embed_pair'])
                 pair_act = pair_act + pair_embed 
 
-        if c.esm1b.enabled and 'esm1b_embed' in batch:
-            esm1b_embed = self.proj_esm1b_embed(batch['esm1b_embed'])
-            if c.esm1b.norm:
-                esm1b_embed = self.esm1b_norm(esm1b_embed)
-            seq_act = seq_act + esm1b_embed
+        if c.esm.enabled and 'esm_embed' in batch:
+            esm_embed = self.proj_esm_embed(batch['esm_embed'])
+            if c.esm.norm:
+                esm_embed = self.esm_norm(esm_embed)
+            seq_act = seq_act + esm_embed
 
-            if c.esm1b.pair_enabled and 'esm1b_embed_pair' in batch:
-                pair_embed = self.proj_esm1b_embed_pair(batch['esm1b_embed_pair'])
+            if c.esm.pair_enabled and 'esm_embed_pair' in batch:
+                pair_embed = self.proj_esm_embed_pair(batch['esm_embed_pair'])
                 pair_act = pair_act + pair_embed
 
         if c.antiberty.enabled and 'antiberty_embed' in batch:

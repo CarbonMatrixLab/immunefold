@@ -8,6 +8,9 @@
          "seq_channel" : 512,
          "pair_channel" : 256,
          "max_relative_feature" : 32,
+	 "region_embed":{
+            "enabled":false
+	 },
          "esm" : {
             "enabled" : true,
             "embed_channel" : 2560,

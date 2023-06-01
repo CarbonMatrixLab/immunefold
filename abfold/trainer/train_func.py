@@ -234,9 +234,9 @@ def train(args):
         # Save a checkpoint every epoch
         if args.world_rank == 0:
             checkpoint_manager.save(epoch, prefix='epoch_')
-            torch.save(dict(feats=feats,
-                model=model.module if isinstance(model, nn.parallel.DistributedDataParallel) else model),
-                os.path.join(args.prefix, 'checkpoints', f'model_epoch_{epoch}.pth'))
+            #torch.save(dict(feats=feats,
+            #    model=model.module if isinstance(model, nn.parallel.DistributedDataParallel) else model),
+            #    os.path.join(args.prefix, 'checkpoints', f'model_epoch_{epoch}.pth'))
 
         if eval_loader is not None:
             model.eval()

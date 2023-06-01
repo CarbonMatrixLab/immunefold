@@ -27,7 +27,9 @@ class EmbeddingAndSeqformer(nn.Module):
         self.num_region = residue_constants.num_ab_regions + 1
 
         self.proj_aa_type = Linear(self.num_token, c.seq_channel, init='linear')
-        self.proj_region_embed = Linear(self.num_region, c.seq_channel, init='linear')
+
+        if c.region_embed.enabled:
+            self.proj_region_embed = Linear(self.num_region, c.seq_channel, init='linear')
 
         if c.abrep.enabled:
             self.proj_abrep_embed = Linear(c.abrep.embed_channel, c.seq_channel, init='linear', bias=True)
@@ -68,15 +70,16 @@ class EmbeddingAndSeqformer(nn.Module):
         c = self.config
 
         seq, mask= batch['seq'], batch['mask']
-        region_embed = batch['region_embed']
 
         batch_size, num_residue = seq.shape[:2]
         
         seq_one_hot = F.one_hot(seq, num_classes = self.num_token).to(dtype=torch.float32)
         seq_act = self.proj_aa_type(seq_one_hot)
-        
-        region_one_hot = F.one_hot(region_embed, num_classes = self.num_region).to(dtype=torch.float32)
-        seq_act = seq_act + self.proj_region_embed(region_one_hot)
+       
+        if c.region_embed.enabled:
+            region_embed = batch['region_embed']
+            region_one_hot = F.one_hot(region_embed, num_classes = self.num_region).to(dtype=torch.float32)
+            seq_act = seq_act + self.proj_region_embed(region_one_hot)
         
 
         left_single = self.proj_left_single(seq_one_hot)

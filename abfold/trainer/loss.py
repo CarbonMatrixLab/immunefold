@@ -145,9 +145,9 @@ def compute_calpha_local_loss(batch, value, config):
         dist_err = torch.sqrt(torch.sum(torch.square(gt_fouth_calpha_pos - pred_fouth_calpha_pos), dim=-1) + epsilon)
         dist_err = torch.clip(dist_err, c.local_fape.fape_min, c.local_fape.clamp_distance)
 
-        #if c.local_fape.loop_weight.enabled:
-        #    loop_mask = torch.eq(batch['cdr_def'], 5).to(dtype=dist_err.dtype, device=dist_err.device)
-        #    dist_err = dist_err * ((1. - loop_mask) + loop_mask * c.local_fape.loop_weight.weight)
+        if c.local_fape.loop_weight.enabled:
+            loop_mask = torch.eq(batch['cdr_def'], 5).to(dtype=dist_err.dtype, device=dist_err.device)
+            dist_err = dist_err * ((1. - loop_mask) + loop_mask * c.local_fape.loop_weight.weight)
 
         dist_err = torch.sum(gt_fouth_calpha_exists * dist_err)
 
@@ -281,13 +281,13 @@ def compute_backbone_loss(batch, value, config):
     
     traj = value['traj']
 
-    #if c.fape.loop_weight.enabled:
-    #    loop_mask = torch.eq(batch['cdr_def'], 5)
-    #    loop_mask = torch.logical_or(loop_mask[:,:,None], loop_mask[:,None,:]).to(
-    #            dtype=target_positions.dtype, device=target_positions.device)
-    #    loop_weight = (1. - loop_mask) + loop_mask * c.local_fape.loop_weight.weight
-    #else:
-    loop_weight = None
+    if c.fape.loop_weight.enabled:
+        loop_mask = torch.eq(batch['cdr_def'], 5)
+        loop_mask = torch.logical_or(loop_mask[:,:,None], loop_mask[:,None,:]).to(
+                dtype=target_positions.dtype, device=target_positions.device)
+        loop_weight = (1. - loop_mask) + loop_mask * c.local_fape.loop_weight.weight
+    else:
+        loop_weight = None
 
     fape = sum(_yield_backbone_loss(
         traj, pair_mask=None,

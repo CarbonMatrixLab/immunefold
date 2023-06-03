@@ -338,6 +338,7 @@ class GeneralStructureDataset(StructureDataset):
                 atom14_gt_positions=padded_atom14_gt_positions,
                 atom14_gt_exists=padded_atom14_gt_existss,
                 chain_id=padded_chain_id,
+                cdr_def=torch.ones_like(padded_seqs) * 14,
                 region_embed = torch.zeros_like(padded_seqs),
                 data_type = 'general'
                 )

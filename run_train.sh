@@ -11,11 +11,11 @@ local_world_size=1; python -m torch.distributed.launch\
     --flat_steps 16384 \
     --learning_rate 0.0003 \
     --lr_decay poly \
-    --prefix ./studies/15b_v1\
+    --prefix ./studies/15b_v7\
     --model_features ./config/config_data_pair.json \
     --model_config ./config/config_model_pair.json \
     --train_name_idx ../abdata_2023/sabdab/train_cluster.idx \
     --train_data ../abdata_2023/sabdab/npz \
     --general_data_gpu_ratio 0. \
-    --train_general_name_idx ../ab_data/data/pdb50_v2/clean_bc40_cluster.idx \
+    --train_general_name_idx ../ab_data/data/pdb50_v2/clean_bc50_cluster.idx \
     --train_general_data ../ab_data/data/pdb50_v2/data

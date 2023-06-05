@@ -143,7 +143,10 @@ def compute_calpha_local_loss(batch, value, config):
     
     def _fape(gt_fouth_calpha_pos, gt_fouth_calpha_exists, pred_fouth_calpha_pos):
         dist_err = torch.sqrt(torch.sum(torch.square(gt_fouth_calpha_pos - pred_fouth_calpha_pos), dim=-1) + epsilon)
-        dist_err = torch.clip(dist_err, c.local_fape.fape_min, c.local_fape.clamp_distance)
+        if c.local_fape.unclamped_ratio > 0.01:
+            dist_err = c.local_fape.unclamped_ratio * dist_err + (1. - c.local_fape.unclamped_ratio) * torch.clip(dist_err, c.local_fape.fape_min, c.local_fape.clamp_distance)
+        else:
+            dist_err = torch.clip(dist_err, c.local_fape.fape_min, c.local_fape.clamp_distance)
 
         if c.local_fape.loop_weight.enabled:
             loop_mask = torch.eq(batch['cdr_def'], 5).to(dtype=dist_err.dtype, device=dist_err.device)
@@ -228,7 +231,8 @@ def compute_sidechain_loss(batch, value, config):
         target_positions=value['renamed_atom14_gt_positions'],
         positions_mask=value['renamed_atom14_gt_exists'],
         clamp_distance=config.fape.clamp_distance,
-        length_scale=config.fape.loss_unit_distance)
+        length_scale=config.fape.loss_unit_distance,
+        unclamped_ratio=config.fape.unclamped_ratio)
 
     return fape
 
@@ -252,7 +256,8 @@ def compute_final_backbone_loss(batch, value, config):
         target_positions=gt_positions,
         positions_mask=gt_position_mask,
         clamp_distance=config.fape.clamp_distance,
-        length_scale=config.fape.loss_unit_distance)
+        length_scale=config.fape.loss_unit_distance,
+        unclamped_ratio=config.fape.unclamped_ratio)
 
     return fape
 
@@ -276,7 +281,8 @@ def compute_backbone_loss(batch, value, config):
                     positions_mask=positions_mask[:,:,1],
                     pos_weight = pos_weight,
                     clamp_distance=clamp_distance,
-                    length_scale=loss_unit_distance)
+                    length_scale=loss_unit_distance,
+                    unclamped_ratio=c.fape.unclamped_ratio)
             yield r
     
     traj = value['traj']
@@ -373,7 +379,7 @@ def compute_renamed_ground_truth(batch, atom14_pred_positions):
       'renamed_atom14_gt_exists': renamed_atom14_gt_mask,  # (N, 14)
   }
 
-def frame_aligned_point_error(pred_frames, target_frames, frames_mask, pred_positions, target_positions, positions_mask, pair_mask=None, pos_weight=None, clamp_distance=None, epsilon=1e-8, length_scale=10.):
+def frame_aligned_point_error(pred_frames, target_frames, frames_mask, pred_positions, target_positions, positions_mask, pair_mask=None, pos_weight=None, clamp_distance=None, epsilon=1e-8, length_scale=10., unclamped_ratio=0.):
     assert pred_frames[0].shape == target_frames[0].shape 
     assert pred_positions.shape == target_positions.shape
     assert list(frames_mask.shape) == list(target_frames[0].shape[:-2])
@@ -406,7 +412,10 @@ def frame_aligned_point_error(pred_frames, target_frames, frames_mask, pred_posi
             torch.sum(torch.square(local_pred_pos - local_target_pos), dim=-1) + epsilon)
     
     if clamp_distance is not None:
-        error_dist = torch.clip(error_dist, 0, clamp_distance)
+        if unclamped_ratio > 0.01:
+            error_dist = unclamped_ratio * error_dist + (1. - unclamped_ratio) * torch.clip(error_dist, 0, clamp_distance)
+        else:
+            error_dist = torch.clip(error_dist, 0, clamp_distance)
 
     dij_mask = torch.logical_and(frames_mask[:,:,None], positions_mask[:,None])
     if pair_mask is not None:

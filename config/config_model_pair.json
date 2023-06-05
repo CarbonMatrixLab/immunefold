@@ -152,7 +152,7 @@
                "loss_unit_distance" : 5.0,
                "clamp_distance" : 5.0,
                "clamp_type" : "relu",
-               "unclamped_ratio" : 0
+               "unclamped_ratio" : 0.1
             },
             "fape" : {
                "weight" : 1.0,
@@ -164,7 +164,7 @@
                "loss_unit_distance" : 10.0,
                "clamp_distance" : 10.0,
                "clamp_type" : "relu",
-               "unclamped_ratio" : 0
+               "unclamped_ratio" : 0.1
             },
 	    "interface_fape" : {
 		"loss_unit_distance" : 20.0,

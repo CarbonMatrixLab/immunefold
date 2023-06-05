@@ -101,7 +101,7 @@ class EmbeddingAndSeqformer(nn.Module):
 
         pair_act = pair_act + self.proj_rel_pos(rel_pos)
 
-        if c.abrep.enabled and 'abrep_embed' in batch:
+        if c.abrep.enabled:
             abrep_embed = self.proj_abrep_embed(batch['abrep_embed'])
             if c.abrep.norm:
                 abrep_embed = self.abrep_norm(abrep_embed)
@@ -111,7 +111,7 @@ class EmbeddingAndSeqformer(nn.Module):
                 pair_embed = self.proj_abrep_embed_pair(batch['abrep_embed_pair'])
                 pair_act = pair_act + pair_embed 
 
-        if c.esm.enabled and 'esm_embed' in batch:
+        if c.esm.enabled:
             esm_embed = self.proj_esm_embed(batch['esm_embed'])
             if c.esm.norm:
                 esm_embed = self.esm_norm(esm_embed)
@@ -121,7 +121,7 @@ class EmbeddingAndSeqformer(nn.Module):
                 pair_embed = self.proj_esm_embed_pair(batch['esm_embed_pair'])
                 pair_act = pair_act + pair_embed
 
-        if c.antiberty.enabled and 'antiberty_embed' in batch:
+        if c.antiberty.enabled:
             antiberty_embed = self.proj_antiberty_embed(batch['antiberty_embed'])
             if c.antiberty.norm:
                 antiberty_embed = self.antiberty_norm(antiberty_embed)

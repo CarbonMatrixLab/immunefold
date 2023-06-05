@@ -14,22 +14,22 @@
          "esm" : {
             "enabled" : true,
             "embed_channel" : 2560,
-	    "norm":false,
+	    "norm":true,
             "pair_enabled" : false,
             "embed_pair_channel" : 660
          },
-	 "antiberty": {
-	    "enabled" : false,
-	    "norm":false,
-	    "embed_channel" :512
-	 },
          "abrep" : {
-            "enabled" : false,
+            "enabled" : true,
             "embed_channel" : 512,
 	    "norm":true,
             "pair_enabled" : false,
             "embed_pair_channel" : 512
          },
+	 "antiberty": {
+            "enabled" : false,
+            "norm":false,
+            "embed_channel" :512
+	 },
 	 "recycle_features" :true,
          "recycle_pos" : true,
          "prev_pos" : {

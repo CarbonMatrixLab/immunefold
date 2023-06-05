@@ -8,6 +8,7 @@
   ["make_torsion_angles", {}],
   ["make_pseudo_beta", {}],
   ["make_calpha3_frames", {}],
+  ["make_abrep_embed", {"device":"%(device)s", "return_attnw": false, "model_path":"../ab_data/abrep/bert_epoch19_step774000"}],
   ["make_esm_embed", {
 	  "return_attnw": false,
 	  "sep_pad_num":48,

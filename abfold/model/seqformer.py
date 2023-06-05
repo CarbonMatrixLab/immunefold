@@ -32,17 +32,24 @@ class EmbeddingAndSeqformer(nn.Module):
             self.proj_region_embed = Linear(self.num_region, c.seq_channel, init='linear')
 
         if c.abrep.enabled:
-            self.proj_abrep_embed = Linear(c.abrep.embed_channel, c.seq_channel, init='linear', bias=True)
-            if c.abrep.norm:
-                self.abrep_norm = LayerNorm(c.seq_channel)
-            #self.abrep_norm = LayerNorm(c.seq_channel)
+            self.proj_abrep_embed = nn.Sequential(
+                LayerNorm(c.abrep.embed_channel),
+                Linear(c.abrep.embed_channel, c.seq_channel, init='linear', bias=True),
+                nn.ReLU(),
+                Linear(c.seq_channel, c.seq_channel, init='linear', bias=True),
+                )
+            
             if c.abrep.pair_enabled:
                 self.proj_abrep_embed_pair = Linear(c.abrep.embed_pair_channel, c.pair_channel, init='final', bias=False)
 
         if c.esm.enabled:
-            self.proj_esm_embed = Linear(c.esm.embed_channel, c.seq_channel, init='linear', bias=True)
-            if c.esm.norm:
-                self.esm_norm = LayerNorm(c.seq_channel)
+            self.proj_esm_embed = nn.Sequential(
+                LayerNorm(c.esm.embed_channel),
+                Linear(c.esm.embed_channel, c.seq_channel, init='linear', bias=True),
+                nn.ReLU(),
+                Linear(c.seq_channel, c.seq_channel, init='linear', bias=True),
+                )
+
             if c.esm.pair_enabled:
                 self.proj_esm_embed_pair = Linear(c.esm.embed_pair_channel, c.pair_channel, init='linear', bias=True)
         
@@ -103,8 +110,6 @@ class EmbeddingAndSeqformer(nn.Module):
 
         if c.abrep.enabled:
             abrep_embed = self.proj_abrep_embed(batch['abrep_embed'])
-            if c.abrep.norm:
-                abrep_embed = self.abrep_norm(abrep_embed)
             seq_act = seq_act + abrep_embed
 
             if c.abrep.pair_enabled and 'abrep_embed_pair' in batch:
@@ -113,8 +118,6 @@ class EmbeddingAndSeqformer(nn.Module):
 
         if c.esm.enabled:
             esm_embed = self.proj_esm_embed(batch['esm_embed'])
-            if c.esm.norm:
-                esm_embed = self.esm_norm(esm_embed)
             seq_act = seq_act + esm_embed
 
             if c.esm.pair_enabled and 'esm_embed_pair' in batch:

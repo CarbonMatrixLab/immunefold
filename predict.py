@@ -5,6 +5,8 @@ from logging.handlers import QueueHandler, QueueListener
 import resource
 import json
 
+from collections import OrderedDict
+import ml_collections
 import torch
 import torch.multiprocessing as mp
 from einops import rearrange
@@ -12,6 +14,8 @@ from einops import rearrange
 #from abfold.data import dataset
 from abfold.trainer import dataset
 from abfold.data.utils import save_ig_pdb, save_general_pdb
+
+from abfold.model.abfold import AbFold
 
 try:
     import torch_mlu
@@ -57,9 +61,21 @@ def worker_load(rank, args):  # pylint: disable=redefined-outer-name
     
     device = worker_device(rank, args)
     
+    with open(args.model_config, 'r', encoding='utf-8') as f:
+        config = json.loads(f.read())
+        config = ml_collections.ConfigDict(config)
 
     checkpoint = torch.load(args.model, map_location=args.map_location)
-    model = checkpoint['model']
+    #model = checkpoint['model']
+    print(checkpoint.keys())
+    model = AbFold(config=config.model)
+    
+    model_state_dict = OrderedDict()
+    for k, v in checkpoint['model'].items():
+        if k.startswith('module.'):
+            k = k[len('module.'):]
+        model_state_dict[k] = v
+    model.load_state_dict(model_state_dict)
     
     with open(args.model_features, 'r', encoding='utf-8') as f:
         feats = json.loads(f.read())
@@ -205,6 +221,7 @@ if __name__ == '__main__':
     parser.add_argument('--ipc_file', type=str, default='./test.ipc')
     parser.add_argument('--model', type=str, required=True)
     parser.add_argument('--model_features', type=str, required=True)
+    parser.add_argument('--model_config', type=str, required=True)
     parser.add_argument('--map_location', type=str, default=None)
     parser.add_argument('--name_idx', type=str, required=True)
     parser.add_argument('--data_dir', type=str, required=True)

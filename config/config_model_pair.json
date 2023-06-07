@@ -3,7 +3,7 @@
       "num_atom" : 5,
       "num_recycle" : 3,
       "embeddings_and_seqformer" : {
-         "seqformer_num_block" : 16,
+         "seqformer_num_block" : 8,
          "cdr_def_num" : 15,
          "seq_channel" : 512,
          "pair_channel" : 256,
@@ -14,6 +14,7 @@
          "esm" : {
             "enabled" : true,
             "embed_channel" : 2560,
+	    "num_layers":36,
 	    "norm":true,
             "pair_enabled" : false,
             "embed_pair_channel" : 660

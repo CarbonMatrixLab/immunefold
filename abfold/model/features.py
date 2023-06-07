@@ -75,17 +75,22 @@ def make_esm_embed(protein, model_path, sep_pad_num=0, repr_layer=None, max_seq_
         else:
             protein['sep_pad_seq'] = [h + 'G' * sep_pad_num + l for h, l in zip(protein['str_heavy_seq'], protein['str_light_seq'])]
             embed = _one('sep_pad_seq')
-            embed = [torch.cat([
-                embed['single'][k,:len(x)],
-                embed['single'][k,len(x)+sep_pad_num:len(x)+sep_pad_num+len(y)]],
-                dim=0) for k, (x,y) in enumerate(zip(protein['str_heavy_seq'],protein['str_light_seq']))]
+            if len(embed['single']) == 1:
+                embed = embed['single'][0]
+            else:
+                embed = torch.stack(embed['single'], dim=-1)
             
+            embed = [torch.cat([
+                embed[k,:len(x)],
+                embed[k,len(x)+sep_pad_num:len(x)+sep_pad_num+len(y)]],
+                dim=0) for k, (x,y) in enumerate(zip(protein['str_heavy_seq'],protein['str_light_seq']))]
 
         lengths = (e.shape[0] for e in embed)
         batch_length =  max(lengths)
 
         protein[field] = pad_for_batch(embed, batch_length, dtype='ebd')
-
+        
+        # FIXED ME
         if return_attnw:
             embed = [torch.cat([
                 F.pad(light_embed['pair'][k,:len(x), :len(x)], (0, 0, 0, len(y)), value=0.),

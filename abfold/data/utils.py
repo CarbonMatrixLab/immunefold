@@ -54,7 +54,8 @@ def pad_for_batch(items, batch_length, dtype):
             batch.append(c)
     elif dtype == "ebd":
         for item in items:
-            z = torch.zeros((batch_length - item.shape[0],  item.shape[-1]), dtype=item.dtype,
+            shape = [batch_length - item.shape[0]] + list(item.shape[1:])
+            z = torch.zeros(shape, dtype=item.dtype,
 device = item.device)
             c = torch.cat((item, z), dim=0)
             batch.append(c)

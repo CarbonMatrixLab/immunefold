@@ -25,13 +25,18 @@ class ESMEmbeddingExtractor:
         if repr_layer is None:
             repr_layer = ESM_EMBED_LAYER
 
+        if type(repr_layer) is int:
+            repr_layer = [repr_layer]
+
         with torch.no_grad():
             batch_labels, batch_strs, batch_tokens = self.batch_converter(label_seqs)
             batch_tokens = batch_tokens.to(device=device)
-
-            results = self.model(batch_tokens, repr_layers=[repr_layer], need_head_weights=return_attnw)
             
-            single = results['representations'][repr_layer][:,1 : 1 + max_len]
+            results = self.model(batch_tokens, repr_layers=repr_layer, need_head_weights=return_attnw)
+            
+            
+            single = [results['representations'][r][:,1 : 1 + max_len] for r in repr_layer]
+
             ret = dict(single=single)
 
             if return_attnw:

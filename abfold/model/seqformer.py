@@ -40,6 +40,7 @@ class EmbeddingAndSeqformer(nn.Module):
                 Linear(c.abrep.embed_channel, c.seq_channel, init='linear', bias=True),
                 nn.ReLU(),
                 Linear(c.seq_channel, c.seq_channel, init='linear', bias=True),
+                nn.Dropout(p=c.abrep.dropout_rate),
                 )
             
             if c.abrep.pair_enabled:
@@ -55,6 +56,7 @@ class EmbeddingAndSeqformer(nn.Module):
                 Linear(c.esm.embed_channel, c.seq_channel, init='linear', bias=True),
                 nn.ReLU(),
                 Linear(c.seq_channel, c.seq_channel, init='linear', bias=True),
+                nn.Dropout(p=c.esm.dropout_rate),
                 )
 
             if c.esm.pair_enabled:

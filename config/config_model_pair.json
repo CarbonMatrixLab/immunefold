@@ -15,6 +15,7 @@
             "enabled" : true,
             "embed_channel" : 2560,
 	    "num_layers":36,
+	    "dropout_rate":0.1,
 	    "norm":true,
             "pair_enabled" : false,
             "embed_pair_channel" : 660
@@ -23,6 +24,7 @@
             "enabled" : true,
             "embed_channel" : 512,
 	    "num_layers":32,
+	    "dropout_rate":0.1,
 	    "norm":true,
             "pair_enabled" : false,
             "embed_pair_channel" : 512

@@ -16,7 +16,7 @@ class OptipizerInverseSquarRootDecay(Adam):
 
         self.start_lr = 1e-5
 
-        self.second_stage_steps = 10000
+        self.second_stage_steps = 0 #10000
         self.second_stage_lr = 1e-4
 
     def get_values(self):

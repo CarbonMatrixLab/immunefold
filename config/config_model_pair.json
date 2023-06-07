@@ -21,7 +21,7 @@
             "embed_pair_channel" : 660
          },
          "abrep" : {
-            "enabled" : true,
+            "enabled" : false,
             "embed_channel" : 512,
 	    "num_layers":32,
 	    "dropout_rate":0.1,
@@ -146,11 +146,11 @@
             "angle_norm_weight" : 0.1,
             "sidechain_fape_weight" : 0.5,
             "backbone_fape_weight" : 0.5,
-	    "calpha_local_fape_weight":0.5,
+	    "calpha_local_fape_weight":0.0,
             "local_fape" : {
 	       "loop_weight":{
-	       	  "enabled":true,
-		  "weight":10.0
+	       	  "enabled":false,
+		  "weight":1.0
 	       },
                "fape_min" : 1e-06,
                "loss_unit_distance" : 5.0,
@@ -161,8 +161,8 @@
             "fape" : {
                "weight" : 1.0,
 	       "loop_weight":{
-	       	  "enabled":true,
-		  "weight":10.0
+	       	  "enabled":false,
+		  "weight":1.0
 	       },
                "fape_min" : 1e-06,
                "loss_unit_distance" : 10.0,

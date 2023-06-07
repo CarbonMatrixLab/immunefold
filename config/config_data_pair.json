@@ -10,6 +10,7 @@
   ["make_calpha3_frames", {}],
   ["make_abrep_embed", {
 	  "return_attnw": false,
+	  "repr_layer":[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32],
 	  "device":"%(device)s",
 	  "model_path":"../abdata_2023/abrep/bert_epoch19_step774000"}],
   ["make_esm_embed", {

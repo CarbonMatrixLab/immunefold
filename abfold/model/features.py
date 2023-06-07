@@ -75,6 +75,7 @@ def make_esm_embed(protein, model_path, sep_pad_num=0, repr_layer=None, max_seq_
         else:
             protein['sep_pad_seq'] = [h + 'G' * sep_pad_num + l for h, l in zip(protein['str_heavy_seq'], protein['str_light_seq'])]
             embed = _one('sep_pad_seq')
+
             if len(embed['single']) == 1:
                 embed = embed['single'][0]
             else:
@@ -233,7 +234,7 @@ def make_ablang_embed(protein, model_path, device=None, field='ablang_embed', is
     return protein
 
 @take1st
-def make_abrep_embed(protein, model_path, device=None, return_attnw=False, field='abrep_embed', is_training=True):
+def make_abrep_embed(protein, model_path, repr_layer=None, device=None, return_attnw=False, field='abrep_embed', is_training=True):
     data_type = protein['data_type']
     if data_type == 'general':
         '''
@@ -248,16 +249,25 @@ def make_abrep_embed(protein, model_path, device=None, return_attnw=False, field
 
     extractor = AbRepExtractor.get(model_path, device=device)
 
-    heavy_embed = extractor.rescoding(protein['str_heavy_seq'], protein['str_heavy_numbering'], chain_name = 'Heavy', device=device, return_attnw=return_attnw)
-    light_embed = extractor.rescoding(protein['str_light_seq'], protein['str_light_numbering'], chain_name = 'Light', device=device, return_attnw=return_attnw)
-
+    heavy_embed = extractor.rescoding(protein['str_heavy_seq'], protein['str_heavy_numbering'], chain_name = 'Heavy', repr_layer=repr_layer, device=device, return_attnw=return_attnw)
+    light_embed = extractor.rescoding(protein['str_light_seq'], protein['str_light_numbering'], chain_name = 'Light', repr_layer=repr_layer, device=device, return_attnw=return_attnw)
     
-    embed = [torch.cat([light_embed['single'][k,:len(x)], heavy_embed['single'][k,:len(y)]], dim=0) for k, (x,y) in enumerate(zip(protein['str_light_seq'],protein['str_heavy_seq']))]
+    # FIX ME
+    if len(repr_layer) == 1:
+        light_embed = light_embed['single'][0]
+        heavy_embed = heavy_embed['single'][0]
+    else:
+        light_embed = torch.stack(light_embed['single'], dim=-1)
+        heavy_embed = torch.stack(heavy_embed['single'], dim=-1)
+
+    embed = [torch.cat([light_embed[k,:len(x)], heavy_embed[k,:len(y)]], dim=0) for k, (x,y) in enumerate(zip(protein['str_light_seq'],protein['str_heavy_seq']))]
+
     lengths = (e.shape[0] for e in embed)
     batch_length =  max(lengths)
 
     protein[field] = pad_for_batch(embed, batch_length, dtype='ebd')
 
+    # FIX ME
     if return_attnw:
         embed = [torch.cat([
             F.pad(light_embed['pair'][k,:len(x), :len(x)], (0, 0, 0, len(y)), value=0.),

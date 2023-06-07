@@ -15,6 +15,8 @@ except:
     
 _extractor_dict = {}
 
+ESM_EMBED_LAYER=32
+
 class AbRepExtractor(object):
     def __init__(self, model_path):
         super().__init__()
@@ -49,7 +51,7 @@ class AbRepExtractor(object):
 
         return _extractor_dict[name]
 
-    def rescoding(self, str_seqs, str_numberings, chain_name, device=None, return_attnw=False):
+    def rescoding(self, str_seqs, str_numberings, chain_name, repr_layer=None, device=None, return_attnw=False):
         assert chain_name in ['Heavy', 'Light']
 
         max_len = max([len(s) for s in str_seqs]) + 2
@@ -73,10 +75,16 @@ class AbRepExtractor(object):
         if device is not None:
             seqs = torch.tensor(seqs, device=device)
             positions = torch.tensor(positions, device=device)
+        
+        if repr_layer is None:
+            repr_layer = ESM_EMBED_LAYER
+
+        if type(repr_layer) is int:
+            repr_layer = [repr_layer]
 
         with torch.no_grad():
-            results = self.model(seqs, positions, repr_layers=[32], need_head_weights=return_attnw)
-            single = results["representations"][32][:, 1:-1]
+            results = self.model(seqs, positions, repr_layers=repr_layer, need_head_weights=return_attnw)
+            single = [results['representations'][r][:,1 : 1 + max_len] for r in repr_layer]
 
             ret = dict(single=single)
 

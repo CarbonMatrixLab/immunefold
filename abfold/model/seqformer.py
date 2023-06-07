@@ -32,6 +32,9 @@ class EmbeddingAndSeqformer(nn.Module):
             self.proj_region_embed = Linear(self.num_region, c.seq_channel, init='linear')
 
         if c.abrep.enabled:
+            abrep_embed_weights = torch.log(torch.tensor([(1-0.5)/c.abrep.num_layers] * c.abrep.num_layers + [0.5]))
+            self.abrep_embed_weights = nn.Parameter(abrep_embed_weights)
+            
             self.proj_abrep_embed = nn.Sequential(
                 LayerNorm(c.abrep.embed_channel),
                 Linear(c.abrep.embed_channel, c.seq_channel, init='linear', bias=True),
@@ -46,6 +49,7 @@ class EmbeddingAndSeqformer(nn.Module):
             #esm_embed_weights = torch.zeros((c.esm.num_layers + 1,))
             esm_embed_weights = torch.log(torch.tensor([(1-0.5)/c.esm.num_layers] * c.esm.num_layers + [0.5]))
             self.esm_embed_weights = nn.Parameter(esm_embed_weights)
+
             self.proj_esm_embed = nn.Sequential(
                 LayerNorm(c.esm.embed_channel),
                 Linear(c.esm.embed_channel, c.seq_channel, init='linear', bias=True),
@@ -112,7 +116,11 @@ class EmbeddingAndSeqformer(nn.Module):
         pair_act = pair_act + self.proj_rel_pos(rel_pos)
 
         if c.abrep.enabled:
-            abrep_embed = self.proj_abrep_embed(batch['abrep_embed'])
+            abrep_embed = batch['abrep_embed']
+            layer_weights = F.softmax(self.abrep_embed_weights, dim=-1)
+
+            abrep_embed = torch.einsum('b l c n, n -> b l c', abrep_embed, layer_weights)
+            abrep_embed = self.proj_abrep_embed(abrep_embed)
             seq_act = seq_act + abrep_embed
 
             if c.abrep.pair_enabled and 'abrep_embed_pair' in batch:

@@ -7,37 +7,32 @@ from einops import rearrange
 
 from abfold.common import residue_constants
 
-class Linear(nn.Module):
+class Linear(nn.Linear):
     def __init__(self, input_dim, output_dim, init, bias=True):
-        super().__init__()
-
-        self.proj = nn.Linear(input_dim, output_dim, bias=bias)
+        super().__init__(input_dim, output_dim, bias=bias)
 
         assert init in ['gate', 'final', 'attn', 'relu', 'linear']
 
         if init in ['gate', 'final']:
-            nn.init.constant_(self.proj.weight, 0.)
+            nn.init.constant_(self.weight, 0.)
         elif init == 'attn':
             # GlorotUniform
-            torch.nn.init.xavier_uniform_(self.proj.weight)
+            torch.nn.init.xavier_uniform_(self.weight)
         elif init in ['relu', 'linear']:
             # Relu, He
             # linear, Le cun
             distribution_stddev = 0.87962566103423978
             scale = 2. if init == 'relu' else 1.
             stddev = np.sqrt(scale / input_dim) / distribution_stddev
-            nn.init.trunc_normal_(self.proj.weight, mean=0., std=stddev)
+            nn.init.trunc_normal_(self.weight, mean=0., std=stddev)
         else:
             raise NotImplementedError(f'{init} not Implemented')
 
         if bias:
             if init == 'gate':
-                nn.init.constant_(self.proj.bias, 1.)
+                nn.init.constant_(self.bias, 1.)
             else:
-                nn.init.constant_(self.proj.bias, 0.)
-
-    def forward(self, x):
-        return self.proj(x)
+                nn.init.constant_(self.bias, 0.)
 
 # the operator torch.sigmoid is very unstable in mlu
 class Gate(nn.Module):

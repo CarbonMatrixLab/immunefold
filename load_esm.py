@@ -48,24 +48,24 @@ def load(args):
         seq_attn = block.seq_attn
         _assign(seq_attn.seq_norm, prefix + 'layernorm_1')
         _assign(seq_attn.pair_norm, prefix + 'pair_to_sequence.layernorm')
-        _assign(seq_attn.proj_pair.proj, prefix + 'pair_to_sequence.linear')
+        _assign(seq_attn.proj_pair, prefix + 'pair_to_sequence.linear')
 
         proj_q, proj_k, proj_v = torch.chunk(_get(prefix + 'seq_attention.proj.weight'), 3, dim=0)
         _set(prefix + 'seq_attention.proj_q.weight', proj_q)
         _set(prefix + 'seq_attention.proj_k.weight', proj_k)
         _set(prefix + 'seq_attention.proj_v.weight', proj_v)
-        _assign(seq_attn.attn.proj_q.proj, prefix + 'seq_attention.proj_q')
-        _assign(seq_attn.attn.proj_k.proj, prefix + 'seq_attention.proj_k')
-        _assign(seq_attn.attn.proj_v.proj, prefix + 'seq_attention.proj_v')
+        _assign(seq_attn.attn.proj_q, prefix + 'seq_attention.proj_q')
+        _assign(seq_attn.attn.proj_k, prefix + 'seq_attention.proj_k')
+        _assign(seq_attn.attn.proj_v, prefix + 'seq_attention.proj_v')
 
-        _assign(seq_attn.attn.gate.proj, prefix + 'seq_attention.g_proj')
-        _assign(seq_attn.attn.proj_out.proj, prefix + 'seq_attention.o_proj')
+        _assign(seq_attn.attn.gate, prefix + 'seq_attention.g_proj')
+        _assign(seq_attn.attn.proj_out, prefix + 'seq_attention.o_proj')
 
         # Seq Transition
         seq_tran = block.seq_transition
         _assign(seq_tran.transition[0], prefix + f'mlp_seq.mlp.0')
-        _assign(seq_tran.transition[1].proj, prefix + f'mlp_seq.mlp.1')
-        _assign(seq_tran.transition[3].proj, prefix + f'mlp_seq.mlp.3')
+        _assign(seq_tran.transition[1], prefix + f'mlp_seq.mlp.1')
+        _assign(seq_tran.transition[3], prefix + f'mlp_seq.mlp.3')
 
         # Outer 
         outer = block.outer_product_mean
@@ -76,61 +76,61 @@ def load(args):
         _set(prefix + 'sequence_to_pair.left_proj.bias', left_proj_b)
         _set(prefix + 'sequence_to_pair.right_proj.weight', right_proj_w)
         _set(prefix + 'sequence_to_pair.right_proj.bias', right_proj_b)
-        _assign(outer.left_proj.proj, prefix + 'sequence_to_pair.left_proj')
-        _assign(outer.right_proj.proj, prefix + 'sequence_to_pair.right_proj')
+        _assign(outer.left_proj, prefix + 'sequence_to_pair.left_proj')
+        _assign(outer.right_proj, prefix + 'sequence_to_pair.right_proj')
         
         # triangle_multiplication_outgoing
         mul = block.triangle_multiplication_outgoing
         prefix2 = prefix + 'tri_mul_out.'
         _assign(mul.norm, prefix2 + 'layer_norm_in')
         _assign(mul.final_norm, prefix2 + 'layer_norm_out')
-        _assign(mul.left_proj.proj, prefix2 + 'linear_a_p')
-        _assign(mul.right_proj.proj, prefix2 + 'linear_b_p')
-        _assign(mul.left_gate.proj, prefix2 + 'linear_a_g')
-        _assign(mul.right_gate.proj, prefix2 + 'linear_b_g')
-        _assign(mul.final_gate.proj, prefix2 + 'linear_g')
-        _assign(mul.proj_out.proj, prefix2 + 'linear_z')
+        _assign(mul.left_proj, prefix2 + 'linear_a_p')
+        _assign(mul.right_proj, prefix2 + 'linear_b_p')
+        _assign(mul.left_gate, prefix2 + 'linear_a_g')
+        _assign(mul.right_gate, prefix2 + 'linear_b_g')
+        _assign(mul.final_gate, prefix2 + 'linear_g')
+        _assign(mul.proj_out, prefix2 + 'linear_z')
 
         # triangle_multiplication_incoming
         mul = block.triangle_multiplication_incoming
         prefix2 = prefix + 'tri_mul_in.'
         _assign(mul.norm, prefix2 + 'layer_norm_in')
         _assign(mul.final_norm, prefix2 + 'layer_norm_out')
-        _assign(mul.left_proj.proj, prefix2 + 'linear_a_p')
-        _assign(mul.right_proj.proj, prefix2 + 'linear_b_p')
-        _assign(mul.left_gate.proj, prefix2 + 'linear_a_g')
-        _assign(mul.right_gate.proj, prefix2 + 'linear_b_g')
-        _assign(mul.final_gate.proj, prefix2 + 'linear_g')
-        _assign(mul.proj_out.proj, prefix2 + 'linear_z')
+        _assign(mul.left_proj, prefix2 + 'linear_a_p')
+        _assign(mul.right_proj, prefix2 + 'linear_b_p')
+        _assign(mul.left_gate, prefix2 + 'linear_a_g')
+        _assign(mul.right_gate, prefix2 + 'linear_b_g')
+        _assign(mul.final_gate, prefix2 + 'linear_g')
+        _assign(mul.proj_out, prefix2 + 'linear_z')
 
         # triangle_attention_starting_node 
         tri = block.triangle_attention_starting_node
         prefix2 = prefix + 'tri_att_start.'
         _assign(tri.norm, prefix2 + 'layer_norm')
-        _assign(tri.proj_pair.proj, prefix2 + 'linear')
-        _assign(tri.attn.proj_q.proj, prefix2 + 'mha.linear_q')
-        _assign(tri.attn.proj_k.proj, prefix2 + 'mha.linear_k')
-        _assign(tri.attn.proj_v.proj, prefix2 + 'mha.linear_v')
-        _assign(tri.attn.gate.proj, prefix2 + 'mha.linear_g')
-        _assign(tri.attn.proj_out.proj, prefix2 + 'mha.linear_o')
+        _assign(tri.proj_pair, prefix2 + 'linear')
+        _assign(tri.attn.proj_q, prefix2 + 'mha.linear_q')
+        _assign(tri.attn.proj_k, prefix2 + 'mha.linear_k')
+        _assign(tri.attn.proj_v, prefix2 + 'mha.linear_v')
+        _assign(tri.attn.gate, prefix2 + 'mha.linear_g')
+        _assign(tri.attn.proj_out, prefix2 + 'mha.linear_o')
 
         # triangle_attention_ending_node
         tri = block.triangle_attention_ending_node
         prefix2 = prefix + 'tri_att_end.'
         _assign(tri.norm, prefix2 + 'layer_norm')
-        _assign(tri.proj_pair.proj, prefix2 + 'linear')
-        _assign(tri.attn.proj_q.proj, prefix2 + 'mha.linear_q')
-        _assign(tri.attn.proj_k.proj, prefix2 + 'mha.linear_k')
-        _assign(tri.attn.proj_v.proj, prefix2 + 'mha.linear_v')
-        _assign(tri.attn.gate.proj, prefix2 + 'mha.linear_g')
-        _assign(tri.attn.proj_out.proj, prefix2 + 'mha.linear_o')
+        _assign(tri.proj_pair, prefix2 + 'linear')
+        _assign(tri.attn.proj_q, prefix2 + 'mha.linear_q')
+        _assign(tri.attn.proj_k, prefix2 + 'mha.linear_k')
+        _assign(tri.attn.proj_v, prefix2 + 'mha.linear_v')
+        _assign(tri.attn.gate, prefix2 + 'mha.linear_g')
+        _assign(tri.attn.proj_out, prefix2 + 'mha.linear_o')
 
         # pair_transition
         # Seq Transition
         tran = block.pair_transition
         _assign(tran.transition[0], prefix + f'mlp_pair.mlp.0')
-        _assign(tran.transition[1].proj, prefix + f'mlp_pair.mlp.1')
-        _assign(tran.transition[3].proj, prefix + f'mlp_pair.mlp.3')
+        _assign(tran.transition[1], prefix + f'mlp_pair.mlp.1')
+        _assign(tran.transition[3], prefix + f'mlp_pair.mlp.3')
      
     def _load_embedding():
         embed = abfold.impl.seqformer
@@ -140,8 +140,24 @@ def load(args):
         _assign(embed.proj_rel_pos, 'trunk.pairwise_positional_embedding.embedding')
         
         _assign(embed.proj_esm_embed[0], 'esm_s_mlp.0')
-        _assign(embed.proj_esm_embed[1].proj, 'esm_s_mlp.1')
-        _assign(embed.proj_esm_embed[3].proj, 'esm_s_mlp.3')
+        _assign(embed.proj_esm_embed[1], 'esm_s_mlp.1')
+        _assign(embed.proj_esm_embed[3], 'esm_s_mlp.3')
+
+    def _load_structure_module():
+        struc = abfold.impl.structure_module.struct_module
+        _assign(struc.proj_init_seq_act, 'trunk.trunk2sm_s') 
+        _assign(struc.proj_init_pair_act, 'trunk.trunk2sm_z') 
+        
+        prefix = 'trunk.structure_module.'
+        _assign(struc.init_seq_layer_norm, prefix + 'layer_norm_s')
+        _assign(struc.init_pair_layer_norm, prefix + 'layer_norm_z')
+
+        _assign(struc.proj_seq, prefix + 'linear_in')
+
+        # ipa 
+        ipa = struc.attention_module
+        prefix = 'trunk.structure_module.ipa'
+
 
     # load embedding
     _load_embedding()
@@ -151,7 +167,11 @@ def load(args):
         _load_seqformer_block(it)
 
     # load structure module
-    
+    _load_structure_module()
+
+    # load features in recycling
+    _load_structure_module()
+
     # load heads
 
 def main(args):

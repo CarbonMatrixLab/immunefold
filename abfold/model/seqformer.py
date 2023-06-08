@@ -23,10 +23,10 @@ class EmbeddingAndSeqformer(nn.Module):
         super().__init__()
         c = config
 
-        self.num_token = len(residue_constants.restypes_with_x)
+        self.num_token = residue_constants.restype_num + 3
         self.num_region = residue_constants.num_ab_regions + 1
 
-        self.proj_aa_type = Linear(self.num_token, c.seq_channel, init='linear')
+        self.proj_aa_type = nn.Embedding(self.num_token, c.seq_channel, padding_idx=0)
 
         if c.region_embed.enabled:
             self.proj_region_embed = Linear(self.num_region, c.seq_channel, init='linear')
@@ -67,9 +67,10 @@ class EmbeddingAndSeqformer(nn.Module):
             if c.antiberty.norm:
                 self.antiberty_norm = LayerNorm(c.seq_channel)
 
-        self.proj_left_single = Linear(self.num_token, c.pair_channel, init='linear')
-        self.proj_right_single = Linear(self.num_token, c.pair_channel, init='linear')
-        self.proj_rel_pos = Linear(c.max_relative_feature * 2 + 2 + 1, c.pair_channel, init='linear')
+        #self.proj_left_single = Linear(self.num_token, c.pair_channel, init='linear')
+        #self.proj_right_single = Linear(self.num_token, c.pair_channel, init='linear')
+        #self.proj_rel_pos = Linear(c.max_relative_feature * 2 + 2 + 1, c.pair_channel, init='linear')
+        self.proj_rel_pos = torch.nn.Embedding(c.max_relative_feature * 2 + 2, c.pair_channel)
 
         if c.recycle_features:
             self.prev_seq_norm = LayerNorm(c.seq_channel)
@@ -89,33 +90,17 @@ class EmbeddingAndSeqformer(nn.Module):
 
         batch_size, num_residue = seq.shape[:2]
         
-        seq_one_hot = F.one_hot(seq, num_classes = self.num_token).to(dtype=torch.float32)
-        seq_act = self.proj_aa_type(seq_one_hot)
+        seq_act = self.proj_aa_type(seq)
        
         if c.region_embed.enabled:
             region_embed = batch['region_embed']
             region_one_hot = F.one_hot(region_embed, num_classes = self.num_region).to(dtype=torch.float32)
             seq_act = seq_act + self.proj_region_embed(region_one_hot)
         
-
-        left_single = self.proj_left_single(seq_one_hot)
-        right_single = self.proj_right_single(seq_one_hot)
-        pair_act = rearrange(left_single, 'b l c -> b l () c') + rearrange(right_single, 'b l c -> b () l c')
-
         seq_pos = torch.arange(num_residue, device=seq.device)
-       
         offset = rearrange(seq_pos, 'l -> () l ()') - rearrange(seq_pos, 'l -> () () l')
-        clipped_offset = torch.clip(offset + c.max_relative_feature, min=0, max=2*c.max_relative_feature)
-
-        eq_chain_id = torch.eq(rearrange(batch['chain_id'], 'b l -> b () l'), rearrange(batch['chain_id'], 'b l -> b l ()'))
-       
-        # mlu torch.where does not support long type.
-        final_offset = torch.where(eq_chain_id, clipped_offset.to(dtype=torch.float32),  torch.tensor(2*c.max_relative_feature+1, dtype=torch.float32, device=seq.device)).to(dtype=torch.long)
-
-        rel_pos = F.one_hot(final_offset, num_classes=2 * c.max_relative_feature + 2).to(dtype=pair_act.dtype)
-        rel_pos = torch.cat([rel_pos, eq_chain_id.to(dtype=rel_pos.dtype)[:,:,:,None]], axis=-1)
-
-        pair_act = pair_act + self.proj_rel_pos(rel_pos)
+        rel_pos = torch.clip(offset + c.max_relative_feature, min=0, max=2*c.max_relative_feature) + 1
+        pair_act = self.proj_rel_pos(rel_pos)
 
         if c.abrep.enabled:
             abrep_embed = batch['abrep_embed']

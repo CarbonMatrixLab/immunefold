@@ -12,11 +12,13 @@ def load(args):
         config = json.loads(f.read())
         config = ml_collections.ConfigDict(config)
 
+
     #checkpoint = torch.load(args.model, map_location=args.map_location)
     #model = checkpoint['model']
     abfold = AbFold(config=config.model)
-    
     esmfold = torch.load(args.esmfold_ckpt)['model_state_dict']
+    
+    c = config.model
     
     def _load(des, source):
         des.load_weights(source)
@@ -35,6 +37,8 @@ def load(args):
             m.load_state_dict(OrderedDict(weight = _get(n + '.weight'), ), strict=True)
         else:
             m.load_state_dict(OrderedDict(weight = _get(n + '.weight'), bias = _get(n + '.bias')), strict=True)
+    def _assign_data(m, n):
+        m.data = _get(n)
 
     def _load_seqformer_block(it):
         block = abfold.impl.seqformer.seqformer.blocks[it]
@@ -127,10 +131,28 @@ def load(args):
         _assign(tran.transition[0], prefix + f'mlp_pair.mlp.0')
         _assign(tran.transition[1].proj, prefix + f'mlp_pair.mlp.1')
         _assign(tran.transition[3].proj, prefix + f'mlp_pair.mlp.3')
+     
+    def _load_embedding():
+        embed = abfold.impl.seqformer
+        _assign_data(embed.esm_embed_weights, 'esm_s_combine')
         
-    for it in range(2):
+        _assign(embed.proj_aa_type, 'embedding') 
+        _assign(embed.proj_rel_pos, 'trunk.pairwise_positional_embedding.embedding')
+        
+        _assign(embed.proj_esm_embed[0], 'esm_s_mlp.0')
+        _assign(embed.proj_esm_embed[1].proj, 'esm_s_mlp.1')
+        _assign(embed.proj_esm_embed[3].proj, 'esm_s_mlp.3')
+
+    # load embedding
+    _load_embedding()
+
+    # load seqformer blocks
+    for it in range(c.embeddings_and_seqformer.seqformer_num_block):
         _load_seqformer_block(it)
-        break
+
+    # load structure module
+    
+    # load heads
 
 def main(args):
     load(args)

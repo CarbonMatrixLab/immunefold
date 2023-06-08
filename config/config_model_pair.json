@@ -3,10 +3,10 @@
       "num_atom" : 5,
       "num_recycle" : 3,
       "embeddings_and_seqformer" : {
-         "seqformer_num_block" : 8,
+         "seqformer_num_block" : 48,
          "cdr_def_num" : 15,
-         "seq_channel" : 512,
-         "pair_channel" : 256,
+         "seq_channel" : 1024,
+         "pair_channel" : 128,
          "max_relative_feature" : 32,
 	 "region_embed":{
             "enabled":false
@@ -44,7 +44,7 @@
          "seqformer" : {
             "seq_attention_with_pair_bias" : {
                "orientation" : "per_row",
-               "num_head" : 16,
+               "num_head" : 32,
 	       "inp_kernels":[],
                "dropout_rate" : 0.1,
                "shared_dropout" : false
@@ -57,7 +57,7 @@
             },
             "outer_product_mean" : {
                "orientation" : "per_row",
-               "num_outer_channel" : 32,
+               "num_outer_channel" : 64,
                "dropout_rate" : 0,
                "shared_dropout" : true
             },
@@ -65,7 +65,7 @@
                "orientation" : "per_row",
                "num_intermediate_channel" : 128,
 	       "gating":true,
-	       "num_head":8,
+	       "num_head":4,
 	       "inp_kernels":[],
                "dropout_rate" : 0.1,
                "shared_dropout" : false
@@ -74,14 +74,14 @@
                "orientation" : "per_column",
                "num_intermediate_channel" : 128,
 	       "gating":true,
-	       "num_head":8,
+	       "num_head":4,
 	       "inp_kernels":[],
                "dropout_rate" : 0.1,
                "shared_dropout" : false
             },
             "triangle_attention_starting_node" : {
                "orientation" : "per_row",
-               "num_head" : 8,
+               "num_head" : 4,
 	       "gating":true,
 	       "inp_kernels":[],
                "dropout_rate" : 0.1,
@@ -89,7 +89,7 @@
             },
             "triangle_attention_ending_node" : {
                "orientation" : "per_column",
-               "num_head" : 8,
+               "num_head" : 4,
 	       "gating":true,
 	       "inp_kernels":[],
                "dropout_rate" : 0.1,

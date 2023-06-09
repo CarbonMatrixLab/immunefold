@@ -162,7 +162,7 @@ class StructureModule(nn.Module):
         seq_act, static_pair_act = representations['seq'], representations['pair']
         
         seq_act = self.proj_init_seq_act(seq_act)
-        static_pair_act = self.proj_init_pair_act(pair_act)
+        static_pair_act = self.proj_init_pair_act(static_pair_act)
         
         seq_act = self.init_seq_layer_norm(seq_act)
         static_pair_act = self.init_pair_layer_norm(static_pair_act)

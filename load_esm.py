@@ -238,6 +238,12 @@ def load(args):
         if n not in assigned_param_set and not n.startswith('esm.'):
             print(n)
 
+    
+    torch.save({
+        'model_config' : config.model,
+        'model_state_dict' : abfold.state_dict()
+        }, args.output_abfold_ckpt)
+
 def main(args):
     load(args)
 
@@ -245,6 +251,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_config', type=str, required=True)
     parser.add_argument('--esmfold_ckpt', type=str, default=None)
+    parser.add_argument('--output_abfold_ckpt', type=str, default=None)
     parser.add_argument('--verbose', action='store_true')
     args = parser.parse_args()
 

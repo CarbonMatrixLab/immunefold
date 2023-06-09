@@ -122,5 +122,6 @@ def dgram_from_positions(positions, num_bins, min_bin, max_bin):
         dim=-1,
         keepdims=True)
 
-    true_bins = torch.sum(dist2 > sq_breaks, axis=-1)
-    return F.one_hot(true_bins, num_bins)
+    true_bins = torch.sum(dist2 > sq_breaks, axis=-1).long()
+
+    return true_bins

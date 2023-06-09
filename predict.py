@@ -61,21 +61,19 @@ def worker_load(rank, args):  # pylint: disable=redefined-outer-name
     
     device = worker_device(rank, args)
     
-    with open(args.model_config, 'r', encoding='utf-8') as f:
-        config = json.loads(f.read())
-        config = ml_collections.ConfigDict(config)
+    #with open(args.model_config, 'r', encoding='utf-8') as f:
+    #    config = json.loads(f.read())
+    #    config = ml_collections.ConfigDict(config)
 
     checkpoint = torch.load(args.model, map_location=args.map_location)
     #model = checkpoint['model']
     print(checkpoint.keys())
-    model = AbFold(config=config.model)
-    
-    model_state_dict = OrderedDict()
-    for k, v in checkpoint['model'].items():
-        if k.startswith('module.'):
-            k = k[len('module.'):]
-        model_state_dict[k] = v
-    model.load_state_dict(model_state_dict)
+    model_config = checkpoint['model_config']
+    model_state_dict = checkpoint['model_state_dict']
+   
+    model_config.num_recycle = 0
+    model = AbFold(config=model_config)
+    model.load_state_dict(model_state_dict, strict=True)
     
     with open(args.model_features, 'r', encoding='utf-8') as f:
         feats = json.loads(f.read())
@@ -131,7 +129,7 @@ def evaluate(rank, log_queue, args):
     device = worker_device(rank, args)
     name_idx = []
     with open(args.name_idx) as f:
-        name_idx = [x.strip() for x in f]
+        name_idx = [x.strip() for x in f][:1]
     
     test_loader = dataset.load(
         data_dir=args.data_dir,
@@ -221,7 +219,6 @@ if __name__ == '__main__':
     parser.add_argument('--ipc_file', type=str, default='./test.ipc')
     parser.add_argument('--model', type=str, required=True)
     parser.add_argument('--model_features', type=str, required=True)
-    parser.add_argument('--model_config', type=str, required=True)
     parser.add_argument('--map_location', type=str, default=None)
     parser.add_argument('--name_idx', type=str, required=True)
     parser.add_argument('--data_dir', type=str, required=True)

@@ -28,9 +28,6 @@ class EmbeddingAndSeqformer(nn.Module):
 
         self.proj_aa_type = nn.Embedding(self.num_token, c.seq_channel, padding_idx=0)
 
-        if c.region_embed.enabled:
-            self.proj_region_embed = Linear(self.num_region, c.seq_channel, init='linear')
-
         if c.abrep.enabled:
             abrep_embed_weights = torch.log(torch.tensor([(1-0.5)/c.abrep.num_layers] * c.abrep.num_layers + [0.5]))
             self.abrep_embed_weights = nn.Parameter(abrep_embed_weights)
@@ -62,14 +59,6 @@ class EmbeddingAndSeqformer(nn.Module):
             if c.esm.pair_enabled:
                 self.proj_esm_embed_pair = Linear(c.esm.embed_pair_channel, c.pair_channel, init='linear', bias=True)
         
-        if c.antiberty.enabled:
-            self.proj_antiberty_embed = Linear(c.antiberty.embed_channel, c.seq_channel, init='linear', bias=True)
-            if c.antiberty.norm:
-                self.antiberty_norm = LayerNorm(c.seq_channel)
-
-        #self.proj_left_single = Linear(self.num_token, c.pair_channel, init='linear')
-        #self.proj_right_single = Linear(self.num_token, c.pair_channel, init='linear')
-        #self.proj_rel_pos = Linear(c.max_relative_feature * 2 + 2 + 1, c.pair_channel, init='linear')
         self.proj_rel_pos = torch.nn.Embedding(c.max_relative_feature * 2 + 2, c.pair_channel)
 
         if c.recycle_features:
@@ -90,13 +79,8 @@ class EmbeddingAndSeqformer(nn.Module):
 
         batch_size, num_residue = seq.shape[:2]
         
-        seq_act = self.proj_aa_type(seq)
+        seq_act = self.proj_aa_type(seq + 1)
        
-        if c.region_embed.enabled:
-            region_embed = batch['region_embed']
-            region_one_hot = F.one_hot(region_embed, num_classes = self.num_region).to(dtype=torch.float32)
-            seq_act = seq_act + self.proj_region_embed(region_one_hot)
-        
         seq_pos = torch.arange(num_residue, device=seq.device)
         offset = rearrange(seq_pos, 'l -> () l ()') - rearrange(seq_pos, 'l -> () () l')
         rel_pos = torch.clip(offset + c.max_relative_feature, min=0, max=2*c.max_relative_feature) + 1
@@ -140,7 +124,7 @@ class EmbeddingAndSeqformer(nn.Module):
 
         if c.recycle_pos and 'prev_pos' in batch:
             prev_pseudo_beta = pseudo_beta_fn(batch['seq'], batch['prev_pos'], None)
-            dgram = dgram_from_positions(prev_pseudo_beta, **self.config.prev_pos).to(dtype=pair_act.dtype)
+            dgram = dgram_from_positions(prev_pseudo_beta, **self.config.prev_pos)
             pair_act = pair_act + self.proj_prev_pos(dgram)
         
         seq_act, pair_act = self.seqformer(seq_act, pair_act, mask=mask, is_recycling=batch['is_recycling'])

@@ -10,13 +10,16 @@ import torch
 from torch.nn import functional as F
 
 from abfold.common import residue_constants
-from abfold.common.utils import str_seq_to_index
+from abfold.common.utils import str_seq_to_index as AF_str_seq_to_index
 from abfold.model.features import FeatureBuilder
 import abfold.trainer.features
 
 from abfold.data.utils import pad_for_batch
 
 logger = logging.getLogger(__file__)
+
+def str_seq_to_index(x):
+    return AF_str_seq_to_index(x)
 
 class Cluster(object):
     def __init__(self, names):

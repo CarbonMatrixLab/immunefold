@@ -60,7 +60,13 @@ def make_esm_embed(protein, model_path, sep_pad_num=0, repr_layer=None, max_seq_
     data_type = protein['data_type']
     if data_type == 'general':
         batch_embed = _one('str_seq')
-        protein[field] = batch_embed['single']
+        
+        if len(batch_embed['single']) == 1:
+            batch_embed = batch_embed['single'][0]
+        else:
+            batch_embed = torch.stack(batch_embed['single'], dim=-1)
+        
+        protein[field] = batch_embed
 
         if return_attnw:
             protein[f'{field}_pair'] = batch_embed['pair']

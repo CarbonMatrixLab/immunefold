@@ -77,7 +77,7 @@ class EmbeddingAndSeqformer(nn.Module):
             self.prev_pair_norm = LayerNorm(c.pair_channel)
 
         if c.recycle_pos:
-            self.proj_prev_pos = Linear(c.prev_pos.num_bins, c.pair_channel, init='linear')
+            self.proj_prev_pos = nn.Embedding(c.prev_pos.num_bins, c.pair_channel)
 
         self.seqformer = Seqformer(c)
 
@@ -278,6 +278,8 @@ class Transition(nn.Module):
     def forward(self, act, mask):
         return self.transition(act)
 
+# AF2 and ESM-FOLD have different implementations
+# Here we just follow ESMFOLD
 class OuterProductMean(nn.Module):
     def __init__(self, config, num_in_channel, num_out_channel):
         super().__init__()
@@ -287,7 +289,7 @@ class OuterProductMean(nn.Module):
         self.left_proj = Linear(num_in_channel, c.num_outer_channel, init='linear')
         self.right_proj = Linear(num_in_channel, c.num_outer_channel, init='linear')
 
-        self.out_proj = Linear(c.num_outer_channel * c.num_outer_channel, num_out_channel, init='final')
+        self.out_proj = Linear(2 * c.num_outer_channel, num_out_channel, init='final')
 
     def forward(self, act, mask):
         """
@@ -300,9 +302,13 @@ class OuterProductMean(nn.Module):
         right_act = mask * self.right_proj(act)
 
         #act = rearrange(left_act, 'b l c -> b l () c ()') * rearrange(right_act, 'b l c -> b  () l () c')
-        act = torch.einsum('b i c, b j d -> b i j c d', left_act, right_act)
-        act = rearrange(act, 'b i j c d -> b i j (c d)')
+        #act = torch.einsum('b i c, b j d -> b i j c d', left_act, right_act)
+        #act = rearrange(act, 'b i j c d -> b i j (c d)')
+        
+        prod = left_act[:, None, :, :] * right_act[:, :, None, :]
+        diff = left_act[:, None, :, :] - right_act[:, :, None, :]
 
+        act = torch.cat([prod, diff], dim=-1)
         act = self.out_proj(act)
 
         return act

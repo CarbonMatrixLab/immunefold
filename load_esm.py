@@ -19,6 +19,8 @@ def load(args):
     esmfold = torch.load(args.esmfold_ckpt)['model_state_dict']
     
     c = config.model
+
+    assigned_param_set = set()
     
     def _load(des, source):
         des.load_weights(source)
@@ -31,14 +33,21 @@ def load(args):
 
     def _set(n, m):
         esmfold[n] = m
+
+    def _del(n):
+        del esmfold[n]
     
     def _assign(m, n):
         if not _has(n + '.bias'):
             m.load_state_dict(OrderedDict(weight = _get(n + '.weight'), ), strict=True)
+            assigned_param_set.add(n + '.weight')
         else:
             m.load_state_dict(OrderedDict(weight = _get(n + '.weight'), bias = _get(n + '.bias')), strict=True)
+            assigned_param_set.add(n + '.weight')
+            assigned_param_set.add(n + '.bias')
     def _assign_data(m, n):
         m.data = _get(n)
+        assigned_param_set.add(n)
 
     def _load_seqformer_block(it):
         block = abfold.impl.seqformer.seqformer.blocks[it]
@@ -51,6 +60,7 @@ def load(args):
         _assign(seq_attn.proj_pair, prefix + 'pair_to_sequence.linear')
 
         proj_q, proj_k, proj_v = torch.chunk(_get(prefix + 'seq_attention.proj.weight'), 3, dim=0)
+        _del(prefix + 'seq_attention.proj.weight')
         _set(prefix + 'seq_attention.proj_q.weight', proj_q)
         _set(prefix + 'seq_attention.proj_k.weight', proj_k)
         _set(prefix + 'seq_attention.proj_v.weight', proj_v)
@@ -69,15 +79,19 @@ def load(args):
 
         # Outer 
         outer = block.outer_product_mean
-        _assign(outer.norm, prefix + 'sequence_to_pair.layernorm')
-        left_proj_w, right_proj_w = torch.chunk(_get(prefix + 'sequence_to_pair.proj.weight'), 2, dim=0)
-        left_proj_b, right_proj_b = torch.chunk(_get(prefix + 'sequence_to_pair.proj.bias'), 2, dim=0)
-        _set(prefix + 'sequence_to_pair.left_proj.weight', left_proj_w)
-        _set(prefix + 'sequence_to_pair.left_proj.bias', left_proj_b)
-        _set(prefix + 'sequence_to_pair.right_proj.weight', right_proj_w)
-        _set(prefix + 'sequence_to_pair.right_proj.bias', right_proj_b)
-        _assign(outer.left_proj, prefix + 'sequence_to_pair.left_proj')
-        _assign(outer.right_proj, prefix + 'sequence_to_pair.right_proj')
+        prefix2 = prefix + 'sequence_to_pair.'
+        _assign(outer.norm, prefix2 + 'layernorm')
+        left_proj_w, right_proj_w = torch.chunk(_get(prefix2 + 'proj.weight'), 2, dim=0)
+        left_proj_b, right_proj_b = torch.chunk(_get(prefix2 + 'proj.bias'), 2, dim=0)
+        _del(prefix2 + 'proj.weight')
+        _del(prefix2 + 'proj.bias')
+        _set(prefix2 + 'left_proj.weight', left_proj_w)
+        _set(prefix2 + 'left_proj.bias', left_proj_b)
+        _set(prefix2 + 'right_proj.weight', right_proj_w)
+        _set(prefix2 + 'right_proj.bias', right_proj_b)
+        _assign(outer.left_proj, prefix2 + 'left_proj')
+        _assign(outer.right_proj, prefix2 + 'right_proj')
+        _assign(outer.out_proj, prefix2 + 'o_proj')
         
         # triangle_multiplication_outgoing
         mul = block.triangle_multiplication_outgoing
@@ -157,7 +171,7 @@ def load(args):
         # ipa 
         ipa = struc.attention_module
         prefix = 'trunk.structure_module.ipa.'
-        #_assign(ipa.trainable_point_weights, prefix + 'head_weights') 
+        _assign_data(ipa.trainable_point_weights, prefix + 'head_weights') 
         _assign(ipa.proj_q_scalar, prefix + 'linear_q')
         _assign(ipa.proj_kv_scalar, prefix + 'linear_kv')
         _assign(ipa.proj_q_point_local, prefix + 'linear_q_points')
@@ -194,7 +208,10 @@ def load(args):
         _assign(sc.projection, prefix + 'linear_out')
 
     def _load_recycling():
-        pass
+        r = abfold.impl.seqformer
+        _assign(r.prev_seq_norm, 'trunk.recycle_s_norm')
+        _assign(r.prev_pair_norm, 'trunk.recycle_z_norm')
+        _assign(r.proj_prev_pos, 'trunk.recycle_disto')
 
     # load embedding
     _load_embedding()
@@ -210,6 +227,16 @@ def load(args):
     _load_recycling()
 
     # load heads
+
+    # check
+    print('assigned params')
+    for n in assigned_param_set:
+        print(n)
+
+    print('unassigned params')
+    for n in esmfold:
+        if n not in assigned_param_set and not n.startswith('esm.'):
+            print(n)
 
 def main(args):
     load(args)

@@ -53,7 +53,7 @@ class MultiRigidSidechain(nn.Module):
         super().__init__()
         c = config
         
-        self.torsion_module = TorsionModule(c.torsion, c.num_channel, num_in_seq_channel)
+        self.torsion_module = TorsionModule(c.torsion, c.num_channel, c.num_channel)
         
         self.config = config
         

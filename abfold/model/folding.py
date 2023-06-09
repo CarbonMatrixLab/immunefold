@@ -23,7 +23,7 @@ class InvariantPointAttention(nn.Module):
 
         c = config
 
-        bias=False
+        bias=True
         self.proj_q_scalar = Linear(c.num_channel, c.num_head * c.num_scalar_qk, init='attn', bias=bias)
         self.proj_kv_scalar = Linear(c.num_channel, c.num_head * (c.num_scalar_v + c.num_scalar_qk), init='attn', bias=bias)
 
@@ -127,10 +127,14 @@ class StructureModule(nn.Module):
         super().__init__()
 
         c = config
-
-        self.init_seq_layer_norm = LayerNorm(num_in_seq_channel)
-        self.init_pair_layer_norm = LayerNorm(num_in_pair_channel)
+        
         self.proj_init_seq_act = Linear(num_in_seq_channel, c.num_channel, init='linear')
+        self.proj_init_pair_act = Linear(num_in_pair_channel, num_in_pair_channel, init='linear')
+
+        self.init_seq_layer_norm = LayerNorm(c.num_channel)
+        self.init_pair_layer_norm = LayerNorm(num_in_pair_channel)
+
+        self.proj_seq = Linear(c.num_channel, c.num_channel, init='linear')
 
         self.attention_module = InvariantPointAttention(c, num_in_pair_channel)
         self.attention_layer_norm = LayerNorm(c.num_channel)
@@ -156,11 +160,15 @@ class StructureModule(nn.Module):
         b, n, device = *batch['seq'].shape[:2], batch['seq'].device
 
         seq_act, static_pair_act = representations['seq'], representations['pair']
-
+        
+        seq_act = self.proj_init_seq_act(seq_act)
+        static_pair_act = self.proj_init_pair_act(pair_act)
+        
         seq_act = self.init_seq_layer_norm(seq_act)
         static_pair_act = self.init_pair_layer_norm(static_pair_act)
+
         initial_seq_act = seq_act
-        seq_act = self.proj_init_seq_act(seq_act)
+        seq_act = self.proj_seq(seq_act)
 
         outputs = dict(traj = [], sidechains=[])
 

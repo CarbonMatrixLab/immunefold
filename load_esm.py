@@ -156,8 +156,45 @@ def load(args):
 
         # ipa 
         ipa = struc.attention_module
-        prefix = 'trunk.structure_module.ipa'
+        prefix = 'trunk.structure_module.ipa.'
+        #_assign(ipa.trainable_point_weights, prefix + 'head_weights') 
+        _assign(ipa.proj_q_scalar, prefix + 'linear_q')
+        _assign(ipa.proj_kv_scalar, prefix + 'linear_kv')
+        _assign(ipa.proj_q_point_local, prefix + 'linear_q_points')
+        _assign(ipa.proj_kv_point_local, prefix + 'linear_kv_points')
+        _assign(ipa.proj_kv_scalar, prefix + 'linear_kv')
 
+        _assign(ipa.proj_pair, prefix + 'linear_b')
+        _assign(ipa.final_proj, prefix + 'linear_out')
+
+        _assign(struc.attention_layer_norm, 'trunk.structure_module.layer_norm_ipa')
+
+        tran = struc.transition_module
+        prefix = 'trunk.structure_module.transition.layers.'
+        _assign(tran[0], prefix + '0.linear_1')
+        _assign(tran[2], prefix + '0.linear_2')
+        _assign(tran[4], prefix + '0.linear_3')
+
+        # transition layer norm
+        _assign(struc.transition_layer_norm, 'trunk.structure_module.transition.layer_norm') 
+
+        # bb update
+        _assign(struc.affine_update, 'trunk.structure_module.bb_update.linear')
+
+
+        # sidechain
+        sc =  struc.sidechain_module.torsion_module
+        prefix = 'trunk.structure_module.angle_resnet.'
+        _assign(sc.proj_act[1], prefix + 'linear_in')
+        _assign(sc.proj_init_act[1], prefix + 'linear_initial')
+        _assign(sc.blocks[0].net[1], prefix + 'layers.0.linear_1')
+        _assign(sc.blocks[0].net[3], prefix + 'layers.0.linear_2')
+        _assign(sc.blocks[1].net[1], prefix + 'layers.1.linear_1')
+        _assign(sc.blocks[1].net[3], prefix + 'layers.1.linear_2')
+        _assign(sc.projection, prefix + 'linear_out')
+
+    def _load_recycling():
+        pass
 
     # load embedding
     _load_embedding()
@@ -170,7 +207,7 @@ def load(args):
     _load_structure_module()
 
     # load features in recycling
-    _load_structure_module()
+    _load_recycling()
 
     # load heads
 

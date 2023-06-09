@@ -5,13 +5,13 @@ local_world_size=1; python -m torch.distributed.launch\
     train.py  \
     --device gpu \
     --max_seq_len 256 \
-    --batch_size 2 \
+    --batch_size 1 \
     --num_epoch 1024 \
     --warmup_steps 0 \
     --flat_steps 16384 \
     --learning_rate 0.0003 \
     --lr_decay poly \
-    --prefix ./studies/15b_v7\
+    --prefix ./studies/t0\
     --model_features ./config/config_data_pair.json \
     --model_config ./config/config_model_pair.json \
     --train_name_idx ../abdata_2023/sabdab/train_cluster.idx \

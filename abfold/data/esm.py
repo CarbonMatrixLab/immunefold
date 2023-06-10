@@ -1,11 +1,7 @@
 import torch
-
-from esm.pretrained import load_model_and_alphabet_local
-from abfold.utils import default,exists
 from einops import rearrange
 
-ESM_EMBED_LAYER = 33
-ESM_EMBED_DIM = 1280
+from esm.pretrained import load_model_and_alphabet_local
 
 # adapted from https://github.com/facebookresearch/esm
 _extractor_dict = {}
@@ -13,17 +9,15 @@ _extractor_dict = {}
 class ESMEmbeddingExtractor:
     def __init__(self, model_path):
         self.model, alphabet = load_model_and_alphabet_local(model_path)
-        self.model.eval()
+        self.model.requires_grad_(False)
+        self.model.half()
+
         self.batch_converter = alphabet.get_batch_converter()
 
-
     def extract(self, label_seqs, repr_layer=None, return_attnw=False, device=None):
-        device = default(device, getattr(label_seqs, 'device', None))
+        device = label_seqs.device if device is None else device
 
         max_len = max([len(s) for l, s in label_seqs])
-
-        if repr_layer is None:
-            repr_layer = ESM_EMBED_LAYER
 
         if type(repr_layer) is int:
             repr_layer = [repr_layer]
@@ -49,7 +43,7 @@ class ESMEmbeddingExtractor:
 
         if model_path not in _extractor_dict:
             obj = ESMEmbeddingExtractor(model_path)
-            if exists(device):
+            if device is not None:
                 obj.model.to(device=device)
             _extractor_dict[model_path] = obj
         return _extractor_dict[model_path]

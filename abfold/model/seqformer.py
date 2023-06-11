@@ -85,7 +85,6 @@ class EmbeddingAndSeqformer(nn.Module):
         offset = rearrange(seq_pos, 'l -> () () l') - rearrange(seq_pos, 'l -> () l ()')
         rel_pos = torch.clip(offset + c.max_relative_feature, min=0, max=2*c.max_relative_feature) + 1
         pair_act = self.proj_rel_pos(rel_pos)
-        print('rel pair', pair_act.shape, pair_act)
 
         if c.abrep.enabled:
             abrep_embed = batch['abrep_embed']
@@ -119,12 +118,8 @@ class EmbeddingAndSeqformer(nn.Module):
                 pair_act = pair_act + self.prev_pair_norm(batch['prev_pair'])
 
         if c.recycle_pos and 'prev_pos' in batch:
-            p = self.proj_prev_pos(batch['prev_pos'])
-            print('prev pos', p.shape, p)
-            pair_act = pair_act + p
+            pair_act = pair_act + self.proj_prev_pos(batch['prev_pos'])
 
-        print('input s', seq_act.shape, seq_act)
-        print('input z', pair_act.shape, pair_act)
         seq_act, pair_act = self.seqformer(seq_act, pair_act, mask=mask, is_recycling=batch['is_recycling'])
 
         return seq_act, pair_act
@@ -511,8 +506,6 @@ class Seqformer(nn.Module):
                 seq_act, pair_act = checkpoint(block_fn, seq_act, pair_act)
             else:
                 seq_act, pair_act = block_fn(seq_act, pair_act)
-            print('seqformer it= ', it, 's', seq_act.shape, seq_act)
-            print('seqformer it= ', it, 'z', pair_act.shape, pair_act)
 
         return seq_act, pair_act
 

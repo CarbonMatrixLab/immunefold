@@ -177,9 +177,7 @@ class StructureModule(nn.Module):
 
         for fold_it in range(c.num_layer):
             is_last = (fold_it == (c.num_layer - 1))
-            print('before ipa=', fold_it, seq_act.shape, seq_act)
             seq_act = seq_act + self.attention_module(inputs_1d = seq_act, inputs_2d = static_pair_act, mask = batch['mask'], affine=(rotations, translations))
-            print('after ipa=', fold_it, seq_act.shape, seq_act)
             seq_act = F.dropout(seq_act, p = c.dropout, training=self.training)
             seq_act = self.attention_layer_norm(seq_act)
             
@@ -209,9 +207,6 @@ class StructureModule(nn.Module):
         outputs['representations'] = {'structure_module': seq_act}
 
         outputs['final_atom14_positions'] = outputs['sidechains'][-1]['atom_pos']
-        print('CA', outputs['final_atom14_positions'][:,:,1])
-        print('N', outputs['final_atom14_positions'][:,:,0])
-        print('C', outputs['final_atom14_positions'][:,:,2])
 
         outputs['final_atom_positions'] = batched_select(outputs['final_atom14_positions'], batch['residx_atom37_to_atom14'], batch_dims=2)
         outputs['final_affines'] = outputs['traj'][-1]

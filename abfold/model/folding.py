@@ -41,8 +41,7 @@ class InvariantPointAttention(nn.Module):
         self.config = c
         self.dist_epsilon = dist_epsilon
         
-    def forward(self, inputs_1d, inputs_2d, mask, affine):
-        rotations, translations = affine
+    def forward(self, inputs_1d, inputs_2d, mask, in_rigids):
         batch_size, num_residues, _ = inputs_1d.shape
 
         c = self.config
@@ -80,9 +79,10 @@ class InvariantPointAttention(nn.Module):
 
         kv_point_local = self.proj_kv_point_local(inputs_1d)
         kv_point_local = rearrange(kv_point_local, 'b l (r n) -> b l n r', r=3)
-        
-        q_point_global = torch.einsum('b l n r, b l d r -> b l n d', q_point_local, rotations) + translations
-        kv_point_global = torch.einsum('b l n r, b l d r -> b l n d', kv_point_local, rotations) + translations
+
+        # to global
+        q_point_local = r3.rigids_apply(in_rigids, q_point_local)
+        kv_point_local = r3.rigids_apply(in_rigids, kv_point_local)
         q_point_global = rearrange(q_point_global, 'b l (h n) r -> b l h n r', h=num_head)
         kv_point_global = rearrange(kv_point_global, 'b l (h n) r -> b l h n r', h=num_head)
         k_point_global, v_point_global = torch.split(kv_point_global, [num_point_qk, num_point_v], dim=-2)
@@ -105,16 +105,19 @@ class InvariantPointAttention(nn.Module):
 
         attn = F.softmax(attn_logits, dim=-1)
 
+        # results on scalar
         result_scalar = torch.matmul(attn, v_scalar)
         result_scalar = rearrange(result_scalar, 'b h l c -> b l (h c)')
         output_features = [result_scalar]
 
+        # results on points
         result_point_global = torch.einsum('b h i j, b j h n r -> b h i n r', attn, v_point_global)
         result_point_global = rearrange(result_point_global, 'b h l n r -> b l (h n) r')
-        result_point_local = r3.rigids_apply(r3.invert_rigids(affine), result_point_global)
+        result_point_local = r3.rigids_apply(r3.invert_rigids(backb_rigids), result_point_global)
         output_features.append(rearrange(result_point_local, 'b l n r -> b l (r n)'))
         output_features.append(torch.sqrt(torch.sum(torch.square(result_point_local), dim=-1) + self.dist_epsilon))
 
+        # results on input 2d
         result_attention_over_2d = torch.einsum('b h i j, b i j c -> b h i c', attn, inputs_2d)
         result_attention_over_2d = rearrange(result_attention_over_2d, 'b h l c -> b l (h c)')
         output_features.append(result_attention_over_2d)

@@ -11,5 +11,8 @@ python predict.py  \
 
 for i in `cat ${base}/test.idx`
 do
+    echo ${i}
     TMalign ${base}/pred/$i.pdb ${base}/esmfold/$i.pdb
+    cat ${base}/pred/$i.pdb | grep -w NH1 | head -n 1
+    cat ${base}/esmfold/$i.pdb | grep -w NH1 | head -n 1
 done

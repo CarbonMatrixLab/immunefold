@@ -52,7 +52,8 @@ class InvariantPointAttention(nn.Module):
         num_point_qk = c.num_point_qk
         num_scalar_v = c.num_scalar_v
         num_point_v = c.num_point_v
-
+        
+        # hyper settings
         scalar_variance = max(num_scalar_qk, 1) * 1.
         point_variance = max(num_point_qk, 1) * 9. / 2
 
@@ -61,7 +62,8 @@ class InvariantPointAttention(nn.Module):
         scalar_weights = np.sqrt(1.0 / (num_logit_terms * scalar_variance))
         point_weights = np.sqrt(1.0 / (num_logit_terms * point_variance))
         attention_2d_weights = np.sqrt(1.0 / (num_logit_terms))
-
+        
+        # calculation begins
         q_scalar = self.proj_q_scalar(inputs_1d)
         q_scalar = rearrange(q_scalar, 'b l (h c) -> b h l c', h = num_head)
 
@@ -74,20 +76,20 @@ class InvariantPointAttention(nn.Module):
         translations = rearrange(translations, 'b l r -> b l () r')
 
         q_point_local = self.proj_q_point_local(inputs_1d)
-        q_point_local = rearrange(q_point_local, 'b l (n r) -> b l n r', r=3)
+        q_point_local = rearrange(q_point_local, 'b l (r n) -> b l n r', r=3)
 
         kv_point_local = self.proj_kv_point_local(inputs_1d)
-        kv_point_local = rearrange(kv_point_local, 'b l (n r) -> b l n r', r=3)
-        k_point_local, v_point_local = torch.split(kv_point_local, [num_head * num_point_qk, num_head * num_point_v], dim=-2)
+        kv_point_local = rearrange(kv_point_local, 'b l (r n) -> b l n r', r=3)
         
         q_point_global = torch.einsum('b l n r, b l d r -> b l n d', q_point_local, rotations) + translations
-        k_point_global = torch.einsum('b l n r, b l d r -> b l n d', k_point_local, rotations) + translations
-        v_point_global = torch.einsum('b l n r, b l d r -> b l n d', v_point_local, rotations) + translations
+        kv_point_global = torch.einsum('b l n r, b l d r -> b l n d', kv_point_local, rotations) + translations
+        q_point_global = rearrange(q_point_global, 'b l (h n) r -> b l h n r', h=num_head)
+        kv_point_global = rearrange(kv_point_global, 'b l (h n) r -> b l h n r', h=num_head)
+        k_point_global, v_point_global = torch.split(kv_point_global, [num_point_qk, num_point_v], dim=-2)
         
-        dist2 = torch.sum(torch.square(rearrange(q_point_global, 'b i n r -> b i () n r') - rearrange(k_point_global, 'b j n r -> b () j n r')), dim=-1)
-        dist2 = torch.sum(rearrange(dist2, 'b i j (h n) -> b h i j n', h = num_head), dim=-1)
+        dist2 = torch.sum(torch.square(rearrange(q_point_global, 'b i h n r -> b i () h n r') - rearrange(k_point_global, 'b j h n r -> b () j h n r')), dim=[-1,-2])
         point_weights = -0.5 * point_weights * F.softplus(self.trainable_point_weights)
-        attn_qk_point = rearrange(point_weights, 'h -> h () ()') * dist2
+        attn_qk_point = rearrange(point_weights * dist2, 'b i j h -> b h i j')
 
         attn_logits = attn_qk_scalar + attn_qk_point
 
@@ -107,17 +109,16 @@ class InvariantPointAttention(nn.Module):
         result_scalar = rearrange(result_scalar, 'b h l c -> b l (h c)')
         output_features = [result_scalar]
 
-        v_point = rearrange(v_point_global, 'b l (h n) r -> b h l n r', h=num_head)
-        result_point_global = torch.einsum('b h i j, b h j n r -> b h i n r', attn, v_point)
+        result_point_global = torch.einsum('b h i j, b j h n r -> b h i n r', attn, v_point_global)
         result_point_global = rearrange(result_point_global, 'b h l n r -> b l (h n) r')
-        result_point_local = torch.einsum('b l n r, b l r d -> b l n d', result_point_global - translations, rotations.transpose(-1, -2))
-        output_features.append(rearrange(result_point_local, 'b l n r -> b l (n r)'))
+        result_point_local = r3.rigids_apply(r3.invert_rigids(affine), result_point_global)
+        output_features.append(rearrange(result_point_local, 'b l n r -> b l (r n)'))
         output_features.append(torch.sqrt(torch.sum(torch.square(result_point_local), dim=-1) + self.dist_epsilon))
 
         result_attention_over_2d = torch.einsum('b h i j, b i j c -> b h i c', attn, inputs_2d)
         result_attention_over_2d = rearrange(result_attention_over_2d, 'b h l c -> b l (h c)')
         output_features.append(result_attention_over_2d)
-
+        
         final_act = torch.cat(output_features, dim=-1)
 
         return self.final_proj(final_act)
@@ -163,7 +164,6 @@ class StructureModule(nn.Module):
         
         seq_act = self.proj_init_seq_act(seq_act)
         static_pair_act = self.proj_init_pair_act(static_pair_act)
-        
         seq_act = self.init_seq_layer_norm(seq_act)
         static_pair_act = self.init_pair_layer_norm(static_pair_act)
 
@@ -177,7 +177,6 @@ class StructureModule(nn.Module):
 
         for fold_it in range(c.num_layer):
             is_last = (fold_it == (c.num_layer - 1))
-
             seq_act = seq_act + self.attention_module(inputs_1d = seq_act, inputs_2d = static_pair_act, mask = batch['mask'], affine=(rotations, translations))
             seq_act = F.dropout(seq_act, p = c.dropout, training=self.training)
             seq_act = self.attention_layer_norm(seq_act)
@@ -185,8 +184,9 @@ class StructureModule(nn.Module):
             seq_act = seq_act + self.transition_module(seq_act)
             seq_act = F.dropout(seq_act, p = c.dropout, training=self.training)
             seq_act = self.transition_layer_norm(seq_act)
-
+            
             quaternion_update, translation_update = self.affine_update(seq_act).chunk(2, dim = -1)
+            
             quaternions = quat_affine.quat_precompose_vec(quaternions, quaternion_update)
             translations = r3.rigids_mul_vecs((rotations, translations), translation_update)
             rotations = quat_affine.quat_to_rot(quaternions)
@@ -210,5 +210,6 @@ class StructureModule(nn.Module):
 
         outputs['final_atom_positions'] = batched_select(outputs['final_atom14_positions'], batch['residx_atom37_to_atom14'], batch_dims=2)
         outputs['final_affines'] = outputs['traj'][-1]
+        ca = outputs['traj'][-1][1]
 
         return outputs

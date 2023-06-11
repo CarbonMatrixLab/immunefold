@@ -4,6 +4,15 @@ from einops import rearrange
 def rigids_op(rigids, op):
     return tuple(map(op, rigids))
 
+def rigids_apply(rigids, points):
+    rots, trans = rigids
+    assert (points.shape[-1] == 3) and (points.ndim - trans.ndim  in [0, 1])
+
+    if points.ndim == trans.ndim:
+        return trans + torch.einsum('... l r d, ... l d -> ... l r', rots, points)
+    else:
+        return rearrange(trans, '... d -> ... () d') + torch.einsum('... l r d, ... l m d -> ... l m r', rots, points)
+
 def rigids_mul_vecs(rigids, vecs):
     rots, trans = rigids
     assert vecs.ndim - trans.ndim  in [0, 1]

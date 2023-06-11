@@ -59,15 +59,8 @@ def load(args):
         _assign(seq_attn.pair_norm, prefix + 'pair_to_sequence.layernorm')
         _assign(seq_attn.proj_pair, prefix + 'pair_to_sequence.linear')
 
-        proj_q, proj_k, proj_v = torch.chunk(_get(prefix + 'seq_attention.proj.weight'), 3, dim=0)
-        _del(prefix + 'seq_attention.proj.weight')
-        _set(prefix + 'seq_attention.proj_q.weight', proj_q)
-        _set(prefix + 'seq_attention.proj_k.weight', proj_k)
-        _set(prefix + 'seq_attention.proj_v.weight', proj_v)
-        _assign(seq_attn.attn.proj_q, prefix + 'seq_attention.proj_q')
-        _assign(seq_attn.attn.proj_k, prefix + 'seq_attention.proj_k')
-        _assign(seq_attn.attn.proj_v, prefix + 'seq_attention.proj_v')
-
+        _assign(seq_attn.attn.proj_in, prefix + 'seq_attention.proj')
+        
         _assign(seq_attn.attn.gate, prefix + 'seq_attention.g_proj')
         _assign(seq_attn.attn.proj_out, prefix + 'seq_attention.o_proj')
 

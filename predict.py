@@ -71,7 +71,7 @@ def worker_load(rank, args):  # pylint: disable=redefined-outer-name
     model_config = checkpoint['model_config']
     model_state_dict = checkpoint['model_state_dict']
    
-    model_config.num_recycle = 0
+    #model_config.num_recycle = 0
     model = AbFold(config=model_config)
     model.load_state_dict(model_state_dict, strict=True)
     

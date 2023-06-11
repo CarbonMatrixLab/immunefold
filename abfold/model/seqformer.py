@@ -78,11 +78,11 @@ class EmbeddingAndSeqformer(nn.Module):
         seq, mask= batch['seq'], batch['mask']
 
         batch_size, num_residue = seq.shape[:2]
-        
-        seq_act = self.proj_aa_type(seq + 1)
+       
+        seq_act = self.proj_aa_type(seq)
        
         seq_pos = torch.arange(num_residue, device=seq.device)
-        offset = rearrange(seq_pos, 'l -> () l ()') - rearrange(seq_pos, 'l -> () () l')
+        offset = rearrange(seq_pos, 'l -> () () l') - rearrange(seq_pos, 'l -> () l ()')
         rel_pos = torch.clip(offset + c.max_relative_feature, min=0, max=2*c.max_relative_feature) + 1
         pair_act = self.proj_rel_pos(rel_pos)
 
@@ -99,23 +99,18 @@ class EmbeddingAndSeqformer(nn.Module):
                 pair_act = pair_act + pair_embed 
 
         if c.esm.enabled:
-            esm_embed = batch['esm_embed']
             layer_weights = F.softmax(self.esm_embed_weights, dim=-1)
+            esm_embed = batch['esm_embed'].to(dtype=layer_weights.dtype)
 
             esm_embed = torch.einsum('b l c n, n -> b l c', esm_embed, layer_weights)
+            
             esm_embed = self.proj_esm_embed(esm_embed)
             seq_act = seq_act + esm_embed
 
             if c.esm.pair_enabled and 'esm_embed_pair' in batch:
                 pair_embed = self.proj_esm_embed_pair(batch['esm_embed_pair'])
                 pair_act = pair_act + pair_embed
-
-        if c.antiberty.enabled:
-            antiberty_embed = self.proj_antiberty_embed(batch['antiberty_embed'])
-            if c.antiberty.norm:
-                antiberty_embed = self.antiberty_norm(antiberty_embed)
-            seq_act = seq_act + antiberty_embed
-
+        
         if c.recycle_features:
             if 'prev_seq' in batch:
                 seq_act = seq_act + self.prev_seq_norm(batch['prev_seq'])
@@ -123,16 +118,17 @@ class EmbeddingAndSeqformer(nn.Module):
                 pair_act = pair_act + self.prev_pair_norm(batch['prev_pair'])
 
         if c.recycle_pos and 'prev_pos' in batch:
-            prev_pseudo_beta = pseudo_beta_fn(batch['seq'], batch['prev_pos'], None)
-            dgram = dgram_from_positions(prev_pseudo_beta, **self.config.prev_pos)
-            pair_act = pair_act + self.proj_prev_pos(dgram)
-        
+            pair_act = pair_act + self.proj_prev_pos(batch['prev_pos'])
+
         seq_act, pair_act = self.seqformer(seq_act, pair_act, mask=mask, is_recycling=batch['is_recycling'])
 
         return seq_act, pair_act
 
 class Attention(nn.Module):
-    def __init__(self, input_dim, key_dim, value_dim, output_dim, num_head, gating=True, inp_kernels=None):
+    def __init__(self, input_dim, key_dim, value_dim, output_dim, num_head,
+            split_first=True, 
+            gating=True,
+            inp_kernels=None):
         super().__init__()
         assert key_dim % num_head == 0
         assert value_dim % num_head == 0
@@ -140,10 +136,16 @@ class Attention(nn.Module):
         self.key_dim, self.value_dim = key_dim, value_dim
 
         self.num_head = num_head
+        
+        self.split_first = split_first
 
-        self.proj_q = Linear(input_dim, key_dim, init='attn', bias=False)
-        self.proj_k = Linear(input_dim, key_dim, init='attn', bias=False)
-        self.proj_v = Linear(input_dim, value_dim, init='attn', bias=False)
+        if self.split_first:
+            self.proj_q = Linear(input_dim, key_dim, init='attn', bias=False)
+            self.proj_k = Linear(input_dim, key_dim, init='attn', bias=False)
+            self.proj_v = Linear(input_dim, value_dim, init='attn', bias=False)
+        else:
+            assert (key_dim == value_dim)
+            self.proj_in = Linear(input_dim, key_dim * 3, init='attn', bias=False)
         
         self.gating = gating
         if gating:
@@ -157,7 +159,7 @@ class Attention(nn.Module):
             self.inp_k = SpatialDepthWiseInception(key_dim // num_head, inp_kernels)
             self.inp_v = SpatialDepthWiseInception(value_dim // num_head, inp_kernels)
 
-    def forward(self, q_data, k_data, bias=None, k_mask=None):
+    def forward(self, q_data, k_data=None, bias=None, k_mask=None):
         """
         Arguments:
             q_data: (batch_size, N_seqs, N_queries, q_channel)
@@ -168,12 +170,17 @@ class Attention(nn.Module):
             (b s l c)
         """
         key_dim, value_dim = self.key_dim // self.num_head, self.value_dim // self.num_head
-
-        q = self.proj_q(q_data) 
-        k = self.proj_k(k_data)
-        v = self.proj_v(k_data)
-
-        q, k, v = map(lambda t: rearrange(t, 'b s l (h d) -> b s h l d', h = self.num_head), (q, k, v))
+        
+        if self.split_first:
+            assert (k_data is not None)
+            q = self.proj_q(q_data) 
+            k = self.proj_k(k_data)
+            v = self.proj_v(k_data)
+            q, k, v = map(lambda t: rearrange(t, 'b s l (h d) -> b s h l d', h = self.num_head), (q, k, v))
+        else:
+            assert (k_data is None)
+            t = rearrange(self.proj_in(q_data), "... l (h d) -> ... h l d", h=self.num_head)
+            q, k, v = torch.chunk(t, 3, dim=-1)
         
         if self.inp_kernels:
             q, k, v = map(lambda t: rearrange(t, 'b s h l d-> b (s h) l d'), (q, k, v))
@@ -184,7 +191,7 @@ class Attention(nn.Module):
         
         q = q* key_dim**(-0.5)
 
-        logits = torch.einsum('b s h q d, b s h k d -> b s h q k', q, k)
+        logits = torch.einsum('... h q d, ... h k d -> ... h q k', q, k)
 
         if bias is not None:
             logits = logits + rearrange(bias,  'b h q k -> b () h q k')
@@ -221,6 +228,7 @@ class SeqAttentionWithPairBias(nn.Module):
                 value_dim=num_in_seq_channel,
                 output_dim=num_in_seq_channel,
                 num_head=c.num_head,
+                split_first=False,
                 inp_kernels=c.inp_kernels)
 
         self.config = config
@@ -236,12 +244,12 @@ class SeqAttentionWithPairBias(nn.Module):
         """
         mask = rearrange(mask, 'b l -> b () l')
         seq_act = self.seq_norm(seq_act)
+        
         pair_act = self.pair_norm(pair_act)
-
         bias = rearrange(self.proj_pair(pair_act), 'b i j h -> b h i j')
-
+        
         seq_act = rearrange(seq_act, 'b l c -> b () l c')
-        seq_act = self.attn(q_data=seq_act, k_data=seq_act, bias=bias, k_mask=mask)
+        seq_act = self.attn(q_data=seq_act, bias=bias, k_mask=mask)
         seq_act = rearrange(seq_act, 'b s l c -> (b s) l c')
         return seq_act
 
@@ -468,7 +476,6 @@ class SeqformerIteration(nn.Module):
         
         seq_act = dropout_fn(
                 seq_act, self.seq_attn(seq_act, pair_act, seq_mask), c.seq_attention_with_pair_bias)
-
         seq_act = seq_act + self.seq_transition(seq_act, seq_mask)
         
         pair_act = pair_act + self.outer_product_mean(seq_act, seq_mask)
@@ -493,7 +500,7 @@ class Seqformer(nn.Module):
         self.blocks = nn.ModuleList([SeqformerIteration(c.seqformer, c.seq_channel, c.pair_channel) for _ in range(c.seqformer_num_block)])
 
     def forward(self, seq_act, pair_act, mask, is_recycling=True):
-        for block in self.blocks:
+        for it, block in enumerate(self.blocks):
             block_fn = functools.partial(block, seq_mask=mask)
             if self.training and not is_recycling:
                 seq_act, pair_act = checkpoint(block_fn, seq_act, pair_act)

@@ -8,7 +8,9 @@ from torch import nn
 from abfold.common import residue_constants
 from abfold.model.seqformer import EmbeddingAndSeqformer
 from abfold.model.head import HeaderBuilder
-from abfold.utils import *
+from abfold.model.common_modules import (
+        pseudo_beta_fn_v2,
+        dgram_from_positions)
 
 class AbFoldIteration(nn.Module):
     def __init__(self, config):
@@ -64,21 +66,24 @@ class AbFold(nn.Module):
         batch_size, num_residues, device = *seq.shape[:2], seq.device
 
         def get_prev(ret):
+            prev_pseudo_beta = pseudo_beta_fn_v2(batch['seq'], ret['heads']['folding']['final_atom_positions'])
+            prev_disto_bins = dgram_from_positions(prev_pseudo_beta, **self.config.embeddings_and_seqformer.prev_pos)
+            
             new_prev = {
-                    'prev_pos': ret['heads']['folding']['final_atom_positions'].detach(),
+                    'prev_pos': prev_disto_bins.detach(),
                     'prev_seq': ret['representations']['seq'].detach(),
                     'prev_pair': ret['representations']['pair'].detach()
                     }
             return new_prev
             
-        if c.num_recycle > 0:
-            emb_config = c.embeddings_and_seqformer
-            prev = {
-                    'prev_pos': torch.zeros([batch_size, num_residues, c.num_atom, 3], device=device),
-                    'prev_seq': torch.zeros([batch_size, num_residues, emb_config.seq_channel], device=device),
-                    'prev_pair': torch.zeros([batch_size, num_residues, num_residues, emb_config.pair_channel], device=device)
-            }
-            batch.update(prev)
+        # Just to adapt to ESMFOLD
+        emb_config = c.embeddings_and_seqformer
+        prev = {
+                'prev_pos': torch.zeros([batch_size, num_residues, num_residues], device=device, dtype=torch.int64),
+                'prev_seq': torch.zeros([batch_size, num_residues, emb_config.seq_channel], device=device),
+                'prev_pair': torch.zeros([batch_size, num_residues, num_residues, emb_config.pair_channel], device=device)
+        }
+        batch.update(prev)
         
         if self.training:
             num_recycle = random.randint(0, c.num_recycle)
@@ -89,6 +94,7 @@ class AbFold(nn.Module):
             batch.update(is_recycling=True)
             for i in range(num_recycle):
                 ret = self.impl(batch, compute_loss=False)
+            
                 prev = get_prev(ret)
                 batch.update(prev)
         

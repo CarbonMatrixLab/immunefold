@@ -37,9 +37,9 @@
 	 "recycle_features" :true,
          "recycle_pos" : true,
          "prev_pos" : {
-            "min_bin" : 3.25,
+            "min_bin" : 3.375,
             "num_bins" : 15,
-            "max_bin" : 20.75
+            "max_bin" : 21.375
          },
          "seqformer" : {
             "seq_attention_with_pair_bias" : {

@@ -195,13 +195,12 @@ residue_atom_renaming_swaps = {
     'TYR': {'CD1': 'CD2', 'CE1': 'CE2'},
 }
 
-def load_rigid_schema():
-    new_schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-            'old_rigid_schema.json')
-    with open(new_schema_path) as f:
+def load_default_rigids():
+    schema_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),'default_rigids.json')
+    with open(schema_file) as f:
         return json.load(f)
 
-rigid_group_atom_positions = load_rigid_schema()
+rigid_group_atom_positions = load_default_rigids()
 
 restype_atom14_to_atom37 = np.zeros([21, 14], dtype=np.int32)  # mapping (restype, atom14) --> atom37
 restype_atom37_to_atom14 = np.zeros([21, 37], dtype=np.int32)  # mapping (restype, atom37) --> atom14
@@ -286,7 +285,7 @@ def _make_rigid_group_constants():
         # psi-frame to backbone
         mat = _make_rigid_transformation_4x4(
                 ex=atom_positions['C'] - atom_positions['CA'],
-                ey=atom_positions['N'] - atom_positions['CA'],
+                ey=atom_positions['CA'] - atom_positions['N'],
                 translation=atom_positions['C'])
         restype_rigid_group_default_frame[restype, 3, :, :] = mat
 
@@ -365,7 +364,6 @@ def _make_ambiguous():
             restype_atom14_is_ambiguous[restype_idx, target_index] = 1
 
 _make_ambiguous()
-
 
 # structure constants
 ca_ca = 3.80209737096

@@ -18,7 +18,6 @@ def rigids_mul_vecs(rigids, vecs):
     assert vecs.ndim - trans.ndim  in [0, 1]
 
     if vecs.ndim == trans.ndim:
-        #return trans + torch.einsum('... r d, ... d -> ... r', rots, vecs)
         return trans + torch.squeeze(torch.matmul(rots, vecs[..., None]), dim=-1) 
     else:
         return rearrange(trans, '... d -> ... () d') + torch.einsum('... r d, ... m d -> ... m r', rots, vecs)

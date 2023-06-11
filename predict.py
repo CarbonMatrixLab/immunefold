@@ -35,7 +35,7 @@ def worker_setup(rank, log_queue, args):  # pylint: disable=redefined-outer-name
             logging.info('torch.distributed.init_process_group: rank=%d@%d, world_size=%d', rank, args.gpu_list[rank] if args.gpu_list else 0, world_size)
             torch.distributed.init_process_group(
                     backend='nccl',
-                    init_method=f'file://{args.ipc_file}',
+                    #init_method=f'file://{args.ipc_file}',
                     rank=rank, world_size=world_size)
 
 def worker_cleanup(args):  # pylint: disable=redefined-outer-name
@@ -65,7 +65,7 @@ def worker_load(rank, args):  # pylint: disable=redefined-outer-name
     #    config = json.loads(f.read())
     #    config = ml_collections.ConfigDict(config)
 
-    checkpoint = torch.load(args.model, map_location=args.map_location)
+    checkpoint = torch.load(args.model, map_location='cpu')
     #model = checkpoint['model']
     print(checkpoint.keys())
     model_config = checkpoint['model_config']
@@ -129,7 +129,7 @@ def evaluate(rank, log_queue, args):
     device = worker_device(rank, args)
     name_idx = []
     with open(args.name_idx) as f:
-        name_idx = [x.strip() for x in f][:1]
+        name_idx = [x.strip() for x in f]
     
     test_loader = dataset.load(
         data_dir=args.data_dir,
@@ -214,16 +214,18 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--gpu_list', type=int, nargs='+')
+    parser.add_argument('--gpu_list', type=int, nargs='+', default=[0])
     parser.add_argument('--device', type=str, choices=['gpu', 'cpu', 'mlu'], default='gpu')
-    parser.add_argument('--ipc_file', type=str, default='./test.ipc')
+    
     parser.add_argument('--model', type=str, required=True)
     parser.add_argument('--model_features', type=str, required=True)
-    parser.add_argument('--map_location', type=str, default=None)
+    
     parser.add_argument('--name_idx', type=str, required=True)
     parser.add_argument('--data_dir', type=str, required=True)
     parser.add_argument('--output_dir', type=str, required=True)
+    
     parser.add_argument('--batch_size', type=int, default=1)
+    
     parser.add_argument('--mode', type=str, choices=['ig', 'general'], required=True)
     parser.add_argument('--verbose', action='store_true')
     args = parser.parse_args()

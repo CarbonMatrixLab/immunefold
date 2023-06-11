@@ -24,13 +24,13 @@ def make_npz(code, chain_id, str_seq, seq2struc, structure, args):
     assert n > 0
     coords = np.zeros((n, 14, 3), dtype=np.float32)
     coord_mask = np.zeros((n, 14), dtype=bool)
-    
+
     for seq_idx, residue_at_position in seq2struc.items():
         if not residue_at_position.is_missing and residue_at_position.hetflag == ' ':
             residue_id = (residue_at_position.hetflag,
                     residue_at_position.position.residue_number,
                     residue_at_position.position.insertion_code)
-            
+
             residue = structure[residue_id]
 
             if residue.resname not in residue_constants.restype_name_to_atom14_names:
@@ -42,13 +42,13 @@ def make_npz(code, chain_id, str_seq, seq2struc, structure, args):
                 atom14idx = res_atom14_list.index(atom.id)
                 coords[seq_idx, atom14idx] = atom.get_coord()
                 coord_mask[seq_idx, atom14idx]= True
-    
+
     feature = dict(seq=str_seq,
             coords=coords,
             coord_mask=coord_mask)
 
     np.savez(os.path.join(args.output_dir, f'{code}_{chain_id}.npz'), **feature)
-    
+
     return
 
 def save_header(header, file_path):
@@ -61,18 +61,18 @@ def process(code, full_code, args):
     try:
         parsing_result = mmcif_parse(file_id=code, mmcif_file=mmcif_file)
     except PDBConstructionException as e:
-        logger.warning('mmcif_parse: %s {%s}', mmcif_file, str(e))
+        logging.warning('mmcif_parse: %s {%s}', mmcif_file, str(e))
     except Exception as e:
-        logger.warning('mmcif_parse: %s {%s}', mmcif_file, str(e))
+        logging.warning('mmcif_parse: %s {%s}', mmcif_file, str(e))
         raise Exception('...') from e
     if not parsing_result.mmcif_object:
         return
     if args.header_dir:
-        save_header(parsing_result.mmcif_object.header, 
+        save_header(parsing_result.mmcif_object.header,
                 os.path.join(args.header_dir, f'{code}.json'))
 
     chain_ids = [c.split('_')[1] for c in full_code]
-    struc = parsing_result.mmcif_object.structure 
+    struc = parsing_result.mmcif_object.structure
     for chain_id in chain_ids:
         if chain_id not in parsing_result.mmcif_object.chain_to_seqres:
             continue
@@ -81,13 +81,13 @@ def process(code, full_code, args):
         try:
             make_npz(code, chain_id, str_seq, seqres_to_structure, struc[chain_id], args)
         except Exception as e:
-            logger.error(f'make structure: {mmcif_file} {chain_id} {str(e)}')
+            logging.error(f'make structure: {mmcif_file} {chain_id} {str(e)}')
 
 def main(args):
-    # names = parse_list(args.name_idx)
+    names = parse_list(args.name_idx)
 
     func = functools.partial(process, args=args)
-    
+
     with mp.Pool(args.cpus) as p:
         p.starmap(func, parse_list(args.name_idx))
 

@@ -22,9 +22,11 @@ def make_pred_coords(pdb_file, heavy_len, light_len, alg_type):
     parser = PDBParser(QUIET=1)
     model = parser.get_structure('pdb', pdb_file)[0]
 
-    if alg_type not in ['igfold']:
+    if alg_type in ['omegafold']:
         residues = list(model.get_residues())
         residues = residues[:heavy_len] + residues[heavy_len+sep_pad_num:heavy_len+sep_pad_num+light_len]
+    elif alg_type in ['esmfold']:
+        residues = list(model['A'].get_residues()) + list(model['B'].get_residues())
     else:
         residues = list(model['H'].get_residues()) + list(model['L'].get_residues())
 
@@ -49,7 +51,7 @@ def make_one(name, gt_npz_file, pred_file, alg_type):
 
     pred_ca = make_pred_coords(pred_file, len(str_heavy_seq), len(str_light_seq), alg_type)
 
-    print(gt_ca.shape, pred_ca.shape, cdr_def.shape)
+    print(name, gt_ca.shape, pred_ca.shape, cdr_def.shape)
     print(len(str_heavy_seq), len(str_light_seq))
     assert (gt_ca.shape[0] == pred_ca.shape[0] and gt_ca.shape[0] == cdr_def.shape[0])
 
@@ -92,8 +94,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-c', '--name_idx', type=str, required=True)
-    parser.add_argument('-t', '--alg_type', type=str, choices=['igfold', 'esmfold'],
-            default='esmfold')
+    parser.add_argument('-t', '--alg_type', type=str, choices=['igfold', 'esmfold', 'omegafold', 'abfold'], required=True)
     parser.add_argument('-g', '--gt_dir', type=str, required=True)
     parser.add_argument('-p', '--pred_dir', type=str, required=True)
     parser.add_argument('-o', '--output', type=str, required=True)

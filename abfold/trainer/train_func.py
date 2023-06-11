@@ -21,11 +21,9 @@ except ImportError:
 
 from abfold.trainer import dataset
 from abfold.data.utils import (
-    embedding_get_labels,
     pdb_save,
     weights_from_file)
 from abfold.model import AbFold, MetricDict
-from abfold.trainer.utils import CheckpointManager
 from abfold.common.ab_utils import calc_ab_metrics
 from abfold.trainer.optimizer import OptipizerInverseSquarRootDecay as Optimizer
 from abfold.trainer.loss import Loss
@@ -148,6 +146,7 @@ def train(args):
     random.seed(args.random_seed)
     np.random.seed(args.random_seed)
 
+    # dataset
     data_type, feats, train_loader, eval_loader = setup_dataset(args)
 
     # model
@@ -167,26 +166,38 @@ def train(args):
             optim = ct.to(optim, torch.device('mlu'))
     else:
         optim = Adam(model.parameters(), lr=args.learning_rate)
-
-    global_step = 0
-    if args.checkpoint_every > 0:
-        checkpoint_manager = CheckpointManager(
-            os.path.join(args.prefix, 'checkpoints'),
-            max_to_keep=args.checkpoint_max_to_keep,
-            model=model,
-            optimizer=optim)
-        global_step = checkpoint_manager.restore_or_initialize() + 1
     
+    # loss
     loss_object = Loss(config.loss)
-    
+   
+    # checkpoint
+    def _save_checkpoint(it):
+        ckpt_dir = os.path.join(args.prefix, 'checkpoints')
+        if not os.path.exists():
+            os.path.makedirs(ckpt_dir)
+        
+        ckpt_file = os.path.join(ckpt_dir, f'epoch_{it}.ckpt')
+        
+        saved_model = model.module if isinstance(model, nn.parallel.DistributedDataParallel) else model
+
+        torch.save(dict(
+            model_state_dict = saved_model.state_dict(),
+            optim_state_dict = optim.state_dict(),
+            model_config = config.model,
+            train_config = config,
+            feature_config = feats,
+            args = args,
+            train_steps = optim.cur_step), ckpt_file)
+
+    # setup train
     model.train()
 
     for epoch in range(args.num_epoch):
         # drop the reminder for each epoch
         running_loss = MetricDict()
         optim.zero_grad()
+
         for it, batch in enumerate(train_loader):
-            global_step += 1
             jt = (it + 1) % args.num_gradient_accumulate_step
             
             batch_start_time = time.time()
@@ -231,19 +242,16 @@ def train(args):
             logging.info(f'{it} batch time {batch_end_time - batch_start_time} s.')
 
         # Save a checkpoint every epoch
-        if args.world_rank == 0:
-            checkpoint_manager.save(epoch, prefix='epoch_')
-            #torch.save(dict(feats=feats,
-            #    model=model.module if isinstance(model, nn.parallel.DistributedDataParallel) else model),
-            #    os.path.join(args.prefix, 'checkpoints', f'model_epoch_{epoch}.pth'))
+        if args.world_rank == 0 and (epoch + 1) % args.checkpoint_it == 0:
+            _save_checkpoint(epoch)
 
-        if eval_loader is not None:
-            model.eval()
-            if data_type == 'general':
-                evaluate_general_data(model, loss_object, eval_loader, epoch, args)
-            elif data_type == 'ig':
-                evaluate_ig_data(model, loss_object, eval_loader, epoch, args)
-            model.train()
+            if eval_loader is not None:
+                model.eval()
+                if data_type == 'general':
+                    evaluate_general_data(model, loss_object, eval_loader, epoch, args)
+                elif data_type == 'ig':
+                    evaluate_ig_data(model, loss_object, eval_loader, epoch, args)
+                model.train()
 
 def evaluate_ig_data(model, loss_object, eval_loader, epoch, args):
     with torch.no_grad():

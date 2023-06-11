@@ -5,7 +5,7 @@ local_world_size=1; python -m torch.distributed.launch\
     train.py  \
     --device gpu \
     --max_seq_len 256 \
-    --batch_size 1 \
+    --batch_size 2 \
     --num_epoch 1024 \
     --warmup_steps 0 \
     --flat_steps 16384 \

@@ -13,7 +13,6 @@ import ml_collections
 import torch
 from torch import nn
 from torch.optim import Adam
-from torch.utils.tensorboard import SummaryWriter
 try:
     import torch_mlu
     import torch_mlu.core.mlu_model as ct

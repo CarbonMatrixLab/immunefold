@@ -21,7 +21,7 @@ from abfold.model import r3
 def create_batch_from_pdb(pdb_file):
     parser = PDBParser()
     structure = parser.get_structure('id', pdb_file)
-    residues = [x for x in structure.get_residues()]
+    residues = [x for x in structure.get_residues() if x.id[0] == ' ']
     num_residue = len(residues)
 
     atom37_coords = np.zeros((num_residue, 37, 3), dtype=np.float32)
@@ -72,6 +72,18 @@ def print_batch(batch, desc = None):
             print(k, v.shape)
     print()
 
+def check_residue(resname_1code, gt_residue, pred_residue, atom_mask):
+    resname_3code = residue_constants.restype_1to3[resname_1code]
+    atom_names = residue_constants.restype_name_to_atom14_names[resname_3code]
+    
+    for p, g, m, n in zip(gt_residue, pred_residue, atom_mask, atom_names):
+        if not m:
+            continue
+        rmsd = torch.sqrt(torch.sum(torch.square(p-g)))
+        print(n, rmsd)
+        print('reconstr', p)
+        print('original', g)
+
 def main():
     batch = create_batch_from_pdb(sys.argv[1])
     print_batch(batch, desc='create batch')
@@ -100,6 +112,9 @@ def main():
     for i in range(pred_atom14_pos.shape[1]):
         rmsd = torch.sqrt(torch.sum(torch.sum(torch.square(pred_atom14_pos[0,i] - gt_atom14_pos[0,i]), dim=-1) * gt_atom14_mask[0,i]) / (1e-8 + torch.sum(gt_atom14_mask[0,i])))
         print('rmsd', i, rmsd, torch.sum(gt_atom14_mask[0, i]))
+        if rmsd > 1.0:
+            print('gt ', i, batch['seq'][0][i])
+            check_residue(batch['seq'][0][i], pred_atom14_pos[0, i], gt_atom14_pos[0, i], gt_atom14_mask[0, i])
         
     rmsd = torch.sqrt(torch.sum(torch.sum(torch.square(pred_atom14_pos[0] - gt_atom14_pos[0]), dim=-1) * gt_atom14_mask[0]) / (1e-8 + torch.sum(gt_atom14_mask[0])))
     print('total rmsd', i, rmsd, torch.sum(gt_atom14_mask[0, i]))

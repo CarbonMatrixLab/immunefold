@@ -51,8 +51,6 @@ def make_one(name, gt_npz_file, pred_file, alg_type):
 
     pred_ca = make_pred_coords(pred_file, len(str_heavy_seq), len(str_light_seq), alg_type)
 
-    print(name, gt_ca.shape, pred_ca.shape, cdr_def.shape)
-    print(len(str_heavy_seq), len(str_light_seq))
     assert (gt_ca.shape[0] == pred_ca.shape[0] and gt_ca.shape[0] == cdr_def.shape[0])
 
     ab_metrics = calc_ab_metrics(gt_ca, pred_ca, ca_mask, cdr_def)

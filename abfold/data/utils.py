@@ -39,7 +39,7 @@ def pad_for_batch(items, batch_length, dtype):
     elif dtype == 'msk':
         # Mask sequences (1 if present, 0 if absent) are padded with 0s
         for msk in items:
-            z = torch.zeros(batch_length - msk.shape[0], dtype=msk.dtype)
+            z = torch.zeros(batch_length - msk.shape[0], dtype=msk.dtype, device=msk.device)
             c = torch.cat((msk, z), dim=0)
             batch.append(c)
     elif dtype == "crd":

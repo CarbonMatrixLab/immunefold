@@ -8,13 +8,13 @@ _extractor_dict = {}
 
 class ESMEmbeddingExtractor:
     def __init__(self, model_path):
-        self.model, alphabet = load_model_and_alphabet_local(model_path)
+        self.model, self.alphabet = load_model_and_alphabet_local(model_path)
         self.model.requires_grad_(False)
         self.model.half()
 
-        self.batch_converter = alphabet.get_batch_converter()
+        self.batch_converter = self.alphabet.get_batch_converter()
 
-    def extract(self, label_seqs, repr_layer=None, return_attnw=False, device=None):
+    def extract(self, label_seqs, repr_layer=None, return_attnw=False, device=None, linker_mask=None):
         device = label_seqs.device if device is None else device
 
         max_len = max([len(s) for l, s in label_seqs])
@@ -25,6 +25,9 @@ class ESMEmbeddingExtractor:
         with torch.no_grad():
             batch_labels, batch_strs, batch_tokens = self.batch_converter(label_seqs)
             batch_tokens = batch_tokens.to(device=device)
+            
+            if linker_mask is not None:
+                batch_tokens = torch.where(linker_mask, self.alphabet.padding_idx, batch_tokens)
             
             results = self.model(batch_tokens, repr_layers=repr_layer, need_head_weights=return_attnw)
             single = [results['representations'][r][:,1 : 1 + max_len] for r in repr_layer]

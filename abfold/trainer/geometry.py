@@ -34,6 +34,11 @@ def atom37_to_frames(aatype, all_atom_positions, all_atom_mask):
 
   gt_exists = torch.logical_and(torch.all(gt_atoms_exist, dim=-1), group_exists)
 
+  rots = torch.tile(torch.eye(3, dtype=gt_frames[0].dtype, device=gt_frames[0].device), (8, 1, 1))
+  rots[..., 0, 0, 0] = -1
+  rots[..., 0, 2, 2] = -1
+  gt_frames = r3.rigids_mul_rots(gt_frames, rots)
+
   residx_rigidgroup_is_ambiguous = batched_select(torch.tensor(residue_constants.restype_rigidgroup_is_ambiguous, device=device), aatype)
   residx_rigidgroup_ambiguity_rot = batched_select(torch.tensor(residue_constants.restype_rigidgroup_rots, device=aatype.device), aatype)
   
@@ -135,7 +140,6 @@ def atom37_to_torsion_angles(aatype, all_atom_pos, all_atom_mask):
         torch.all(all_atom_mask[:, :, 0:3], dim=-1),# this N, CA, C
         all_atom_mask[:, :, 4])  # this O
 
-
     # Compute the table of chi angle indices. Shape: [restypes, chis=4, atoms=4].
     # Select atoms to compute chis. Shape: [batch, num_res, chis=4, atoms=4].
     atom_indices = batched_select(torch.tensor(residue_constants.chi_angles_atom_indices, device=device), aatype)
@@ -186,13 +190,15 @@ def atom37_to_torsion_angles(aatype, all_atom_pos, all_atom_mask):
         torch.sum(torch.square(torsion_angles_sin_cos), dim=-1, keepdims=True)
         + 1e-8)
     
+    torsion_angles_sin_cos = torsion_angles_sin_cos * torch.tensor([1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0], device=device)[...,None]
+
     chi_is_ambiguous = batched_select(
         torch.tensor(residue_constants.chi_pi_periodic, device=device), aatype)
     mirror_torsion_angles = torch.cat(
         [torch.ones([num_batch, num_res, 3], device=device),
          1.0 - 2.0 * chi_is_ambiguous], dim=-1)
     alt_torsion_angles_sin_cos = (
-        torsion_angles_sin_cos * mirror_torsion_angles[:, :, :, None])
+        torsion_angles_sin_cos * mirror_torsion_angles[...,None])
     
     return {
         'torsion_angles_sin_cos': torsion_angles_sin_cos,  # (B, N, 7, 2)

@@ -1,6 +1,6 @@
 [
   ["make_to_device", {
-    "fields":["seq", "mask", "chain_id", "atom14_gt_positions", "atom14_gt_exists", "region_embed"],
+    "fields":["seq", "mask", "chain_id", "atom14_gt_positions", "atom14_gt_exists", "region_embed", "residx"],
     "device":"%(device)s"}],
   ["make_restype_atom_constants", {}],
   ["make_atom14_alt_gt_positions", {}],

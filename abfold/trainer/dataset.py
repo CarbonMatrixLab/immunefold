@@ -115,7 +115,7 @@ class IgStructureDataset(StructureDataset):
 
     def get_structure_label_npz(self, name):
         num_atoms = 14
-        
+
         struc = np.load(os.path.join(self.data_dir, name + '.npz'))
         coords = torch.from_numpy(np.concatenate([
             struc.get('heavy_coords', np.zeros((0, num_atoms, 3), dtype=np.float32)),
@@ -134,7 +134,7 @@ class IgStructureDataset(StructureDataset):
 
         str_heavy_numbering = str(struc.get('heavy_numbering', ''))
         str_light_numbering = str(struc.get('light_numbering', ''))
-        
+
         aa_mapping = residue_constants.restype_order_with_x
 
         heavy_seq = torch.tensor(str_seq_to_index(str_heavy_seq), dtype=torch.int64)
@@ -149,9 +149,11 @@ class IgStructureDataset(StructureDataset):
             torch.ones(len(str_light_seq), dtype=torch.bool)], dim=-1)
 
         seq = torch.cat([heavy_seq, light_seq], dim=-1)
+        residx = torch.cat([torch.arange(len(str_heavy_seq)), torch.arange(len(str_light_seq)) + residue_constants.residue_chain_index_offset], dim=0)
 
         ret = dict(name=name,
                 seq=seq,
+                residx=residx,
                 mask = mask,
                 str_heavy_seq = str_heavy_seq, str_light_seq=str_light_seq,
                 heavy_seq = heavy_seq, light_seq = light_seq,
@@ -163,11 +165,16 @@ class IgStructureDataset(StructureDataset):
         return ret
 
     def collate_fn(self, batch, feat_builder=None):
-        fields = ('name', 'mask', 'str_heavy_seq', 'str_light_seq',
-                'seq', 'heavy_seq', 'light_seq',
-                'atom14_gt_positions', 'atom14_gt_exists', 'str_heavy_numbering', 'str_light_numbering', 'cdr_def', 'region_embed', 'chain_id')
+        fields = (
+            'name', 'mask',
+            'str_heavy_seq', 'str_light_seq',
+            'seq', 'heavy_seq', 'light_seq',
+            'atom14_gt_positions', 'atom14_gt_exists',
+            'str_heavy_numbering', 'str_light_numbering',
+            'cdr_def', 'region_embed',
+            'chain_id', 'residx')
         name, mask, str_heavy_seq, str_light_seq, seq, heavy_seq, light_seq, atom14_gt_positions, atom14_gt_exists,\
-                str_heavy_numbering, str_light_numbering, cdr_def, region_embed, chain_id =\
+                str_heavy_numbering, str_light_numbering, cdr_def, region_embed, chain_id, residx =\
                 list(zip(*[[b[k] for k in fields] for b in batch]))
 
         max_heavy_len = max(tuple(len(s) for s in str_heavy_seq))
@@ -187,6 +194,8 @@ class IgStructureDataset(StructureDataset):
         padded_chain_id = pad_for_batch(chain_id, max_full_len, 'msk')
         padded_region_embed  = pad_for_batch(region_embed, max_full_len, 'msk')
 
+        padded_residx = pad_for_batch(residx, max_full_len, 'msk')
+
         ret = dict(
 		name=name,
                 seq=padded_seqs,
@@ -202,6 +211,7 @@ class IgStructureDataset(StructureDataset):
                 cdr_def=padded_cdr_def,
                 chain_id=padded_chain_id,
                 region_embed = padded_region_embed,
+                residx = padded_residx,
                 data_type = 'ig'
                 )
 
@@ -246,7 +256,7 @@ class GeneralStructureDataset(StructureDataset):
     def _get_name_idx(self):
         if self.reduce_num is None:
             return self.name_idx
-        
+
         if self.epoch_count == 0:
             random.seed(2022 + self.epoch_count)
             random.shuffle(self.name_idx)
@@ -261,7 +271,7 @@ class GeneralStructureDataset(StructureDataset):
             random.shuffle(self.name_idx)
             
         logging.info(f'general data: epoch_count={self.epoch_count} reduce_num={self.reduce_num} all={len(self.name_idx)} start={start} end={end} ex={",".join([str(x) for x in self.name_idx[:4]])}')
-        
+
         self.epoch_count += 1
         
         return self.name_idx[start:end]

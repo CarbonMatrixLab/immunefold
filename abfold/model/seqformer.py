@@ -80,9 +80,10 @@ class EmbeddingAndSeqformer(nn.Module):
         batch_size, num_residue = seq.shape[:2]
        
         seq_act = self.proj_aa_type(seq)
-       
-        seq_pos = torch.arange(num_residue, device=seq.device)
-        offset = rearrange(seq_pos, 'l -> () () l') - rearrange(seq_pos, 'l -> () l ()')
+
+        seq_pos = batch.get('residx', torch.tile(torch.arange(num_residue, device=seq.device), [batch_size, 1]))
+
+        offset = rearrange(seq_pos, 'b l -> b () l') - rearrange(seq_pos, 'b l -> b l ()')
         rel_pos = torch.clip(offset + c.max_relative_feature, min=0, max=2*c.max_relative_feature) + 1
         pair_act = self.proj_rel_pos(rel_pos)
 

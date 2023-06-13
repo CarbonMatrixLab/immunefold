@@ -72,8 +72,6 @@ class InvariantPointAttention(nn.Module):
 
         attn_qk_scalar = torch.einsum('b h i c, b h j c -> b h i j', q_scalar * scalar_weights, k_scalar)
 
-        translations = rearrange(translations, 'b l r -> b l () r')
-
         q_point_local = self.proj_q_point_local(inputs_1d)
         q_point_local = rearrange(q_point_local, 'b l (r n) -> b l n r', r=3)
 
@@ -81,8 +79,8 @@ class InvariantPointAttention(nn.Module):
         kv_point_local = rearrange(kv_point_local, 'b l (r n) -> b l n r', r=3)
 
         # to global
-        q_point_local = r3.rigids_apply(in_rigids, q_point_local)
-        kv_point_local = r3.rigids_apply(in_rigids, kv_point_local)
+        q_point_global = r3.rigids_apply(in_rigids, q_point_local)
+        kv_point_global = r3.rigids_apply(in_rigids, kv_point_local)
         q_point_global = rearrange(q_point_global, 'b l (h n) r -> b l h n r', h=num_head)
         kv_point_global = rearrange(kv_point_global, 'b l (h n) r -> b l h n r', h=num_head)
         k_point_global, v_point_global = torch.split(kv_point_global, [num_point_qk, num_point_v], dim=-2)
@@ -113,7 +111,7 @@ class InvariantPointAttention(nn.Module):
         # results on points
         result_point_global = torch.einsum('b h i j, b j h n r -> b h i n r', attn, v_point_global)
         result_point_global = rearrange(result_point_global, 'b h l n r -> b l (h n) r')
-        result_point_local = r3.rigids_apply(r3.invert_rigids(backb_rigids), result_point_global)
+        result_point_local = r3.rigids_apply(r3.invert_rigids(in_rigids), result_point_global)
         output_features.append(rearrange(result_point_local, 'b l n r -> b l (r n)'))
         output_features.append(torch.sqrt(torch.sum(torch.square(result_point_local), dim=-1) + self.dist_epsilon))
 
@@ -180,7 +178,7 @@ class StructureModule(nn.Module):
 
         for fold_it in range(c.num_layer):
             is_last = (fold_it == (c.num_layer - 1))
-            seq_act = seq_act + self.attention_module(inputs_1d = seq_act, inputs_2d = static_pair_act, mask = batch['mask'], affine=(rotations, translations))
+            seq_act = seq_act + self.attention_module(inputs_1d = seq_act, inputs_2d = static_pair_act, mask = batch['mask'], in_rigids=(rotations, translations))
             seq_act = F.dropout(seq_act, p = c.dropout, training=self.training)
             seq_act = self.attention_layer_norm(seq_act)
             

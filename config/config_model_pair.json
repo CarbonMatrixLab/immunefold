@@ -107,7 +107,7 @@
          "distogram" : {
             "first_break" : 2.3125,
             "last_break" : 21.6875,
-            "num_bins" : 37
+            "num_bins" : 64
          },
          "structure_module" : {
             "num_layer" : 8,

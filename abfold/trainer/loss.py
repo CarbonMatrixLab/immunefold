@@ -31,12 +31,12 @@ class Loss(nn.Module):
         outputs['loss'] = sum(v.weight * outputs[k]['loss'] for k, v in self.config.items())
         return outputs
 
-def collect_loss(fn):
+def registry_loss(fn):
     global _loss_fn
     _loss_fn[fn.__name__] = fn
     return fn
 
-@collect_loss
+@registry_loss
 def distogram_loss(batch, value, config):
     """Log loss of a distogram."""
     c = config
@@ -58,7 +58,7 @@ def distogram_loss(batch, value, config):
         dim=-1,
         keepdims=True)
 
-    true_bins = torch.sum(dist2 > sq_breaks, axis=-1)
+    true_bins = torch.sum(dist2 > sq_breaks, dim=-1)
 
     errors = -torch.sum(F.one_hot(true_bins, logits.shape[-1]) * F.log_softmax(logits, dim=-1), dim=-1)
 
@@ -69,7 +69,7 @@ def distogram_loss(batch, value, config):
         (1e-6 + torch.sum(square_mask)))
     return dict(loss=avg_error, true_dist=torch.sqrt(dist2+1e-6))
 
-@collect_loss
+@registry_loss
 def folding_loss(batch, value, config):
     c = config
     assert 'folding' in value['heads']

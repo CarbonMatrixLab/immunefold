@@ -206,6 +206,10 @@ def load(args):
         _assign(r.prev_pair_norm, 'trunk.recycle_z_norm')
         _assign(r.proj_prev_pos, 'trunk.recycle_disto')
 
+    def _load_heads():
+        dist = abfold.impl.distogram
+        _assign(dist.proj, 'distogram_head')
+
     # load embedding
     _load_embedding()
 
@@ -220,6 +224,7 @@ def load(args):
     _load_recycling()
 
     # load heads
+    _load_heads()
 
     # check
     print('assigned params')

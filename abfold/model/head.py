@@ -27,19 +27,16 @@ class DistogramHead(nn.Module):
         c = config
 
         self.breaks = torch.linspace(c.first_break, c.last_break, steps=c.num_bins-1)
-        self.net = nn.Sequential(
-                LayerNorm(num_in_channel),
-                Linear(num_in_channel, c.num_bins, init='final'))
+        self.proj = Linear(num_in_channel, c.num_bins, init='final')
 
         self.config = config
 
     def forward(self, headers, representations, batch):
         x = representations['pair']
-        x = (x + rearrange(x, 'b i j c -> b j i c')) * 0.5
-        logits = self.net(x)
+        x = self.proj(x)
+        logits = (x + rearrange(x, 'b i j c -> b j i c')) * 0.5
         breaks = self.breaks.to(logits.device)
         return dict(logits=logits, breaks=breaks)
-
 
 class FoldingHead(nn.Module):
     """Head to predict 3d struct.

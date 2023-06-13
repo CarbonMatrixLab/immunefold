@@ -19,14 +19,11 @@ try:
 except ImportError:
     pass
 
-from abfold.trainer import dataset
-from abfold.data.utils import (
-    pdb_save,
-    weights_from_file)
 from abfold.model import AbFold, MetricDict
-from abfold.common.ab_utils import calc_ab_metrics
+from abfold.trainer import dataset
 from abfold.trainer.optimizer import OptipizerInverseSquarRootDecay as Optimizer
 from abfold.trainer.loss import Loss
+from abfold.common.ab_utils import calc_ab_metrics
 
 def get_device(args):
     if args.device == 'gpu':
@@ -78,22 +75,17 @@ def setup_dataset(args):
         data_world_size = local_world_size_general * num_nodes
         data_rank = node_rank * local_world_size_general + local_rank - local_world_size_ig
 
-    if data_type == 'ig':
-        #train_name_idx = list(pd.read_csv(train_name_idx_file, sep='\t', header=None, names=['name'])['name'])
-        train_name_idx = dataset.parse_cluster(train_name_idx_file)
-        is_cluster_idx = True 
-    else:
-        train_name_idx = dataset.parse_cluster(train_name_idx_file)
-        is_cluster_idx = True
+    train_name_idx = dataset.parse_cluster(train_name_idx_file)
+    is_cluster_idx = True
 
     if data_type == 'general' and data_world_size < local_world_size:
         with open(args.train_name_idx) as f:
             num_ig = len(f.readlines)
-        ig_batch_size = num_nodes * local_world_size_ig * args.batch_size * args.num_gradient_accumulate_step
+        ig_batch_size = num_nodes * local_world_size_ig * args.batch_size * args.gradient_accumulation_it
         num_batch = num_ig // ig_batch_size
-        train_reduce_num = num_batch * num_nodes * local_world_size_general * args.batch_size * args.num_gradient_accumulate_step
+        train_reduce_num = num_batch * num_nodes * local_world_size_general * args.batch_size * args.gradient_accumulation_it
     else:
-        full_batch_size = data_world_size * args.batch_size * args.num_gradient_accumulate_step
+        full_batch_size = data_world_size * args.batch_size * args.gradient_accumulation_it
         train_reduce_num = len(train_name_idx) - len(train_name_idx) % full_batch_size
     
     # feature
@@ -173,7 +165,7 @@ def train(args):
     # checkpoint
     def _save_checkpoint(it):
         ckpt_dir = os.path.join(args.prefix, 'checkpoints')
-        if not os.path.exists():
+        if not os.path.exists(ckpt_dir):
             os.path.makedirs(ckpt_dir)
         
         ckpt_file = os.path.join(ckpt_dir, f'epoch_{it}.ckpt')
@@ -193,18 +185,17 @@ def train(args):
     model.train()
 
     for epoch in range(args.num_epoch):
-        # drop the reminder for each epoch
         running_loss = MetricDict()
         optim.zero_grad()
 
         for it, batch in enumerate(train_loader):
-            jt = (it + 1) % args.num_gradient_accumulate_step
+            jt = (it + 1) % args.gradient_accumulation_it
             
             batch_start_time = time.time()
 
             r = model(batch=batch, compute_loss=True)
             loss_results = loss_object(r, batch)
-            loss = loss_results['loss'] / args.num_gradient_accumulate_step
+            loss = loss_results['loss'] / args.gradient_accumulation_it
             
             loss.backward()
             #torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -233,7 +224,7 @@ def train(args):
                 optim.zero_grad()
                 
                 for k, v in running_loss.items():
-                    v = v / args.num_gradient_accumulate_step
+                    v = v / args.gradient_accumulation_it
                     log_metric_dict(v, epoch, it, prefix=f'Loss/train@{k}')
 
                 running_loss = MetricDict()
@@ -245,13 +236,13 @@ def train(args):
         if args.world_rank == 0 and (epoch + 1) % args.checkpoint_it == 0:
             _save_checkpoint(epoch)
 
-            if eval_loader is not None:
-                model.eval()
-                if data_type == 'general':
-                    evaluate_general_data(model, loss_object, eval_loader, epoch, args)
-                elif data_type == 'ig':
-                    evaluate_ig_data(model, loss_object, eval_loader, epoch, args)
-                model.train()
+        if eval_loader is not None and (epoch + 1) % args.eval_it == 0:
+            model.eval()
+            if data_type == 'general':
+                evaluate_general_data(model, loss_object, eval_loader, epoch, args)
+            elif data_type == 'ig':
+                evaluate_ig_data(model, loss_object, eval_loader, epoch, args)
+            model.train()
 
 def evaluate_ig_data(model, loss_object, eval_loader, epoch, args):
     with torch.no_grad():

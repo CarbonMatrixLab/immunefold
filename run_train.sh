@@ -9,9 +9,10 @@ local_world_size=1; python -m torch.distributed.launch\
     --num_epoch 1024 \
     --warmup_steps 0 \
     --flat_steps 16384 \
-    --learning_rate 0.0003 \
+    --learning_rate 0.0001 \
     --lr_decay poly \
     --prefix ./studies/t0\
+    --restore_model_ckpt ../abdata_2023/esm2/abfold_from_esmfold.ckpt \
     --model_features ./config/config_data_pair.json \
     --model_config ./config/config_model_pair.json \
     --train_name_idx ../abdata_2023/sabdab/train_cluster.idx \

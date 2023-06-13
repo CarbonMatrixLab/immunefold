@@ -146,9 +146,16 @@ def train(args):
         config = json.loads(f.read())
         config = ml_collections.ConfigDict(config)
 
+    if args.restore_model_ckpt is not None:
+        ckpt = torch.load(args.restore_model_ckpt)
+        model = AbFold(config=ckpt['model_config'])
+        model.load_state_dict(ckpt['model_state_dict'], strict=True)
+    else:
+        model = AbFold(config = config.model)
+
     logging.info('AbFold.config: %s', config)
 
-    model = setup_model(AbFold(config=config.model), args)
+    model = setup_model(model, args)
 
     # optimizer
     if args.lr_decay:

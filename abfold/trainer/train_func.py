@@ -24,6 +24,7 @@ from abfold.trainer import dataset
 from abfold.trainer.optimizer import OptipizerInverseSquarRootDecay as Optimizer
 from abfold.trainer.loss import Loss
 from abfold.common.ab_utils import calc_ab_metrics
+from abfold.trainer import model_align
 
 def get_device(args):
     if args.device == 'gpu':
@@ -150,21 +151,26 @@ def train(args):
         ckpt = torch.load(args.restore_model_ckpt)
         model = AbFold(config=ckpt['model_config'])
         model.load_state_dict(ckpt['model_state_dict'], strict=True)
+
+        trainable_variables = model_align.setup_model(model, config.align)
+        print('variables', len(trainable_variables))
     else:
         model = AbFold(config = config.model)
+        trainable_variables = model.parameters()
 
     logging.info('AbFold.config: %s', config)
+
 
     model = setup_model(model, args)
 
     # optimizer
     if args.lr_decay:
-        optim = Optimizer(model.parameters(),
+        optim = Optimizer(trainable_variables,
                 base_lr=args.learning_rate, warmup_steps=args.warmup_steps, flat_steps=args.flat_steps, decay_type=args.lr_decay)
         if args.device == 'mlu':
             optim = ct.to(optim, torch.device('mlu'))
     else:
-        optim = Adam(model.parameters(), lr=args.learning_rate)
+        optim = Adam(trainable_variables, lr=args.learning_rate)
     
     # loss
     loss_object = Loss(config.loss)

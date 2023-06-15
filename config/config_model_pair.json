@@ -133,13 +133,30 @@
          "metric" : {}
       }
    },
+   "align":{
+	 "aa_embed": {
+	   "enable": false
+	 },
+	 "pos_embed":{
+	   "enable": false
+	 },
+         "seqformer": {
+	   "enabled": true,
+	   "align_layers": [44, 45, 46, 47]
+	 },
+         "structure_module": {
+	   "enable": false
+	 }
+   },
    "loss" : {
       "distogram" : {
+	 "enabled": true,
          "config" : {},
          "loss_fn" : "distogram_loss",
-         "weight" : 0.3
+         "weight" : 0.0
       },
       "folding" : {
+	 "enabled":true,
          "config" : {
 	    "use_full_atom":true,
             "chi_weight" : 0.2,
@@ -175,7 +192,7 @@
                "clamp_distance" : 100.0
 	    },
             "violation_tolerance_factor" : 12,
-            "structural_violation_loss_weight" : 0
+            "structural_violation_loss_weight" : 0.0
          },
          "loss_fn" : "folding_loss",
          "weight" : 1.0

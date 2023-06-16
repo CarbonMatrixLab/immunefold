@@ -153,7 +153,7 @@
 	 "enabled": true,
          "config" : {},
          "loss_fn" : "distogram_loss",
-         "weight" : 0.0
+         "weight" : 0.3
       },
       "folding" : {
 	 "enabled":true,

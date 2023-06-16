@@ -5,7 +5,7 @@ from abfold.model.features import take1st, _feats_fn
 from abfold.model.r3 import rigids_from_3_points
 from abfold.utils import default,exists
 from abfold.common import residue_constants
-from abfold.model.common_modules import pseudo_beta_fn_v2 as pseudo_beta_fn
+from abfold.model.common_modules import pseudo_beta_fn
 from abfold.model.utils import batched_select
 
 from abfold.trainer import geometry

@@ -47,39 +47,6 @@ def batched_select(params, indices, dim=None, batch_dims=0):
         
     return torch.reshape(batch_params, output_shape)
 
-def guard_batch(x, mask, input_lens, sep=10):
-    is_1d = (x.ndim == 3)
-    
-    new_mask = torch.stack([
-        torch.cat([F.pad(mask[i,:l], [0,sep], value=0), mask[i,l:]], dim=0) for i, l in enumerate(input_lens)],dim=0)
-    
-    if is_1d:
-        new_x = torch.stack([
-            torch.cat([F.pad(x[i,:l], [0,0,0,sep], value=0.), x[i,l:]], dim=0) for i, l in enumerate(input_lens)],dim=0)
-    else:
-        new_x = torch.stack([
-            torch.cat([
-                F.pad(torch.cat([F.pad(x[i,:l,:l], [0,0,0,sep], value=0.), x[i,:l,l:]], dim=1), [0,0,0,0,0,sep], value=0.),
-                torch.cat([F.pad(x[i,l:,:l], [0,0,0,sep], value=0.), x[i,l:,l:]], dim=1)], dim=0) for i, l in enumerate(input_lens)], dim=0)
-
-
-    return new_x, new_mask
-
-def unguard_batch(x, mask, input_lens, sep=10):
-    is_1d = (x.ndim == 3)
-    
-    if is_1d:
-        new_x = torch.stack([
-            torch.cat([x[i,:l], x[i,l+sep:]], dim=0) for i, l in enumerate(input_lens)], dim=0)
-    else:
-        new_x = torch.stack([
-            torch.cat([
-                torch.cat([x[i,:l,:l], x[i,:l,l+sep:]], dim=1),
-                torch.cat([x[i,l+sep:,:l], x[i,l+sep:,l+sep:]], dim=1)], dim=0) for i, l in enumerate(input_lens)], dim=0)
-
-    
-    return new_x
-
 def lddt(pred_points, true_points, points_mask, cutoff=15.):
     """Computes the lddt score for a batch of coordinates.
         https://academic.oup.com/bioinformatics/article/29/21/2722/195896

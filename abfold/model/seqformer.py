@@ -10,13 +10,8 @@ from einops import rearrange
 from abfold.model.common_modules import(
         Linear,
         LayerNorm,
-        apply_dropout,
-        pseudo_beta_fn,
-        dgram_from_positions)
+        apply_dropout,)
 from abfold.common import residue_constants
-from abfold.model.utils import(
-        guard_batch,
-        unguard_batch)
 
 class EmbeddingAndSeqformer(nn.Module):
     def __init__(self, config):

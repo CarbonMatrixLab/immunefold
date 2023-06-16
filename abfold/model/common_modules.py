@@ -68,7 +68,9 @@ def pseudo_beta_fn_v2(aatype, all_atom_positions, all_atom_masks=None):
     CB = -0.58273431 * a + 0.56802827 * b - 0.54067466 * c + CA
     
     if all_atom_masks is not None:
-        raise NotImplementedError('mask inferences in not implemented in pseudo_beta_fn_v2')
+        CB_mask = torch.all(
+                torch.stack([all_atom_masks[...,n_idx], all_atom_masks[...,ca_idx], all_atom_masks[...,c_idx]], dim=-1), dim=-1)
+        return CB, CB_mask
 
     return CB
 

@@ -118,13 +118,7 @@ class LMDataset(torch.utils.data.IterableDataset):
 
         return ret
 
-def load(fasta_file,
-        feats=None, 
-        is_training=True,
-        max_seq_len=None, reduce_num=None,
-        rank=None, world_size=1,
-        is_cluster_idx=False,
-        **kwargs):
+def load(fasta_file, feats=None, is_training=True, max_seq_len=None, reduce_num=None, rank=None, world_size=1, is_cluster_idx=False, **kwargs):
 
     dataset = LMDataset(fasta_file, max_seq_len=max_seq_len, reduce_num=reduce_num, is_cluster_idx=is_cluster_idx)
 

@@ -5,7 +5,7 @@ import resource
 
 import torch
 
-from abfold.trainer.train_func import train
+from abfold.trainer.train_lm_func import train
 
 class WorkerLogFilter(logging.Filter):
     def __init__(self, rank=-1):
@@ -74,26 +74,20 @@ if __name__ == '__main__':
     parser.add_argument('--prefix', type=str, default='./studies')
     
     # dataset
-    parser.add_argument('--train_name_idx', type=str, required=True)
     parser.add_argument('--train_data', type=str, required=True)
     
     parser.add_argument('--general_data_gpu_ratio', type=float, default=0.0)
     
     parser.add_argument('--max_seq_len', type=int, default=None)
-    parser.add_argument('--train_general_name_idx', type=str)
-    parser.add_argument('--train_general_data', type=str)
 
-    parser.add_argument('--eval_name_idx', type=str)
     parser.add_argument('--eval_data', type=str)
-    parser.add_argument('--eval_general_name_idx', type=str)
-    parser.add_argument('--eval_general_data', type=str)
     
     # random seed
     parser.add_argument('--random_seed', type=int, default=2023)
     
     # model 
     parser.add_argument('--model_features', type=str, required=True)
-    parser.add_argument('--model_config', type=str, required=True)
+    #parser.add_argument('--model_config', type=str, required=True)
     parser.add_argument('--restore_model_ckpt', type=str)
 
     # batch

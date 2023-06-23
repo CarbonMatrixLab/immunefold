@@ -149,11 +149,11 @@ def train(args):
     for epoch in range(args.num_epoch):
         running_loss = MetricDict()
         optim.zero_grad()
+        
+        batch_start_time = time.time()
 
         for it, batch in enumerate(train_loader):
             jt = (it + 1) % args.gradient_accumulation_it
-            
-            batch_start_time = time.time()
 
             r = model(tokens = batch['seq'])
             loss = loss_func(batch, r)
@@ -173,12 +173,13 @@ def train(args):
                 
                 for k, v in running_loss.items():
                     #v = v / args.gradient_accumulation_it
-                    log_metric_dict(v, epoch, it, prefix=f'Loss/train@{k}')
+                    log_metric_dict(v, epoch, optim.cur_step, prefix=f'Loss/train@{k}')
 
                 running_loss = MetricDict()
             
-            batch_end_time = time.time()
-            logging.info(f'{it} batch time {batch_end_time - batch_start_time} s.')
+                batch_end_time = time.time()
+                logging.info(f'{optim.cur_step} batch time {batch_end_time - batch_start_time} s.')
+                batch_start_time = time.time()
 
         # Save a checkpoint every epoch
         if args.world_rank == 0 and (epoch + 1) % args.checkpoint_it == 0:

@@ -113,17 +113,9 @@ def train(args):
     model = setup_model(model, args)
 
     # optimizer
-    if args.lr_decay:
-        optim = Optimizer(
-                trainable_variables,
-                base_lr=args.learning_rate, warmup_steps=args.warmup_steps, flat_steps=args.flat_steps, decay_type=args.lr_decay)
-        if args.device == 'mlu':
-            optim = ct.to(optim, torch.device('mlu'))
-    else:
-        optim = Adam(trainable_variables, lr=args.learning_rate)
+    optim = Optimizer(trainable_variables, args.learning_rate, decay_type='linear', decay_steps=args.decay_steps, min_lr=1e-5,
+            betas=(0.9, 0.98), eps=1e-8, weight_decay=0.01)
     
-    # loss
-   
     # checkpoint
     def _save_checkpoint(it):
         ckpt_dir = os.path.join(args.prefix, 'checkpoints')

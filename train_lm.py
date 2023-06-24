@@ -100,9 +100,9 @@ if __name__ == '__main__':
     parser.add_argument('--eval_it', type=int, default=1000)
 
     # laerning rate
-    parser.add_argument('--lr_decay', type=str, choices=[None, 'half', 'poly'], default=None)
     parser.add_argument('--warmup_steps', type=int, default=0)
     parser.add_argument('--flat_steps', type=int, default=0)
+    parser.add_argument('--decay_steps', type=int)
     parser.add_argument('--learning_rate', type=float, default='3e-4')
 
     # distributed training

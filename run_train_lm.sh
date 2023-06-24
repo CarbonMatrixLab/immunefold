@@ -8,11 +8,11 @@ local_world_size=1; python -m torch.distributed.launch\
     --batch_size 2\
     --num_epoch 1024 \
     --warmup_steps 0 \
-    --flat_steps 16384 \
+    --flat_steps 0 \
+    --decay_steps 20000 \
     --learning_rate 0.0001 \
     --gradient_accumulation_it 128 \
-    --lr_decay poly \
-    --prefix ./studies/lm_acc128\
+    --prefix ./studies/lm_acc128_v1 \
     --restore_model_ckpt ../abdata_2023/esm2/esm2_t36_3B_UR50D.pt \
     --model_features ./config/config_data_lm.json \
     --train_data ../oas_data/oas0.95/oas0.95_repr.shuffled.fasta  

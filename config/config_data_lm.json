@@ -1,0 +1,5 @@
+[
+  ["make_to_device", {
+    "fields":["seq", "label_seq", "label_mask"],
+    "device":"%(device)s"}]
+]

@@ -31,8 +31,9 @@ done
 local_world_size=4
 nnodes=4
 
-output_dir=./studies/3b_v1
+output_dir=./studies/esm_last8_v1
 batch_size=2
+general_data_gpu_ratio=0.0
 
 cd /home/bingxing2/home/scx6023/zhang/AbFold2
 
@@ -47,15 +48,17 @@ python -m torch.distributed.launch\
     --batch_size ${batch_size} \
     --num_epoch 1024 \
     --warmup_steps 1000 \
-    --flat_steps 20000 \
-    --learning_rate 0.0003 \
+    --flat_steps 10000 \
+    --learning_rate 0.0001 \
     --lr_decay poly \
+    --checkpoint_it 10 \
     --prefix ${output_dir} \
+    --restore_model_ckpt ../abdata_2023/esm2/abfold_from_esmfold.ckpt \
     --model_features ./config/config_data_pair.json \
     --model_config ./config/config_model_pair.json \
     --train_name_idx ../abdata_2023/sabdab/train_cluster.idx \
     --train_data ../abdata_2023/sabdab/npz \
-    --general_data_gpu_ratio 0. \
+    --general_data_gpu_ratio ${general_data_gpu_ratio} \
     --train_general_name_idx ../data_2023/pdb50_v2/clean_bc40_cluster.idx \
     --train_general_data ../data_2023/pdb50_v2/data   >>  train_rank0_${SLURM_JOB_ID}.log 2>&1 &a
 
@@ -75,15 +78,17 @@ do	echo node ${r}
         --batch_size ${batch_size} \
         --num_epoch 1024 \
         --warmup_steps 1000 \
-        --flat_steps 20000 \
-        --learning_rate 0.0003 \
+        --flat_steps 10000 \
+        --learning_rate 0.0001 \
         --lr_decay poly \
+        --checkpoint_it 10 \
         --prefix ${output_dir} \
+        --restore_model_ckpt ../abdata_2023/esm2/abfold_from_esmfold.ckpt \
         --model_features ./config/config_data_pair.json \
         --model_config ./config/config_model_pair.json \
         --train_name_idx ../abdata_2023/sabdab/train_cluster.idx \
         --train_data ../abdata_2023/sabdab/npz \
-        --general_data_gpu_ratio 0.0 \
+        --general_data_gpu_ratio ${general_data_gpu_ratio} \
         --train_general_name_idx ../data_2023/pdb50_v2/clean_bc40_cluster.idx \
         --train_general_data ../data_2023/pdb50_v2/data  >> train_rank${rr}_${SLURM_JOB_ID}.log 2>&1 &
 done

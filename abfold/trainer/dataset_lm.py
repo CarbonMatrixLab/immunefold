@@ -13,6 +13,7 @@ from abfold.model.features import FeatureBuilder
 
 logger = logging.getLogger(__file__)
 
+
 class LMDataset(torch.utils.data.IterableDataset):
 
     def __init__(self, fasta_file, chain_pad_num = 28, max_seq_len=None, reduce_num=None, is_cluster_idx=False):
@@ -36,8 +37,9 @@ class LMDataset(torch.utils.data.IterableDataset):
 
         with open(self.fasta_file) as f:
             for line in f:
-                ret = self.parse_seq_line(line)
-                yield ret
+                ret, cdrh3_len = self.parse_seq_line(line)
+                if cdrh3_len <= self.max_seq_len and cdrh3_len > 0:
+                    yield ret
     
     def _create_train_sample(self, str_seq):
         L = len(str_seq)
@@ -65,11 +67,26 @@ class LMDataset(torch.utils.data.IterableDataset):
 
     def parse_seq_line(self, line):
 
-        items = line.strip().split(':')
+        if self.is_cluster_idx:
+            content = np.random.choice(line.strip().split())
+        else:
+            content = line
+
+        items = content.strip().split(':')
+
         chunk_id, heavy_contig, light_config, heavy_str_seq, light_str_seq, heavy_seq_numbering, light_seq_numbering = items
 
         seq, label_seq, label_mask = self._create_train_sample(heavy_str_seq)
         str_seq = heavy_str_seq
+
+        def _cdrh3_len(x):
+            b, e = 105, 117
+            cnt = 0
+            for it in x.split(','):
+                n = int(it) if it[-1].isnumeric() else int(it[:-1])
+                cnt += (n >= b and n <= e)
+
+            return cnt
 
         is_multi = np.random.uniform() > 0.2
         if is_multi:
@@ -91,7 +108,7 @@ class LMDataset(torch.utils.data.IterableDataset):
                 label_mask = torch.tensor(label_mask),
                 )
 
-        return ret
+        return ret, _cdrh3_len(heavy_seq_numbering)
 
     def collate_fn(self, batch, feat_builder=None):
         fields = ('str_seq', 'seq', 'label_seq', 'label_mask')

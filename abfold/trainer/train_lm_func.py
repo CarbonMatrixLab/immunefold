@@ -37,9 +37,9 @@ def setup_model(model, args):
     model = nn.parallel.DistributedDataParallel(
         model,
         device_ids=[args.local_rank], 
-        output_device=args.local_rank,)
+        output_device=args.local_rank,
+        find_unused_parameters=False)
     model._set_static_graph()
-    #find_unused_parameters=True)
     
     logging.info('wrap model with nn.parallel.DistributedDataParallel class')
     return model
@@ -60,7 +60,7 @@ def setup_dataset(args):
     train_loader = dataset.load(
             fasta_file = args.train_data,
             feats=feats, max_seq_len=args.max_seq_len,
-            is_cluster_idx = False,
+            is_cluster_idx = True,
             rank = args.world_rank, world_size = args.world_size,
             batch_size = args.batch_size)
 

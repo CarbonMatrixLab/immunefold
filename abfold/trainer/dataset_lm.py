@@ -16,7 +16,7 @@ logger = logging.getLogger(__file__)
 
 class LMDataset(torch.utils.data.IterableDataset):
 
-    def __init__(self, fasta_file, chain_pad_num = 28, max_seq_len=None, reduce_num=None, is_cluster_idx=False):
+    def __init__(self, fasta_file, chain_pad_num = 28, max_seq_len=None, reduce_num=None, is_cluster_idx=False, max_steps = None):
         super().__init__()
 
         self.fasta_file = fasta_file
@@ -32,14 +32,19 @@ class LMDataset(torch.utils.data.IterableDataset):
 
         self.epoch_count = 0
 
+        self.max_steps = max_steps
+
     def __iter__(self):
         max_seq_len = self.max_seq_len
 
-        with open(self.fasta_file) as f:
-            for line in f:
-                ret, cdrh3_len = self.parse_seq_line(line)
-                if cdrh3_len <= self.max_seq_len and cdrh3_len > 0:
-                    yield ret
+        step = 0
+        while step < self.max_steps:
+            with open(self.fasta_file) as f:
+                for line in f:
+                    ret, cdrh3_len = self.parse_seq_line(line)
+                    if cdrh3_len <= self.max_seq_len and cdrh3_len > 0:
+                        step += 1
+                        yield ret
     
     def _create_train_sample(self, str_seq):
         L = len(str_seq)
@@ -135,9 +140,9 @@ class LMDataset(torch.utils.data.IterableDataset):
 
         return ret
 
-def load(fasta_file, feats=None, is_training=True, max_seq_len=None, reduce_num=None, rank=None, world_size=1, is_cluster_idx=False, **kwargs):
+def load(fasta_file, feats=None, is_training=True, max_seq_len=None, reduce_num=None, rank=None, world_size=1, is_cluster_idx=False, max_steps=None, **kwargs):
 
-    dataset = LMDataset(fasta_file, max_seq_len=max_seq_len, reduce_num=reduce_num, is_cluster_idx=is_cluster_idx)
+    dataset = LMDataset(fasta_file, max_seq_len=max_seq_len, reduce_num=reduce_num, is_cluster_idx=is_cluster_idx, max_steps=max_steps)
 
     if rank is not None:
         dataset = DistributedDataset(dataset, rank, world_size)

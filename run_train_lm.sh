@@ -14,5 +14,6 @@ local_world_size=1; python -m torch.distributed.launch\
     --gradient_accumulation_it 4 \
     --prefix ./studies/lm_acc128_v1 \
     --restore_model_ckpt ../abdata_2023/esm2/esm2_t36_3B_UR50D.pt \
+    --model_config ./config/config_model_lm.json \
     --model_features ./config/config_data_lm.json \
     --train_data ../oas_data/oas0.90/clu90_seq.fasta 

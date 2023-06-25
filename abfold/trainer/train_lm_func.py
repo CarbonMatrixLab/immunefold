@@ -62,6 +62,7 @@ def setup_dataset(args):
             feats=feats, max_seq_len=args.max_seq_len,
             is_cluster_idx = True,
             rank = args.world_rank, world_size = args.world_size,
+            max_steps = (args.decay_steps * args.world_size),
             batch_size = args.batch_size)
 
     logging.info(f'world_rank={args.world_rank} data_world_size={args.world_size}')
@@ -91,24 +92,21 @@ def train(args):
     feats, train_loader, eval_loader = setup_dataset(args)
 
     # model
-    #with open(args.model_config, 'r', encoding='utf-8') as f:
-    #    config = json.loads(f.read())
-    #    config = ml_collections.ConfigDict(config)
+    with open(args.model_config, 'r', encoding='utf-8') as f:
+        config = json.loads(f.read())
+        config = ml_collections.ConfigDict(config)
 
     if args.restore_model_ckpt is not None:
         ckpt = torch.load(args.restore_model_ckpt)
-        model, _ = load_model_and_alphabet_local(args.restore_model_ckpt)
+        model, _, esm_cfg = load_model_and_alphabet_local(args.restore_model_ckpt)
 
         model.embed_tokens.requires_grad = False
 
-        for k in range(16):
+        for k in range(config.finetuning.num_frozen_layers):
             for p in model.layers[k].parameters():
                 p.requires_grad = False
 
         trainable_variables = [p for p in model.parameters() if p.requires_grad]
-    else:
-        model = AbFold(config = config.model)
-        trainable_variables = model.parameters()
     
     model = setup_model(model, args)
 
@@ -122,15 +120,14 @@ def train(args):
         if not os.path.exists(ckpt_dir):
             os.path.makedirs(ckpt_dir)
         
-        ckpt_file = os.path.join(ckpt_dir, f'epoch_{it}.ckpt')
+        ckpt_file = os.path.join(ckpt_dir, f'step_{it}.ckpt')
         
         saved_model = model.module if isinstance(model, nn.parallel.DistributedDataParallel) else model
 
         torch.save(dict(
             model_state_dict = saved_model.state_dict(),
             optim_state_dict = optim.state_dict(),
-            model_config = config.model,
-            train_config = config,
+            esm_config = esm_cfg,
             feature_config = feats,
             args = args,
             train_steps = optim.cur_step), ckpt_file)
@@ -173,9 +170,8 @@ def train(args):
                 logging.info(f'{optim.cur_step} batch time {batch_end_time - batch_start_time} s.')
                 batch_start_time = time.time()
 
-        # Save a checkpoint every epoch
-        if args.world_rank == 0 and (epoch + 1) % args.checkpoint_it == 0:
-            _save_checkpoint(epoch)
+                if optim.cur_step % args.checkpoint_it == 0:
+                    _save_checkpoint(optim.cur_step)
 
         if eval_loader is not None and (epoch + 1) % args.eval_it == 0:
             pass

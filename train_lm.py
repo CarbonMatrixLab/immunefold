@@ -87,7 +87,7 @@ if __name__ == '__main__':
     
     # model 
     parser.add_argument('--model_features', type=str, required=True)
-    #parser.add_argument('--model_config', type=str, required=True)
+    parser.add_argument('--model_config', type=str, required=True)
     parser.add_argument('--restore_model_ckpt', type=str)
 
     # batch

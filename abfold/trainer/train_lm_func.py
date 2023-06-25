@@ -21,7 +21,6 @@ from abfold.model import MetricDict
 from abfold.trainer import dataset_lm as dataset
 from abfold.trainer.optimizer import OptipizerInverseSquarRootDecay as Optimizer
 from abfold.trainer.loss_lm import loss_func
-from abfold.trainer import model_align
 
 def get_device(args):
     if args.device == 'gpu':
@@ -38,8 +37,8 @@ def setup_model(model, args):
         model,
         device_ids=[args.local_rank], 
         output_device=args.local_rank,
-        find_unused_parameters=False)
-    model._set_static_graph()
+        find_unused_parameters=True)
+    #model._set_static_graph()
     
     logging.info('wrap model with nn.parallel.DistributedDataParallel class')
     return model
@@ -143,15 +142,23 @@ def train(args):
 
         for it, batch in enumerate(train_loader):
             jt = (it + 1) % args.gradient_accumulation_it
-
-            r = model(tokens = batch['seq'])
-            loss = loss_func(batch, r)
-
-            loss = loss / args.gradient_accumulation_it
             
-            loss.backward()
-            #torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            
+            if jt == 0:
+                r = model(tokens = batch['seq'])
+
+                loss = loss_func(batch, r)
+                loss = loss / args.gradient_accumulation_it
+ 
+                loss.backward()
+            else:
+                with model.no_sync():
+                    r = model(tokens = batch['seq'])
+ 
+                    loss = loss_func(batch, r)
+                    loss = loss / args.gradient_accumulation_it
+
+                    loss.backward()
+
             running_loss += MetricDict({'loss': loss})
 
             if jt == 0:

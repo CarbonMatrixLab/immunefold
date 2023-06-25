@@ -31,8 +31,9 @@ done
 local_world_size=4
 nnodes=4
 
-output_dir=./studies/3b_v1
-batch_size=2
+output_dir=./studies/esm_finetuning_v2
+batch_size=1
+gradient_accumulation_it=32
 
 cd /home/bingxing2/home/scx6023/zhang/AbFold2
 
@@ -50,12 +51,12 @@ python -m torch.distributed.launch\
     --flat_steps 0 \
     --decay_steps 20000 \
     --learning_rate 0.0001 \
-    --gradient_accumulation_it 4 \
+    --gradient_accumulation_it ${gradient_accumulation_it} \
     --prefix ${output_dir}\
     --restore_model_ckpt ../abdata_2023/esm2/esm2_t36_3B_UR50D.pt \
     --model_config ./config/config_model_lm.json \
     --model_features ./config/config_data_lm.json \
-    --train_data ../oas_data/oas0.90/clu90_seq_train.fasta >>  train_rank0_${SLURM_JOB_ID}.log 2>&1 &
+    --train_data ../oas_data/oas90_clu_seq.train.tsv >>  train_rank0_${SLURM_JOB_ID}.log 2>&1 &
 
 ### 使用srun 运行第二个节点
 for r in `seq 2 ${nnodes}`
@@ -76,12 +77,12 @@ do	echo node ${r}
         --flat_steps 0 \
         --decay_steps 20000 \
         --learning_rate 0.0001 \
-        --gradient_accumulation_it 4 \
+        --gradient_accumulation_it ${gradient_accumulation_it} \
         --prefix ${output_dir} \
         --restore_model_ckpt ../abdata_2023/esm2/esm2_t36_3B_UR50D.pt \
         --model_config ./config/config_model_lm.json \
         --model_features ./config/config_data_lm.json \
-        --train_data ../oas_data/oas0.90/clu90_seq_train.fasta >> train_rank${rr}_${SLURM_JOB_ID}.log 2>&1 &
+        --train_data ../oas_data/oas90_clu_seq.train.tsv  >> train_rank${rr}_${SLURM_JOB_ID}.log 2>&1 &
 done
 
 wait

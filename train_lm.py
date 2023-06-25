@@ -96,7 +96,7 @@ if __name__ == '__main__':
     parser.add_argument('--gradient_accumulation_it', type=int, default=1)
 
     # training log
-    parser.add_argument('--checkpoint_it', type=int, default=100)
+    parser.add_argument('--checkpoint_it', type=int, default=1000)
     parser.add_argument('--eval_it', type=int, default=1000)
 
     # laerning rate

@@ -1,17 +1,17 @@
 
-local_world_size=1; python -m torch.distributed.launch\
+local_world_size=4; python -m torch.distributed.launch\
     --nnodes 1 --node_rank 0 --nproc_per_node ${local_world_size} \
     --master_addr 127.0.0.1 --master_port 2222 \
     train.py  \
     --device gpu \
     --max_seq_len 256 \
-    --batch_size 2 \
+    --batch_size 8 \
     --num_epoch 1024 \
     --warmup_steps 0 \
     --flat_steps 16384 \
     --learning_rate 0.0001 \
     --lr_decay poly \
-    --prefix ./studies/t0\
+    --prefix ./studies/v1\
     --restore_model_ckpt ../abdata_2023/esm2/abfold_from_esmfold.ckpt \
     --model_features ./config/config_data_pair.json \
     --model_config ./config/config_model_pair.json \

@@ -153,7 +153,7 @@ def train(args):
         model.load_state_dict(ckpt['model_state_dict'], strict=True)
 
         trainable_variables = model_align.setup_model(model, config.align)
-        print('variables', len(trainable_variables))
+        #trainable_variables = model.parameters()
     else:
         model = AbFold(config = config.model)
         trainable_variables = model.parameters()

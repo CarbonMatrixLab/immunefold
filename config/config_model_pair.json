@@ -142,7 +142,7 @@
 	 },
          "seqformer": {
 	   "enabled": true,
-	   "align_layers": [44, 45, 46, 47]
+	   "align_layers": "all"
 	 },
          "structure_module": {
 	   "enable": false

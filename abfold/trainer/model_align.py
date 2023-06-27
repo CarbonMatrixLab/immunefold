@@ -13,15 +13,20 @@ def setup_model(model, config):
     if not c.pos_embed.enable:
         model.impl.seqformer.proj_rel_pos = False
     '''
-    for n, p in model.named_parameters():
+    for p in model.parameters():
         if p.requires_grad:
             p.requires_grad = False
   
+    if isinstance(c.seqformer.align_layers, str) and c.seqformer.align_layers == 'all':
+        align_layers = list(range(len(model.impl.seqformer.seqformer.blocks)))
+    else:
+        align_lauers = c.seqformer.align_layers
+    print(align_layers)
     trainable_variables = []
     if c.seqformer.enabled:
-        for n in c.seqformer.align_layers:
+        for n in align_layers:
             x = model.impl.seqformer.seqformer.blocks[n]
-            for n, p in x.named_parameters():
+            for p in x.parameters():
                 p.requires_grad = True
                 trainable_variables.append(p)
 

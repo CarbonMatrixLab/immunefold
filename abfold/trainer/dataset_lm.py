@@ -25,7 +25,7 @@ class DistributedDataset(torch.utils.data.IterableDataset):
         for idx, sample in enumerate(self.dataset):
             if cur_step < self.max_steps:
                 if idx % self.word_size == self.rank:
-                    cut_step += 1
+                    cur_step += 1
                     yield sample
             else:
                 break
@@ -37,7 +37,7 @@ class DistributedDataset(torch.utils.data.IterableDataset):
 
 class LMDataset(torch.utils.data.IterableDataset):
 
-    def __init__(self, fasta_file, chain_pad_num = 28, max_seq_len=None, reduce_num=None, is_cluster_idx=False, max_steps = None):
+    def __init__(self, fasta_file, chain_pad_num = 28, max_seq_len=None, reduce_num=None, is_cluster_idx=False):
         super().__init__()
 
         self.fasta_file = fasta_file
@@ -162,10 +162,10 @@ class LMDataset(torch.utils.data.IterableDataset):
 
 def load(fasta_file, feats=None, is_training=True, max_seq_len=None, reduce_num=None, rank=None, world_size=1, is_cluster_idx=False, max_steps=None, **kwargs):
     
-    dataset = LMDataset(fasta_file, max_seq_len=max_seq_len, reduce_num=reduce_num, is_cluster_idx=is_cluster_idx, max_steps=max_steps)
+    dataset = LMDataset(fasta_file, max_seq_len=max_seq_len, reduce_num=reduce_num, is_cluster_idx=is_cluster_idx)
 
     if rank is not None:
-        dataset = DistributedDataset(dataset, rank, world_size)
+        dataset = DistributedDataset(dataset, rank, world_size, max_steps=max_steps)
 
     kwargs['collate_fn'] = functools.partial(dataset.collate_fn,
             feat_builder = FeatureBuilder(feats, is_training=is_training))

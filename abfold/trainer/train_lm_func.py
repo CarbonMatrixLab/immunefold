@@ -61,7 +61,7 @@ def setup_dataset(args):
             feats=feats, max_seq_len=args.max_seq_len,
             is_cluster_idx = True,
             rank = args.world_rank, world_size = args.world_size,
-            max_steps = args.decay_steps,
+            max_steps = args.decay_steps * args.gradient_accumulation_it,
             batch_size = args.batch_size)
 
     logging.info(f'world_rank={args.world_rank} data_world_size={args.world_size}')

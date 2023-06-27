@@ -31,7 +31,7 @@ done
 local_world_size=4
 nnodes=4
 
-output_dir=./studies/esm_finetuning_v2
+output_dir=./studies/esm_finetuning_steps_v1
 batch_size=1
 gradient_accumulation_it=32
 

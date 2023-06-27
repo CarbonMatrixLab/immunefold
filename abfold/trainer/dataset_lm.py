@@ -7,11 +7,32 @@ from torch.nn import functional as F
 
 from esm.data import Alphabet
 
-from abfold.trainer.dataset import DistributedDataset
 from abfold.common import residue_constants
 from abfold.model.features import FeatureBuilder
 
 logger = logging.getLogger(__file__)
+
+class DistributedDataset(torch.utils.data.IterableDataset):
+    def __init__(self, dataset, rank, word_size, max_steps):
+        super().__init__()
+        self.dataset = dataset
+        self.rank = rank
+        self.word_size = word_size
+        self.max_steps = max_steps
+
+    def __iter__(self):
+        cur_step = 0
+        for idx, sample in enumerate(self.dataset):
+            if cur_step < self.max_steps:
+                if idx % self.word_size == self.rank:
+                    cut_step += 1
+                    yield sample
+            else:
+                break
+    
+    def collate_fn(self, *args, **kwargs):
+        return self.dataset.collate_fn(*args, **kwargs)
+
 
 
 class LMDataset(torch.utils.data.IterableDataset):
@@ -32,13 +53,12 @@ class LMDataset(torch.utils.data.IterableDataset):
 
         self.epoch_count = 0
 
-        self.max_steps = max_steps
 
     def __iter__(self):
         max_seq_len = self.max_seq_len
 
         step = 0
-        while step < self.max_steps:
+        while True:
             with open(self.fasta_file) as f:
                 for line in f:
                     ret, cdrh3_len = self.parse_seq_line(line)
@@ -141,7 +161,7 @@ class LMDataset(torch.utils.data.IterableDataset):
         return ret
 
 def load(fasta_file, feats=None, is_training=True, max_seq_len=None, reduce_num=None, rank=None, world_size=1, is_cluster_idx=False, max_steps=None, **kwargs):
-
+    
     dataset = LMDataset(fasta_file, max_seq_len=max_seq_len, reduce_num=reduce_num, is_cluster_idx=is_cluster_idx, max_steps=max_steps)
 
     if rank is not None:

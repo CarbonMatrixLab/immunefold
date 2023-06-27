@@ -61,7 +61,7 @@ def setup_dataset(args):
             feats=feats, max_seq_len=args.max_seq_len,
             is_cluster_idx = True,
             rank = args.world_rank, world_size = args.world_size,
-            max_steps = (args.decay_steps * args.world_size),
+            max_steps = args.decay_steps,
             batch_size = args.batch_size)
 
     logging.info(f'world_rank={args.world_rank} data_world_size={args.world_size}')
@@ -124,9 +124,8 @@ def train(args):
         saved_model = model.module if isinstance(model, nn.parallel.DistributedDataParallel) else model
 
         torch.save(dict(
-            model_state_dict = saved_model.state_dict(),
-            optim_state_dict = optim.state_dict(),
-            esm_config = esm_cfg,
+            model = saved_model.state_dict(),
+            cfg = esm_cfg,
             feature_config = feats,
             args = args,
             train_steps = optim.cur_step), ckpt_file)
@@ -134,51 +133,46 @@ def train(args):
     # setup train
     model.train()
 
-    for epoch in range(args.num_epoch):
-        running_loss = MetricDict()
-        optim.zero_grad()
+    running_loss = MetricDict()
+    optim.zero_grad()
+    batch_start_time = time.time()
+
+    for it, batch in enumerate(train_loader):
+        jt = (it + 1) % args.gradient_accumulation_it
         
-        batch_start_time = time.time()
+        if jt == 0:
+            r = model(tokens = batch['seq'])
 
-        for it, batch in enumerate(train_loader):
-            jt = (it + 1) % args.gradient_accumulation_it
-            
-            if jt == 0:
+            loss = loss_func(batch, r)
+            loss = loss / args.gradient_accumulation_it
+ 
+            loss.backward()
+        else:
+            with model.no_sync():
                 r = model(tokens = batch['seq'])
-
+ 
                 loss = loss_func(batch, r)
                 loss = loss / args.gradient_accumulation_it
- 
+
                 loss.backward()
-            else:
-                with model.no_sync():
-                    r = model(tokens = batch['seq'])
- 
-                    loss = loss_func(batch, r)
-                    loss = loss / args.gradient_accumulation_it
 
-                    loss.backward()
+        running_loss += MetricDict({'loss': loss})
 
-            running_loss += MetricDict({'loss': loss})
+        if jt == 0:
+            logging.info(f'optim step= {optim.cur_step} lr= {optim.get_values()}')
 
-            if jt == 0:
-                logging.info(f'optim step= {optim.cur_step} lr= {optim.get_values()}')
-
-                optim.step()
-                optim.zero_grad()
-                
-                for k, v in running_loss.items():
-                    #v = v / args.gradient_accumulation_it
-                    log_metric_dict(v, epoch, optim.cur_step, prefix=f'Loss/train@{k}')
-
-                running_loss = MetricDict()
+            optim.step()
+            optim.zero_grad()
             
-                batch_end_time = time.time()
-                logging.info(f'{optim.cur_step} batch time {batch_end_time - batch_start_time} s.')
-                batch_start_time = time.time()
+            for k, v in running_loss.items():
+                #v = v / args.gradient_accumulation_it
+                log_metric_dict(v, 0, optim.cur_step, prefix=f'Loss/train@{k}')
 
-                if optim.cur_step % args.checkpoint_it == 0:
+            running_loss = MetricDict()
+        
+            batch_end_time = time.time()
+            logging.info(f'{optim.cur_step} batch time {batch_end_time - batch_start_time} s.')
+            batch_start_time = time.time()
+
+            if optim.cur_step % args.checkpoint_it == 0:
                     _save_checkpoint(optim.cur_step)
-
-        if eval_loader is not None and (epoch + 1) % args.eval_it == 0:
-            pass

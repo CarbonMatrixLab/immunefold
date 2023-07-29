@@ -160,7 +160,7 @@ def make_stage1_feature(structure):
     coord_mask = np.zeros((N, 14), dtype=bool)
     str_seq = []
 
-    for residue in structure:
+    for seq_idx, residue in enumerate(structure):
         aa = residue_constants.restype_3to1.get(residue.resname, 'X') 
         str_seq.append(aa)
         res_atom14_list = residue_constants.restype_name_to_atom14_names.get(residue.resname,
@@ -175,27 +175,28 @@ def make_stage1_feature(structure):
 
     feature = dict(
             str_seq=''.join(str_seq),
-            residx = np.arange(N)
+            residx = np.arange(N),
             coords=coords,
             coord_mask=coord_mask)
 
     return feature
 
 
-def make_stage1_feature_from_pdb(pdb_file, sep_pad_num=48):
+def make_stage1_feature_from_pdb(pdb_file):
     struc = parse_pdb(pdb_file)
     N = len(list(struc.get_chains()))
+    print('chain',N)
     assert (N in [1, 2])
 
     if N == 1:
-        return make_stage1_feature(struc)
+        return make_stage1_feature(struc['A'])
     
-    A = make_stage1_feature(struc.get_chains[0])
-    B = make_stage1_feature(struc.get_chains[1])
+    A = make_stage1_feature(struc['A'])
+    B = make_stage1_feature(struc['B'])
     
     return dict(
-            str_seq= A + 'G' * sep_pad_num + B,
-            residx = np.concatenate(A['residx'], B['residx'] + A['residx'].shape[0] + residue_constants.residue_chain_index_offset]
+            str_seq= A['str_seq'] + B['str_seq'],
+            residx = np.concatenate([A['residx'], B['residx'] + A['residx'].shape[0] + residue_constants.residue_chain_index_offset], axis=0),
             coords=np.concatenate([A['coords'], B['coords']], axis=0),
             coord_mask=np.concatenate([A['coord_mask'], B['coord_mask']], axis=0))
 

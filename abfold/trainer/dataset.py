@@ -137,49 +137,46 @@ class Stage1StructureDataset(torch.utils.data.Dataset):
 
         struc = make_stage1_from_pdb(pdb_file, self.sep_pad_num) 
 
-        num_atoms = 14
-
-        coords = torch.from_numpy(struc['coords'])
-        coord_mask = torch.from_numpy(struc['coord_mask'])
-
         str_seq = struc['str_seq']
-
-        assert len(str_seq) == coords.shape[0] and len(str_seq) == coord_mask.shape[0] and len(str_seq) > 0
-
         seq = torch.tensor(str_seq_to_index(str_seq), dtype=torch.int64)
-
+        
         mask = torch.ones((len(str_seq),))
-
 
         ret = dict(name=name,
                 str_seq = str_seq,
                 seq = seq,
                 mask = mask,
-                atom14_gt_positions=coords, atom14_gt_exists=coord_mask,
+                residx = torch.from_numpy(struc['residx']),
+                atom14_gt_positions = torch.from_numpy(struc['coords']), 
+                atom14_gt_exists =torch.from_numpy(struc['coord_mask']),
                 )
 
         return ret
 
     def collate_fn(self, batch, feat_builder=None):
         fields = ('name', 'str_seq', 'seq', 'mask',
-                'atom14_gt_positions', 'atom14_gt_exists',)
-        name, str_seq, seq, mask, atom14_gt_positions, atom14_gt_exists =\
+                'atom14_gt_positions', 'atom14_gt_exists', 'residx')
+        name, str_seq, seq, mask, atom14_gt_positions, atom14_gt_exists, residx=\
                 list(zip(*[[b[k] for k in fields] for b in batch]))
 
         max_len = max(tuple(len(s) for s in str_seq))
+        
         padded_seqs = pad_for_batch(seq, max_len, 'seq')
         padded_masks = pad_for_batch(mask, max_len, 'msk')
 
-        padded_seqs = pad_for_batch(seq, max_len, 'seq')
+        padded_residx = pad_for_batch(residx, max_len, 'msk')
 
         padded_atom14_gt_positions = pad_for_batch(atom14_gt_positions, max_len, 'crd')
         padded_atom14_gt_existss = pad_for_batch(atom14_gt_exists, max_len, 'crd_msk')
+
+        padded_residx = pad_for_batch(residx, max_len, ''
 
         ret = dict(
 		name=name,
                 str_seq=str_seq,
                 seq=padded_seqs,
                 mask=padded_masks,
+                residx=padded_residx,
                 atom14_gt_positions=padded_atom14_gt_positions,
                 atom14_gt_exists=padded_atom14_gt_existss,
                 data_type = 'general'
@@ -189,7 +186,6 @@ class Stage1StructureDataset(torch.utils.data.Dataset):
             ret = feat_builder.build(ret)
 
         return ret
-
 
 def sample_with_struc(struc_mask, str_len, max_seq_len):
     num_struc = torch.sum(struc_mask)

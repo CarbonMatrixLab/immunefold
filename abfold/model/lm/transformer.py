@@ -1,3 +1,5 @@
+from torch import nn
+
 from esm import modules  as E
 
 from abfold.model.lm.multihead_attention import MultiheadAttention
@@ -57,7 +59,7 @@ class TransformerLayer(nn.Module):
 
         residual = x
         x = self.final_layer_norm(x)
-        x = gelu(self.fc1(x))
+        x = E.gelu(self.fc1(x))
         x = self.fc2(x)
         x = residual + x
 

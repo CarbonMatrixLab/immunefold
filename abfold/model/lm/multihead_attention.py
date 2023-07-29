@@ -4,6 +4,8 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 
+from einops import repeat
+
 from esm import multihead_attention as E 
 
 from abfold.model.lm.rotary_embedding import RotaryEmbedding
@@ -237,7 +239,10 @@ class MultiheadAttention(E.MultiheadAttention):
 
         if self.rot_emb:
             if index is None:
-                index = torch.tile(torch.arange(q.shape[1], q.device), [q.shape[0], 1, 1])
+                index = torch.tile(torch.arange(q.shape[1], device=q.device), [q.shape[0], 1])
+            else:
+                index = repeat(index, 'b l -> (b h) l', h=self.num_heads)
+
             q, k = self.rot_emb(q, k, index)
 
         attn_weights = torch.bmm(q, k.transpose(1, 2))

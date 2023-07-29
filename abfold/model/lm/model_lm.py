@@ -1,12 +1,12 @@
 from typing import Union
 import functools
 
+from torch import nn
 from torch.utils.checkpoint import checkpoint
 
 import esm
 from esm.model import esm2 as E
-
-from abfold.model.lm import transformer import TransformerLayer 
+from abfold.model.lm.transformer import TransformerLayer 
 
 class ModelLM(E.ESM2):
     def __init__(self,

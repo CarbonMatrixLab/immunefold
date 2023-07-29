@@ -84,6 +84,142 @@ class StructureDataset(torch.utils.data.IterableDataset):
     def __len__(self):
         return len(self.name_idx)
 
+class Stage1StructureDataset(torch.utils.data.Dataset):
+    def __init__(self, data_dir, name_idx, max_seq_len=None, reduce_num=None, is_cluster_idx=False):
+        super().__init__()
+
+        self.data_dir = pathlib.Path(data_dir)
+        self.name_idx = name_idx
+        self.max_seq_len = max_seq_len
+        self.reduce_num = reduce_num
+        self.is_cluster_idx = is_cluster_idx
+
+        logger.info(f'dataset size= {len(name_idx)} max_seq_len= {max_seq_len} reduce_num= {reduce_num} is_cluster_idx= {is_cluster_idx}')
+
+        self.epoch_count = 0
+
+    def __len__(self):
+        return len(self.name_idx)
+
+    
+    def _get_name_idx(self):
+        if self.reduce_num is None:
+            return self.name_idx
+
+        random.seed(2022 + self.epoch_count)
+        random.shuffle(self.name_idx)
+        self.epoch_count += 1
+        logging.info(f'ig data: epoch_count={self.epoch_count} reduce_num={self.reduce_num} all={len(self.name_idx)} ex={",".join([str(x) for x in self.name_idx[:4]])}')
+        
+        return self.name_idx[:self.reduce_num]
+
+    def __iter__(self):
+        name_idx = self._get_name_idx()
+        for item in name_idx:
+            if self.is_cluster_idx:
+                name = item.get_next()
+            else:
+                name = item
+            ret = self.get_structure_label_npz(name)
+            heavy_len, light_len = len(ret.get('str_heavy_seq', '')), len(ret.get('str_light_seq', ''))
+            if self.max_seq_len is not None:
+                if heavy_len + light_len > self.max_seq_len:
+                    logger.warn(f'{name} too long. heavy - {heavy_len}, light - {light_len}')
+            yield ret
+
+    def def __getitem__(self, idx):
+        name = self.name_idx[idx]
+
+        return self.get_structure_from_pdb(name)
+
+    def get_structure_from_pdb(self, name):
+        pdb_file = os.path.join(args.data_dir, name + '.pdb')
+
+        struc = make_stage1_from_pdb(pdb_file, self.sep_pad_num) 
+
+        num_atoms = 14
+
+        coords = torch.from_numpy(struc['coords'])
+        coord_mask = torch.from_numpy(struc['coord_mask'])
+
+        str_seq = struc['str_seq']
+
+        assert len(str_seq) == coords.shape[0] and len(str_seq) == coord_mask.shape[0] and len(str_seq) > 0
+
+        seq = torch.tensor(str_seq_to_index(str_seq), dtype=torch.int64)
+
+        mask = torch.ones((len(str_seq),))
+
+
+        ret = dict(name=name,
+                str_seq = str_seq,
+                seq = seq,
+                mask = mask,
+                atom14_gt_positions=coords, atom14_gt_exists=coord_mask,
+                )
+
+        return ret
+
+    def collate_fn(self, batch, feat_builder=None):
+        fields = ('name', 'str_seq', 'seq', 'mask',
+                'atom14_gt_positions', 'atom14_gt_exists',)
+        name, str_seq, seq, mask, atom14_gt_positions, atom14_gt_exists =\
+                list(zip(*[[b[k] for k in fields] for b in batch]))
+
+        max_len = max(tuple(len(s) for s in str_seq))
+        padded_seqs = pad_for_batch(seq, max_len, 'seq')
+        padded_masks = pad_for_batch(mask, max_len, 'msk')
+
+        padded_seqs = pad_for_batch(seq, max_len, 'seq')
+
+        padded_atom14_gt_positions = pad_for_batch(atom14_gt_positions, max_len, 'crd')
+        padded_atom14_gt_existss = pad_for_batch(atom14_gt_exists, max_len, 'crd_msk')
+
+        ret = dict(
+		name=name,
+                str_seq=str_seq,
+                seq=padded_seqs,
+                mask=padded_masks,
+                atom14_gt_positions=padded_atom14_gt_positions,
+                atom14_gt_exists=padded_atom14_gt_existss,
+                data_type = 'general'
+                )
+
+        if feat_builder:
+            ret = feat_builder.build(ret)
+
+        return ret
+
+
+def sample_with_struc(struc_mask, str_len, max_seq_len):
+    num_struc = torch.sum(struc_mask)
+    if num_struc > 0 and num_struc < str_len:
+        struc_start, struc_end = 0, str_len
+        while struc_start < str_len and struc_mask[struc_start] == False:
+            struc_start += 1
+        while struc_end > 0 and struc_mask[struc_end - 1] == False:
+            struc_end -= 1
+        if struc_end - struc_start > max_seq_len:
+            start = random.randint(struc_start, struc_end - max_seq_len)
+            end = start + max_seq_len
+        else:
+            extra = max_seq_len - (struc_end - struc_start)
+            left_extra = struc_start - extra // 2 - 10
+            right_extra = struc_end + extra // 2 + 10
+            start = random.randint(left_extra, right_extra)
+            end = start + max_seq_len
+            if start < 0:
+                start = 0
+                end = start + max_seq_len
+            elif end > str_len:
+                end = str_len
+                start = end - max_seq_len
+    else:
+        start = random.randint(0, str_len - max_seq_len)
+        end = start + max_seq_len
+    return start, end
+
+
 class IgStructureDataset(StructureDataset):
     def __init__(self, data_dir, name_idx, max_seq_len=None, reduce_num=None, is_cluster_idx=False):
         super().__init__(data_dir, name_idx, max_seq_len=max_seq_len, reduce_num=reduce_num, is_cluster_idx=is_cluster_idx)

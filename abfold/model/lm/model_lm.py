@@ -4,9 +4,11 @@ import functools
 from torch.utils.checkpoint import checkpoint
 
 import esm
-from esm.model.esm2 import ESM2
+from esm.model import esm2 as E
 
-class ModelLM(ESM2):
+from abfold.model.lm import transformer import TransformerLayer 
+
+class ModelLM(E.ESM2):
     def __init__(self,
             num_layers: int = 33,
             embed_dim: int = 1280,
@@ -14,6 +16,7 @@ class ModelLM(ESM2):
             alphabet: Union[esm.data.Alphabet, str] = "ESM-1b",
             token_dropout: bool = True,
             ):
+        
         super().__init__(
                 num_layers = num_layers,
                 embed_dim = embed_dim,
@@ -22,8 +25,44 @@ class ModelLM(ESM2):
                 token_dropout = token_dropout,
                 )
 
+    def _init_submodules(self):
+        self.embed_scale = 1
+        self.embed_tokens = nn.Embedding(
+            self.alphabet_size,
+            self.embed_dim,
+            padding_idx=self.padding_idx,
+        )
+
+        self.layers = nn.ModuleList(
+            [
+                TransformerLayer(
+                    self.embed_dim,
+                    4 * self.embed_dim,
+                    self.attention_heads,
+                    add_bias_kv=False,
+                    use_esm1b_layer_norm=True,
+                    use_rotary_embeddings=True,
+                )
+                for _ in range(self.num_layers)
+            ]
+        )
+
+        self.contact_head = E.ContactPredictionHead(
+            self.num_layers * self.attention_heads,
+            self.prepend_bos,
+            self.append_eos,
+            eos_idx=self.eos_idx,
+        )
+        self.emb_layer_norm_after = E.ESM1bLayerNorm(self.embed_dim)
+
+        self.lm_head = E.RobertaLMHead(
+            embed_dim=self.embed_dim,
+            output_dim=self.alphabet_size,
+            weight=self.embed_tokens.weight,
+        )
+
     
-    def forward(self, tokens, repr_layers=[], need_head_weights=False, return_contacts=False):
+    def forward(self, tokens, repr_layers=[], index=None, need_head_weights=False, return_contacts=False):
         if return_contacts:
             need_head_weights = True
 
@@ -61,7 +100,7 @@ class ModelLM(ESM2):
             block_fn = functools.partial(layer,
                     self_attn_padding_mask=padding_mask,
                     need_head_weights=need_head_weights,)
-            x, attn = block_fn(x)
+            x, attn = block_fn(x, index=index)
 
             if (layer_idx + 1) in repr_layers:
                 hidden_representations[layer_idx + 1] = x.transpose(0, 1)

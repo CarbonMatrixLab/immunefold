@@ -9,7 +9,8 @@ from einops import rearrange
 from abfold.common import residue_constants
 
 from abfold.data.esm import ESMEmbeddingExtractor
-from abfold.data.abrep import AbRepExtractor
+from abfold.data.esm2 import ESMEmbeddingExtractor2
+#from abfold.data.abrep import AbRepExtractor
 from abfold.utils import default,exists
 from abfold.data.utils import pad_for_batch
 from abfold.model.utils import batched_select
@@ -120,107 +121,18 @@ def make_esm_embed(protein, model_path, sep_pad_num=0, repr_layer=None, max_seq_
         raise NotImplementedError(f'{data_type} not implemented.')
 
 @take1st
-def make_progpt_embed(protein, model_path, max_seq_len=None, device=None, force=False, return_attnw=False, field='progpt_embed', is_training=True):
-    progpt_extractor = ProGPTExtractor.get(model_path, device=device)
+def make_esm2_embed(batch, model_path, repr_layers=None, device=None, field='esm_embed', is_training=True):
+    esm_extractor = ESMEmbeddingExtractor2.get(model_path, device=device)
 
-    def _one(key):
-        str_seqs = protein[key]
-        return progpt_extractor.extract(str_seqs, device=device, return_attnw=return_attnw)
+    ret = esm_extractor.extract(batch['esm_seq'], batch['residx'], repr_layers=repr_layers)
 
-    data_type = protein['data_type']
-    if data_type == 'general':
-        batch_embed = _one('str_seq')
-        protein[field] = batch_embed['single']
+    print(ret.keys(), 'keys')
 
-        if return_attnw:
-            protein[f'{field}_pair'] = batch_embed['pair']
+    batch[field] = torch.stack([ret['representations'][k][:,1:-1] for k in repr_layers], dim=-1)
+    batch['esm_logits'] = ret['logits'][:,1:-1]
+    print('shape', batch['esm_embed'].shape, batch['esm_logits'].shape, batch['esm_seq'].shape, batch['seq'].shape)
 
-        return protein
-    elif data_type == 'ig':
-        if not force:
-            bs, l = protein['seq'].shape[:2]
-            protein[field] = torch.zeros((bs, l, 1024), device=device)
-
-            if return_attnw:
-                protein[f'{field}_pair'] = torch.zeros((bs, l, l, 768), device=device)
-
-            return protein
-        else:
-            heavy_embed = _one('str_heavy_seq')
-            light_embed = _one('str_light_seq')
-
-            embed = [torch.cat([heavy_embed['single'][k,:len(x)], light_embed['single'][k,:len(y)]], dim=0) for k, (x,y) in enumerate(zip(protein['str_heavy_seq'],protein['str_light_seq']))]
-
-            lengths = (e.shape[0] for e in embed)
-            batch_length =  max(lengths)
-
-            protein[field] = pad_for_batch(embed, batch_length, dtype='ebd')
-
-            if return_attnw:
-                embed = [torch.cat([
-                    F.pad(heavy_embed['pair'][k,:len(x), :len(x)], (0, 0, 0, len(y)), value=0.),
-                    F.pad(light_embed['pair'][k,:len(y), :len(y)], (0, 0, len(x), 0), value=0.)], dim=0) for k, (x,y) in enumerate(zip(protein['str_heavy_seq'],protein['str_light_seq']))]
-
-
-                batch_embed = pad_for_batch(embed, batch_length, dtype='pair')
-
-                protein[f'{field}_pair'] = batch_embed
-
-            return protein
-    else:
-        raise NotImplementedError(f'{data_type} not implemented.')
-
-@take1st
-def make_progen_embed(protein, model_path, token_path, max_seq_len=None, device=None, force=False, return_attnw=False, field='progen_embed', is_training=True):
-    progen_extractor = ProGenExtractor.get(model_path, token_path, device=device)
-
-    def _one(key):
-        str_seqs = protein[key]
-        return progen_extractor.extract(str_seqs, device=device, return_attnw=return_attnw)
-
-    data_type = protein['data_type']
-    if data_type == 'general':
-        batch_embed = _one('str_seq')
-        protein[field] = batch_embed['single']
-
-        if return_attnw:
-            protein[f'{field}_pair'] = batch_embed['pair']
-
-        return protein
-    elif data_type == 'ig':
-        if not force:
-            bs, l = protein['seq'].shape[:2]
-            protein[field] = torch.zeros((bs, l, 1024), device=device)
-
-            if return_attnw:
-                protein[f'{field}_pair'] = torch.zeros((bs, l, l, 768), device=device)
-
-            return protein
-        else:
-            heavy_embed = _one('str_heavy_seq')
-            light_embed = _one('str_light_seq')
-
-            embed = [torch.cat([heavy_embed['single'][k,:len(x)], light_embed['single'][k,:len(y)]], dim=0) for k, (x,y) in enumerate(zip(protein['str_heavy_seq'],protein['str_light_seq']))]
-
-            lengths = (e.shape[0] for e in embed)
-            batch_length =  max(lengths)
-
-            protein[field] = pad_for_batch(embed, batch_length, dtype='ebd')
-
-            if return_attnw:
-                embed = [torch.cat([
-                    F.pad(heavy_embed['pair'][k,:len(x), :len(x)], (0, 0, 0, len(y)), value=0.),
-                    F.pad(light_embed['pair'][k,:len(y), :len(y)], (0, 0, len(x), 0), value=0.)], dim=0) for k, (x,y) in enumerate(zip(protein['str_heavy_seq'],protein['str_light_seq']))]
-
-
-                batch_embed = pad_for_batch(embed, batch_length, dtype='pair')
-
-                protein[f'{field}_pair'] = batch_embed
-
-            return protein
-    else:
-        raise NotImplementedError(f'{data_type} not implemented.')
-
+    return batch
 
 @take1st
 def make_ablang_embed(protein, model_path, device=None, field='ablang_embed', is_training=True):

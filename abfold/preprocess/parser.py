@@ -185,7 +185,6 @@ def make_stage1_feature(structure):
 def make_stage1_feature_from_pdb(pdb_file):
     struc = parse_pdb(pdb_file)
     N = len(list(struc.get_chains()))
-    print('chain',N)
     assert (N in [1, 2])
 
     if N == 1:

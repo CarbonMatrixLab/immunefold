@@ -27,17 +27,19 @@ def main(args):
             name_idx = name_idx,
             feats = feats,
             batch_size = 2)
-    
+    '''   
     if args.restore_model_ckpt is not None:
         ckpt = torch.load(args.restore_model_ckpt)
         model, _, esm_cfg = load_model_and_alphabet_local(args.restore_model_ckpt)
         model.to(device)
-        
+    '''
 
     for batch in train_loader:
         for k in batch:
             print(k)
-        r = model(tokens = batch['seq'], index = batch['residx'])
+        #r = model(tokens = batch['esm_seq'], repr_layers = [36], index = batch['residx'])
+        print(r)
+        break
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

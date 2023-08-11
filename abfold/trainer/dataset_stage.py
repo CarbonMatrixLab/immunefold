@@ -106,16 +106,19 @@ class Stage1StructureDataset(torch.utils.data.Dataset):
         struc = make_stage1_feature_from_pdb(pdb_file) 
 
         str_seq = struc['str_seq']
-        seq, label_seq, label_mask = self._create_train_seq_sample(str_seq)
+        seq = torch.tensor(str_seq_to_index(str_seq), dtype=torch.int64)
+        
+        esm_seq, label_esm_seq, label_esm_mask = self._create_train_seq_sample(str_seq)
 
         mask = torch.ones((len(str_seq),))
 
         ret = dict(name=name,
                 str_seq = str_seq,
                 mask = mask,
-                seq = torch.from_numpy(seq),
-                label_seq = torch.from_numpy(label_seq),
-                label_mask = torch.from_numpy(label_mask),
+                seq = seq,
+                esm_seq = torch.from_numpy(esm_seq),
+                label_esm_seq = torch.from_numpy(label_esm_seq),
+                label_esm_mask = torch.from_numpy(label_esm_mask),
                 residx = torch.from_numpy(struc['residx']),
                 atom14_gt_positions = torch.from_numpy(struc['coords']), 
                 atom14_gt_exists =torch.from_numpy(struc['coord_mask']),)
@@ -124,8 +127,8 @@ class Stage1StructureDataset(torch.utils.data.Dataset):
 
     def collate_fn(self, batch, feat_builder=None):
         fields = ('name', 'str_seq', 'seq', 'mask',
-                'atom14_gt_positions', 'atom14_gt_exists', 'residx', 'label_seq', 'label_mask')
-        name, str_seq, seq, mask, atom14_gt_positions, atom14_gt_exists, residx, label_seq, label_mask =\
+                'atom14_gt_positions', 'atom14_gt_exists', 'residx', 'esm_seq', 'label_esm_seq', 'label_esm_mask')
+        name, str_seq, seq, mask, atom14_gt_positions, atom14_gt_exists, residx, esm_seq, label_esm_seq, label_esm_mask =\
                 list(zip(*[[b[k] for k in fields] for b in batch]))
 
         max_len = max(tuple(len(s) for s in str_seq))
@@ -134,8 +137,9 @@ class Stage1StructureDataset(torch.utils.data.Dataset):
             return torch.stack([F.pad(xx, [0, pad_len - xx.shape[-1]], value=pad_value) for xx in x], dim=0)
         
         padded_seq = _pad(seq, max_len, self.alphabet.padding_idx)
-        padded_label_seq = _pad(label_seq, max_len, self.alphabet.padding_idx)
-        padded_label_mask = _pad(label_mask, max_len, 0.)
+        padded_esm_seq = _pad(esm_seq, max_len, self.alphabet.padding_idx)
+        padded_label_esm_seq = _pad(label_esm_seq, max_len, self.alphabet.padding_idx)
+        padded_label_esm_mask = _pad(label_esm_mask, max_len, 0.)
 
         padded_residx = pad_for_batch(residx, max_len, 'msk')
         padded_masks = pad_for_batch(mask, max_len, 'msk')
@@ -145,14 +149,15 @@ class Stage1StructureDataset(torch.utils.data.Dataset):
 
         ret = dict(
 		name=name,
-                str_seq=str_seq,
-                seq=padded_seq,
-                label_seq = padded_label_seq,
-                label_mask = padded_label_mask,
-                mask=padded_masks,
-                residx=padded_residx,
-                atom14_gt_positions=padded_atom14_gt_positions,
-                atom14_gt_exists=padded_atom14_gt_existss,
+                str_seq = str_seq,
+                seq = padded_seq,
+                esm_seq = padded_esm_seq,
+                label_esm_seq = padded_label_esm_seq,
+                label_esm_mask = padded_label_esm_mask,
+                mask = padded_masks,
+                residx = padded_residx,
+                atom14_gt_positions = padded_atom14_gt_positions,
+                atom14_gt_exists = padded_atom14_gt_existss,
                 data_type = 'general'
                 )
 

@@ -134,6 +134,9 @@
       }
    },
    "align":{
+	 "esm": {
+	   "enabled" : true
+	 },
 	 "aa_embed": {
 	   "enable": false
 	 },
@@ -141,7 +144,7 @@
 	   "enable": false
 	 },
          "seqformer": {
-	   "enabled": true,
+	   "enabled": false,
 	   "align_layers": "all"
 	 },
          "structure_module": {

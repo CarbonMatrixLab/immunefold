@@ -12,7 +12,7 @@ local_world_size=4; python -m torch.distributed.launch\
     --learning_rate 0.0001 \
     --lr_decay poly \
     --prefix ./studies/v1\
-    --restore_model_ckpt ../abdata_2023/esm2/abfold_from_esmfold.ckpt \
+    --restore_model_ckpt ../abdata_2023/esm2/esmfold_no_esm.ckpt \
     --model_features ./config/config_data_pair.json \
     --model_config ./config/config_model_pair.json \
     --train_name_idx ../abdata_2023/sabdab/train_cluster.idx \

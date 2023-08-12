@@ -2,8 +2,7 @@ import torch
 
 def setup_model(model, config):
     c = config
-    print(c)
-
+    
     # aa_embed
     '''
     if not c.aa_embed.enable:
@@ -13,21 +12,33 @@ def setup_model(model, config):
     if not c.pos_embed.enable:
         model.impl.seqformer.proj_rel_pos = False
     '''
-    for p in model.parameters():
+
+    for n, p in model.named_parameters():
         if p.requires_grad:
             p.requires_grad = False
-  
-    if isinstance(c.seqformer.align_layers, str) and c.seqformer.align_layers == 'all':
-        align_layers = list(range(len(model.impl.seqformer.seqformer.blocks)))
-    else:
-        align_lauers = c.seqformer.align_layers
-    print(align_layers)
+    
     trainable_variables = []
+
+    if c.esm.enabled:
+        for n, p in model.esm.named_parameters():
+            if 'embed_tokens' not in n:
+                p.requires_grad = True
+                trainable_variables.append(p)
+
     if c.seqformer.enabled:
+        if isinstance(c.seqformer.align_layers, str) and c.seqformer.align_layers == 'all':
+            align_layers = list(range(len(model.impl.seqformer_module.seqformer.blocks)))
+        else:
+            align_layers = c.seqformer.align_layers
+        
         for n in align_layers:
-            x = model.impl.seqformer.seqformer.blocks[n]
+            x = model.impl.seqformer_module.seqformer.blocks[n]
             for p in x.parameters():
                 p.requires_grad = True
                 trainable_variables.append(p)
+    
+    for n, p in model.named_parameters():
+        if p.requires_grad:
+            print(n)
 
     return trainable_variables

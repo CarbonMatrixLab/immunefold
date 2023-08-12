@@ -499,8 +499,8 @@ class Seqformer(nn.Module):
         for it, block in enumerate(self.blocks):
             block_fn = functools.partial(block, seq_mask=mask)
             if self.training and not is_recycling and it > 0:
-                seq_act, pair_act = checkpoint(block_fn, seq_act, pair_act)
-                #seq_act, pair_act = block_fn(seq_act, pair_act)
+                #seq_act, pair_act = checkpoint(block_fn, seq_act, pair_act)
+                seq_act, pair_act = block_fn(seq_act, pair_act)
             else:
                 seq_act, pair_act = block_fn(seq_act, pair_act)
 

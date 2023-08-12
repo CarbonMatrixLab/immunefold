@@ -5,7 +5,7 @@ import resource
 
 import torch
 
-from abfold.trainer.train_lm_func import train
+from abfold.trainer.train_stage1_func import train
 
 class WorkerLogFilter(logging.Filter):
     def __init__(self, rank=-1):
@@ -75,8 +75,7 @@ if __name__ == '__main__':
     
     # dataset
     parser.add_argument('--train_data', type=str, required=True)
-    
-    parser.add_argument('--general_data_gpu_ratio', type=float, default=0.0)
+    parser.add_argument('--train_name_idx', type=str, required=True)
     
     parser.add_argument('--max_seq_len', type=int, default=None)
 
@@ -89,6 +88,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_features', type=str, required=True)
     parser.add_argument('--model_config', type=str, required=True)
     parser.add_argument('--restore_model_ckpt', type=str)
+    parser.add_argument('--restore_esm2_model', type=str)
 
     # batch
     parser.add_argument('--num_epoch', type=int, default=1024)

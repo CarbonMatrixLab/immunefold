@@ -9,8 +9,6 @@ from einops import rearrange
 from abfold.common import residue_constants
 
 from abfold.data.esm import ESMEmbeddingExtractor
-from abfold.data.esm2 import ESMEmbeddingExtractor2
-#from abfold.data.abrep import AbRepExtractor
 from abfold.utils import default,exists
 from abfold.data.utils import pad_for_batch
 from abfold.model.utils import batched_select
@@ -119,20 +117,6 @@ def make_esm_embed(protein, model_path, sep_pad_num=0, repr_layer=None, max_seq_
         return protein
     else:
         raise NotImplementedError(f'{data_type} not implemented.')
-
-@take1st
-def make_esm2_embed(batch, model_path, repr_layers=None, device=None, field='esm_embed', is_training=True):
-    esm_extractor = ESMEmbeddingExtractor2.get(model_path, device=device)
-
-    ret = esm_extractor.extract(batch['esm_seq'], batch['residx'], repr_layers=repr_layers)
-
-    print(ret.keys(), 'keys')
-
-    batch[field] = torch.stack([ret['representations'][k][:,1:-1] for k in repr_layers], dim=-1)
-    batch['esm_logits'] = ret['logits'][:,1:-1]
-    print('shape', batch['esm_embed'].shape, batch['esm_logits'].shape, batch['esm_seq'].shape, batch['seq'].shape)
-
-    return batch
 
 @take1st
 def make_ablang_embed(protein, model_path, device=None, field='ablang_embed', is_training=True):

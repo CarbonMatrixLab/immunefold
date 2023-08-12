@@ -5,6 +5,7 @@ import random
 import torch
 from torch import nn
 
+from abfold.model.lm.pretrained import load_model_and_alphabet_local
 from abfold.common import residue_constants
 from abfold.model.seqformer import EmbeddingAndSeqformer
 from abfold.model.head import HeaderBuilder
@@ -18,7 +19,7 @@ class AbFoldIteration(nn.Module):
 
         c = config
 
-        self.seqformer = EmbeddingAndSeqformer(c.embeddings_and_seqformer)
+        self.seqformer_module = EmbeddingAndSeqformer(c.embeddings_and_seqformer)
 
         self.heads = HeaderBuilder.build(
                 c.heads,
@@ -27,11 +28,11 @@ class AbFoldIteration(nn.Module):
                 parent=self)
 
         self.config = config
-
+    
     def forward(self, batch, compute_loss = False):
         c = self.config
 
-        seq_act, pair_act = self.seqformer(batch)
+        seq_act, pair_act = self.seqformer_module(batch)
 
         representations = {'pair': pair_act, 'seq': seq_act}
 
@@ -53,17 +54,33 @@ class AbFold(nn.Module):
     def __init__(self, config):
         super().__init__()
 
+        self.esm, _, _ = load_model_and_alphabet_local(config['esm2_model_file'])
+
         self.impl = AbFoldIteration(config)
 
         self.config = config
 
+    def _compute_language_model(self, tokens):
+        repr_layers = list(range(self.config.embeddings_and_seqformer.esm.num_layers + 1))
+
+        results = self.esm(tokens, repr_layers=repr_layers, need_head_weights=False)
+
+        ret = {}
+        ret['esm_embed'] = torch.stack([results['representations'][k][:,1:-1] for k in repr_layers], dim=-1)
+        ret['esm_logits'] = results['logits'][:,1:-1]
+        print('shape', tokens.shape, ret['esm_embed'].shape)
+
+        return ret
 
     def forward(self, batch, compute_loss=False):
         c = self.config 
 
         seq = batch['seq']
+        print(seq.shape, 'shape')
 
         batch_size, num_residues, device = *seq.shape[:2], seq.device
+        
+        batch.update(self._compute_language_model(batch['esm_seq']))
 
         def get_prev(ret):
             prev_pseudo_beta = pseudo_beta_fn_v2(batch['seq'], ret['heads']['folding']['final_atom_positions'])

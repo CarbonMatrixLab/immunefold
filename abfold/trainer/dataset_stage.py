@@ -21,6 +21,23 @@ from abfold.common.utils import str_seq_to_index
 
 logger = logging.getLogger(__file__)
 
+class DistributedDataset(torch.utils.data.Dataset):
+    def __init__(self, dataset, rank, world_size):
+        super().__init__()
+        self.dataset = dataset
+        self.rank = rank
+        self.world_size = world_size
+
+    def __len__(self):
+        return len(self.dataset) // self.world_size
+    
+    def __getitem__(self, idx):
+        return self.dataset[idx * self.world_size + self.rank]
+    
+    def collate_fn(self, *args, **kwargs):
+        return self.dataset.collate_fn(*args, **kwargs)
+
+
 class Stage1StructureDataset(torch.utils.data.Dataset):
     def __init__(self, data_dir, name_idx, max_seq_len=None, reduce_num=None, is_cluster_idx=False):
         super().__init__()
@@ -38,7 +55,6 @@ class Stage1StructureDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.name_idx)
-
     
     def _get_name_idx(self):
         if self.reduce_num is None:
@@ -50,20 +66,6 @@ class Stage1StructureDataset(torch.utils.data.Dataset):
         logging.info(f'ig data: epoch_count={self.epoch_count} reduce_num={self.reduce_num} all={len(self.name_idx)} ex={",".join([str(x) for x in self.name_idx[:4]])}')
         
         return self.name_idx[:self.reduce_num]
-
-    def __iter__(self):
-        name_idx = self._get_name_idx()
-        for item in name_idx:
-            if self.is_cluster_idx:
-                name = item.get_next()
-            else:
-                name = item
-            ret = self.get_structure_label_npz(name)
-            heavy_len, light_len = len(ret.get('str_heavy_seq', '')), len(ret.get('str_light_seq', ''))
-            if self.max_seq_len is not None:
-                if heavy_len + light_len > self.max_seq_len:
-                    logger.warn(f'{name} too long. heavy - {heavy_len}, light - {light_len}')
-            yield ret
 
     def __getitem__(self, idx):
         name = self.name_idx[idx]
@@ -137,7 +139,7 @@ class Stage1StructureDataset(torch.utils.data.Dataset):
             return torch.stack([F.pad(xx, [0, pad_len - xx.shape[-1]], value=pad_value) for xx in x], dim=0)
         
         padded_seq = _pad(seq, max_len, self.alphabet.padding_idx)
-        padded_esm_seq = _pad(esm_seq, max_len, self.alphabet.padding_idx)
+        padded_esm_seq = _pad(esm_seq, max_len + 2, self.alphabet.padding_idx)
         padded_label_esm_seq = _pad(label_esm_seq, max_len, self.alphabet.padding_idx)
         padded_label_esm_mask = _pad(label_esm_mask, max_len, 0.)
 

@@ -22,7 +22,7 @@ from abfold.trainer import model_align
 
 def get_device(args):
     if args.device == 'gpu':
-        return torch.device(f'cuda:{args.local_rank}')
+        return torch.device(f'cuda:{args.gpu_list[args.local_rank]}')
     elif args.device == 'mlu':
         return ct.mlu_device(args.local_rank)
     else:
@@ -31,9 +31,11 @@ def get_device(args):
 def setup_model(model, args):
     device = get_device(args)
     model.to(device)
+    model.esm.to(device)
+    print('setup model device', device)
     model = nn.parallel.DistributedDataParallel(
         model,
-        device_ids=[args.local_rank], 
+        device_ids=[args.gpu_list[args.local_rank]], 
         output_device=args.local_rank,)
     model._set_static_graph()
     #find_unused_parameters=True)
@@ -49,6 +51,7 @@ def setup_dataset(args):
         for i in range(len(feats)):
             feat_name, feat_args = feats[i]
             if 'device' in feat_args and feat_args['device'] == '%(device)s':
+                print('setup dataset device', device)
                 feat_args['device'] = device
                 feats[i] = (feat_name, feat_args)
 
@@ -152,6 +155,8 @@ def train(args):
             jt = (it + 1) % args.gradient_accumulation_it
             
             batch_start_time = time.time()
+
+            print('batch device', batch['seq'].device, batch['esm_seq'].device)
 
             r = model(batch=batch, compute_loss=True)
             loss_results = loss_object(r, batch)

@@ -107,6 +107,7 @@ if __name__ == '__main__':
 
     # distributed training
     parser.add_argument("--local_rank", type=int, default=0)
+    parser.add_argument('--gpu_list', type=int, nargs='+')
 
     # verbose
     parser.add_argument('-v', '--verbose', action='store_true', help='verbose')
@@ -117,5 +118,7 @@ if __name__ == '__main__':
     args.world_rank = int(os.environ['RANK'])
     args.world_size = int(os.environ['WORLD_SIZE'])
     args.local_world_size = int(os.environ['LOCAL_WORLD_SIZE'])
+    if args.gpu_list is None:
+        args.gpu_list = list(range(args.local_world_size))
 
     main(args)

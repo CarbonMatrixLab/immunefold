@@ -82,23 +82,13 @@ class EmbeddingAndSeqformer(nn.Module):
         rel_pos = torch.clip(offset + c.max_relative_feature, min=0, max=2*c.max_relative_feature) + 1
         pair_act = self.proj_rel_pos(rel_pos)
 
-        if c.abrep.enabled:
-            abrep_embed = batch['abrep_embed']
-            layer_weights = F.softmax(self.abrep_embed_weights, dim=-1)
-
-            abrep_embed = torch.einsum('b l c n, n -> b l c', abrep_embed, layer_weights)
-            abrep_embed = self.proj_abrep_embed(abrep_embed)
-            seq_act = seq_act + abrep_embed
-
-            if c.abrep.pair_enabled and 'abrep_embed_pair' in batch:
-                pair_embed = self.proj_abrep_embed_pair(batch['abrep_embed_pair'])
-                pair_act = pair_act + pair_embed 
-
         if c.esm.enabled:
             layer_weights = F.softmax(self.esm_embed_weights, dim=-1)
             esm_embed = batch['esm_embed'].to(dtype=layer_weights.dtype)
 
+            print('esm_embed shape', esm_embed.shape, layer_weights.shape)
             esm_embed = torch.einsum('b l c n, n -> b l c', esm_embed, layer_weights)
+            print('after esm shape', esm_embed.shape)
             
             esm_embed = self.proj_esm_embed(esm_embed)
             seq_act = seq_act + esm_embed
@@ -187,6 +177,7 @@ class Attention(nn.Module):
         
         q = q* key_dim**(-0.5)
 
+        print('logits shape', q.shape, k.shape)
         logits = torch.einsum('... h q d, ... h k d -> ... h q k', q, k)
 
         if bias is not None:

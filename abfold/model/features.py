@@ -216,9 +216,14 @@ def make_antiberty_embed(protein, model_path, vocab_path, device=None, field='an
 def make_to_device(protein, fields, device, is_training=True):
     if isfunction(device):
         device = device()
+    
+    print('devices', device, fields)
+    print(protein.keys())
+
     for k in fields:
         if k in protein:
             protein[k] = protein[k].to(device)
+    print('esm_seq', protein['esm_seq'].device)
     return protein
 
 @take1st

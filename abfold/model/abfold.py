@@ -73,12 +73,15 @@ class AbFold(nn.Module):
         return ret
 
     def forward(self, batch, compute_loss=False):
+        print('batch device forward', batch['seq'].device, batch['esm_seq'].device)
+        
         c = self.config 
 
         seq = batch['seq']
-        print(seq.shape, 'shape')
 
         batch_size, num_residues, device = *seq.shape[:2], seq.device
+
+        print('check device', device, batch['esm_seq'].device)
         
         batch.update(self._compute_language_model(batch['esm_seq']))
 

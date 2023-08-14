@@ -1,9 +1,10 @@
 
 local_world_size=1; python -m torch.distributed.launch\
     --nnodes 1 --node_rank 0 --nproc_per_node ${local_world_size} \
-    --master_addr 127.0.0.1 --master_port 2222 \
+    --master_addr 127.0.0.1 --master_port 2223 \
     train_stage1.py  \
     --device gpu \
+    --gpu_list 3 \
     --max_seq_len 256 \
     --batch_size 1 \
     --num_epoch 1024 \

@@ -98,9 +98,14 @@ class ModelLM(E.ESM2):
 
         for layer_idx, layer in enumerate(self.layers):
             block_fn = functools.partial(layer,
+                    residx=residx,
                     self_attn_padding_mask=padding_mask,
                     need_head_weights=need_head_weights,)
-            x, attn = block_fn(x, residx=residx)
+
+            if self.training and layer_idx > 0:
+                x, attn = checkpoint(block_fn, x)
+            else:
+                x, attn = block_fn(x)
 
             if (layer_idx + 1) in repr_layers:
                 hidden_representations[layer_idx + 1] = x.transpose(0, 1)

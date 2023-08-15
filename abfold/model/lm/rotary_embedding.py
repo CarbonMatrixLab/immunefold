@@ -19,13 +19,13 @@ class RotaryEmbedding(E.RotaryEmbedding):
     
     def _update_cos_sin_tables_with_index(self, index):
         with torch.no_grad():
-            seq_len = torch.max(index) + 1
+            seq_len = torch.max(index).item() + 1
         
         device = index.device
 
         # Reset the tables if the sequence length has changed,
         # or if we're on a new device (possibly due to tracing for instance)
-        if seq_len > self._seq_len_cached or self._cos_cached.device != x.device:
+        if seq_len > self._seq_len_cached:#or self._cos_cached.device != device:
             self._seq_len_cached = seq_len
             t = torch.arange(seq_len, device=device).type_as(self.inv_freq)
             freqs = torch.einsum("i,j->ij", t, self.inv_freq)

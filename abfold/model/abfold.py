@@ -6,6 +6,7 @@ import torch
 from torch import nn
 
 from abfold.model.lm.pretrained import load_model_and_alphabet_local
+
 from abfold.common import residue_constants
 from abfold.model.seqformer import EmbeddingAndSeqformer
 from abfold.model.head import HeaderBuilder
@@ -68,21 +69,16 @@ class AbFold(nn.Module):
         ret = {}
         ret['esm_embed'] = torch.stack([results['representations'][k][:,1:-1] for k in repr_layers], dim=-1)
         ret['esm_logits'] = results['logits'][:,1:-1]
-        print('shape', tokens.shape, ret['esm_embed'].shape)
 
         return ret
 
     def forward(self, batch, compute_loss=False):
-        print('batch device forward', batch['seq'].device, batch['esm_seq'].device)
-        
         c = self.config 
 
         seq = batch['seq']
 
         batch_size, num_residues, device = *seq.shape[:2], seq.device
 
-        print('check device', device, batch['esm_seq'].device)
-        
         batch.update(self._compute_language_model(batch['esm_seq']))
 
         def get_prev(ret):
@@ -109,7 +105,7 @@ class AbFold(nn.Module):
             num_recycle = random.randint(0, c.num_recycle)
         else:
             num_recycle = c.num_recycle
-        
+       
         with torch.no_grad():
             batch.update(is_recycling=True)
             for i in range(num_recycle):

@@ -77,8 +77,6 @@ def folding_loss(batch, value, config):
     
     backbone_fape_loss = compute_backbone_loss(batch, value, config)
     
-    calpha_local_fape_loss = compute_calpha_local_loss(batch, value, config)
-    
     chi_loss, chi_loss_items= compute_chi_loss(batch, value, config)
    
     if 'renamed_atom14_gt_positions' not in value:
@@ -86,28 +84,29 @@ def folding_loss(batch, value, config):
 
     sc_fape_loss = compute_sidechain_loss(batch, value, config)
     
-
+    '''
     violation_loss, violation_loss_items = between_residue_bond_loss(
             value['final_atom14_positions'],
             batch['atom14_atom_exists'],
             batch['chain_id'],
             batch['seq'])
+    '''
 
     loss = (
             c.sidechain_fape_weight * sc_fape_loss + 
             c.backbone_fape_weight * backbone_fape_loss +
-            c.chi_weight * chi_loss +
-            c.calpha_local_fape_weight * calpha_local_fape_loss +
-            c.structural_violation_loss_weight * violation_loss)
+            c.chi_weight * chi_loss
+            #c.structural_violation_loss_weight * violation_loss
+            )
 
     return dict(loss=loss,
             backbone_fape_loss=backbone_fape_loss,
             sidechain_fape_loss=sc_fape_loss,
             chi_loss=chi_loss,
-            calpha_local_fape_loss=calpha_local_fape_loss,
-            violation_loss=violation_loss,
+            #violation_loss=violation_loss,
             **chi_loss_items,
-            **violation_loss_items)
+            #**violation_loss_items
+            )
 
 def predicted_lddt_loss(batch, value, config):
     c = config
@@ -136,35 +135,6 @@ def predicted_lddt_loss(batch, value, config):
     loss = torch.sum(errors * mask_ca) / (1e-6 + torch.sum(mask_ca))
      
     return dict(loss=loss)
-
-def compute_calpha_local_loss(batch, value, config):
-    epsilon = 1e-8
-    c = config
-    
-    def _fape(gt_fouth_calpha_pos, gt_fouth_calpha_exists, pred_fouth_calpha_pos):
-        dist_err = torch.sqrt(torch.sum(torch.square(gt_fouth_calpha_pos - pred_fouth_calpha_pos), dim=-1) + epsilon)
-        if c.local_fape.unclamped_ratio > 0.01:
-            dist_err = c.local_fape.unclamped_ratio * dist_err + (1. - c.local_fape.unclamped_ratio) * torch.clip(dist_err, c.local_fape.fape_min, c.local_fape.clamp_distance)
-        else:
-            dist_err = torch.clip(dist_err, c.local_fape.fape_min, c.local_fape.clamp_distance)
-
-        if c.local_fape.loop_weight.enabled:
-            loop_mask = torch.eq(batch['cdr_def'], 5).to(dtype=dist_err.dtype, device=dist_err.device)
-            dist_err = dist_err * ((1. - loop_mask) + loop_mask * c.local_fape.loop_weight.weight)
-
-        dist_err = torch.sum(gt_fouth_calpha_exists * dist_err)
-
-        loss = dist_err / torch.sum(gt_fouth_calpha_exists + epsilon) / c.local_fape.loss_unit_distance
-        
-        return loss
-    
-    pred_frame_positions = geometry.calpha3_to_frames(value['final_atom14_positions'][:,:,1])
-    left_pred_fouth_calpha_pos = pred_frame_positions['left_gt_calpha3_frame_positions']
-    right_pred_fouth_calpha_pos = pred_frame_positions['right_gt_calpha3_frame_positions']
-    
-    return 0.5 * (
-            _fape(batch['left_gt_calpha3_frame_positions'], batch['left_gt_calpha3_frame_position_exists'], left_pred_fouth_calpha_pos) +
-            _fape(batch['right_gt_calpha3_frame_positions'], batch['right_gt_calpha3_frame_position_exists'], right_pred_fouth_calpha_pos))
 
 def compute_chi_loss(batch, value, config):
     device = batch['seq'].device

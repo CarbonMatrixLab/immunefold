@@ -86,9 +86,7 @@ class EmbeddingAndSeqformer(nn.Module):
             layer_weights = F.softmax(self.esm_embed_weights, dim=-1)
             esm_embed = batch['esm_embed'].to(dtype=layer_weights.dtype)
 
-            print('esm_embed shape', esm_embed.shape, layer_weights.shape)
             esm_embed = torch.einsum('b l c n, n -> b l c', esm_embed, layer_weights)
-            print('after esm shape', esm_embed.shape)
             
             esm_embed = self.proj_esm_embed(esm_embed)
             seq_act = seq_act + esm_embed
@@ -177,7 +175,6 @@ class Attention(nn.Module):
         
         q = q* key_dim**(-0.5)
 
-        print('logits shape', q.shape, k.shape)
         logits = torch.einsum('... h q d, ... h k d -> ... h q k', q, k)
 
         if bias is not None:
@@ -490,8 +487,8 @@ class Seqformer(nn.Module):
         for it, block in enumerate(self.blocks):
             block_fn = functools.partial(block, seq_mask=mask)
             if self.training and not is_recycling and it > 0:
-                #seq_act, pair_act = checkpoint(block_fn, seq_act, pair_act)
-                seq_act, pair_act = block_fn(seq_act, pair_act)
+                seq_act, pair_act = checkpoint(block_fn, seq_act, pair_act)
+                #seq_act, pair_act = block_fn(seq_act, pair_act)
             else:
                 seq_act, pair_act = block_fn(seq_act, pair_act)
 

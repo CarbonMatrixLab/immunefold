@@ -31,12 +31,10 @@ def get_device(args):
 def setup_model(model, args):
     device = get_device(args)
     model.to(device)
-    model.esm.to(device)
-    print('setup model device', device)
     model = nn.parallel.DistributedDataParallel(
         model,
         device_ids=[args.gpu_list[args.local_rank]], 
-        output_device=args.local_rank,)
+        output_device=args.gpu_list[args.local_rank],)
     model._set_static_graph()
     #find_unused_parameters=True)
     
@@ -51,7 +49,6 @@ def setup_dataset(args):
         for i in range(len(feats)):
             feat_name, feat_args = feats[i]
             if 'device' in feat_args and feat_args['device'] == '%(device)s':
-                print('setup dataset device', device)
                 feat_args['device'] = device
                 feats[i] = (feat_name, feat_args)
 
@@ -111,13 +108,14 @@ def train(args):
         model = AbFold(config = config.model)
         trainable_variables = model.parameters()
 
+    for n, p in model.named_parameters():
+        print(n, p.requires_grad)
+
     logging.info('AbFold.config: %s', config)
 
     model = setup_model(model, args)
 
     # optimizer
-
-    print('trained number', len(trainable_variables))
     optim = Optimizer(trainable_variables,
             base_lr=args.learning_rate, warmup_steps=args.warmup_steps, flat_steps=args.flat_steps,
             decay_steps=args.decay_steps, decay_type='linear', min_lr=1e-5)
@@ -155,8 +153,6 @@ def train(args):
             jt = (it + 1) % args.gradient_accumulation_it
             
             batch_start_time = time.time()
-
-            print('batch device', batch['seq'].device, batch['esm_seq'].device)
 
             r = model(batch=batch, compute_loss=True)
             loss_results = loss_object(r, batch)

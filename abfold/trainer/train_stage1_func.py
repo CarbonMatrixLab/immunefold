@@ -35,7 +35,7 @@ def setup_model(model, args):
         model,
         device_ids=[args.gpu_list[args.local_rank]], 
         output_device=args.gpu_list[args.local_rank],)
-    model._set_static_graph()
+    #model._set_static_graph()
     #find_unused_parameters=True)
     
     logging.info('wrap model with nn.parallel.DistributedDataParallel class')
@@ -146,6 +146,10 @@ def train(args):
 
     # setup train
     model.train()
+    
+    running_loss = MetricDict()
+    optim.zero_grad()
+    batch_start_time = time.time()
 
     for epoch in range(args.num_epoch):
         running_loss = MetricDict()
@@ -156,12 +160,18 @@ def train(args):
             
             batch_start_time = time.time()
 
-            r = model(batch=batch, compute_loss=True)
-            loss_results = loss_object(r, batch)
-            loss = loss_results['loss'] / args.gradient_accumulation_it
+            if jt == 0:
+                r = model(batch=batch, compute_loss=True)
+                loss_results = loss_object(r, batch)
+                loss = loss_results['loss'] / args.gradient_accumulation_it
             
-            loss.backward()
-            #torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                loss.backward()
+            else:
+                with model.no_sync():
+                    r = model(batch=batch, compute_loss=True)
+                    loss_results = loss_object(r, batch)
+                    loss = loss_results['loss'] / args.gradient_accumulation_it
+                    loss.backward()
             
             logging.info('traing examples ' + ','.join(batch['name']))
             running_loss += MetricDict({'all': loss_results['loss']})
@@ -187,13 +197,14 @@ def train(args):
                 optim.zero_grad()
                 
                 for k, v in running_loss.items():
-                    v = v / args.gradient_accumulation_it
+                    #v = v / args.gradient_accumulation_it
                     log_metric_dict(v, epoch, it, prefix=f'Loss/train@{k}')
 
                 running_loss = MetricDict()
             
-            batch_end_time = time.time()
-            logging.info(f'{it} batch time {batch_end_time - batch_start_time} s.')
+                batch_end_time = time.time()
+                logging.info(f'{it} batch time {batch_end_time - batch_start_time} s.')
+                batch_start_time = time.time()
 
         # Save a checkpoint every epoch
         if args.world_rank == 0 and (epoch + 1) % args.checkpoint_it == 0:

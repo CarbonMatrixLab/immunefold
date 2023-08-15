@@ -34,7 +34,7 @@ nnodes=4
 output_dir=./studies/stage1_v1
 batch_size=1
 
-cd /home/bingxing2/home/scx6023/zhang/AbFold2
+cd /home/bingxing2/home/scx6023/zhang/carbonmatrix
 
 python -m torch.distributed.launch\
     --nnodes=${nnodes} \
@@ -44,13 +44,13 @@ python -m torch.distributed.launch\
     --master_port="29501"  train_stage1.py  \
     --device gpu \
     --max_seq_len 256 \
-    --batch_size 1 \
+    --batch_size ${batch_size} \
     --num_epoch 1024 \
     --warmup_steps 0 \
     --flat_steps 16384 \
     --decay_steps 16384 \
     --learning_rate 0.0001 \
-    --prefix ./studies/v1\
+    --prefix ${output_dir} \
     --restore_model_ckpt ../abdata_2023/esm2/esmfold_no_esm2.ckpt \
     --restore_esm2_model ../abdata_2023/esm2/esm2_t36_3B_UR50D.pt \
     --model_features ./config/config_data_stage1.json \
@@ -71,13 +71,13 @@ do	echo node ${r}
 		--master_port="29501" train_stage1.py  \
         --device gpu \
         --max_seq_len 256 \
-        --batch_size 1 \
+        --batch_size ${batch_size} \
         --num_epoch 1024 \
         --warmup_steps 0 \
         --flat_steps 16384 \
         --decay_steps 16384 \
         --learning_rate 0.0001 \
-        --prefix ./studies/v1\
+        --prefix ${output_dir} \
         --restore_model_ckpt ../abdata_2023/esm2/esmfold_no_esm2.ckpt \
         --restore_esm2_model ../abdata_2023/esm2/esm2_t36_3B_UR50D.pt \
         --model_features ./config/config_data_stage1.json \

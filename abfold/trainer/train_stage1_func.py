@@ -100,7 +100,9 @@ def train(args):
         model_config = ckpt['model_config']
         model_config['esm2_model_file'] = args.restore_esm2_model
         model = AbFold(config = model_config)
+        print(model.impl.distogram.proj.bias, 'check bias')
         model.impl.load_state_dict(ckpt['model_state_dict'], strict=True)
+        print(model.impl.distogram.proj.bias, 'check bias2')
 
         trainable_variables = model_align.setup_model(model, config.align)
         #trainable_variables = model.parameters()

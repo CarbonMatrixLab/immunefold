@@ -720,16 +720,20 @@ def TMscore(A, B, *, L):
 
 def contact_precision_torch(pred, truth, ratios, ranges, mask=None, cutoff=8):
     # (..., l, l)
+
     assert truth.shape[-1] == truth.shape[-2]
     assert pred.shape == truth.shape
 
     seq_len = truth.shape[-1]
     mask1s = torch.ones_like(truth, dtype=torch.int8)
-    if exists(mask):
+    
+    if mask is not None:
         mask1s = mask1s * (mask[...,:,None] * mask[...,None,:])
+    
     mask_ranges = map(
             lambda r: torch.triu(mask1s, default(r[0], 0)) - torch.triu(mask1s, default(r[1], seq_len)),
             ranges)
+
 
     pred_truth = torch.stack((pred, truth), dim=-1)
     for (i, j), mask in zip(ranges, mask_ranges):

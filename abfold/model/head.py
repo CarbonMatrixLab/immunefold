@@ -94,6 +94,7 @@ class MetricDictHead(nn.Module):
             pred = torch.sum(pred[...,:t+1], dim=-1)
             #truth = torch.cdist(positions, positions, p=2)
             truth = torch.sqrt(torch.sum(squared_difference(positions[:,:,None], positions[:,None]), dim=-1))
+
             precision_list = contact_precision(
                     pred, truth, mask=mask,
                     ratios=self.config.get('contact_ratios'),

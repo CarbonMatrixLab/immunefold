@@ -6,7 +6,6 @@ import torch
 from torch import nn
 
 from abfold.model.lm.pretrained import load_model_and_alphabet_local
-#from esm.pretrained import load_model_and_alphabet_local
 
 from abfold.common import residue_constants
 from abfold.model.seqformer import EmbeddingAndSeqformer
@@ -57,7 +56,6 @@ class AbFold(nn.Module):
         super().__init__()
 
         self.esm, _, _ = load_model_and_alphabet_local(config['esm2_model_file'])
-        #self.esm, _ = load_model_and_alphabet_local(config['esm2_model_file'])
 
         self.impl = AbFoldIteration(config)
 

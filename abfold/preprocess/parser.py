@@ -167,8 +167,8 @@ def make_stage1_feature(structure):
                 residue_constants.restype_name_to_atom14_names['UNK'])
 
         for atom in residue.get_atoms():
-            if atom.id not in ['CA', 'C', 'N', 'O']:
-                continue
+            #if atom.id not in ['CA', 'C', 'N', 'O']:
+            #    continue
             atom14idx = res_atom14_list.index(atom.id)
             coords[seq_idx, atom14idx] = atom.get_coord()
             coord_mask[seq_idx, atom14idx]= True

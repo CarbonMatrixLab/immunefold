@@ -9,6 +9,7 @@ import time
 import numpy as np
 import pandas as pd
 import ml_collections
+from contextlib import nullcontext
 
 import torch
 from torch import nn
@@ -34,9 +35,9 @@ def setup_model(model, args):
     model = nn.parallel.DistributedDataParallel(
         model,
         device_ids=[args.gpu_list[args.local_rank]], 
-        output_device=args.gpu_list[args.local_rank],)
+        output_device=args.gpu_list[args.local_rank],
+        find_unused_parameters=True)
     #model._set_static_graph()
-    #find_unused_parameters=True)
     
     logging.info('wrap model with nn.parallel.DistributedDataParallel class')
     return model
@@ -100,9 +101,7 @@ def train(args):
         model_config = ckpt['model_config']
         model_config['esm2_model_file'] = args.restore_esm2_model
         model = AbFold(config = model_config)
-        print(model.impl.distogram.proj.bias, 'check bias')
         model.impl.load_state_dict(ckpt['model_state_dict'], strict=True)
-        print(model.impl.distogram.proj.bias, 'check bias2')
 
         trainable_variables = model_align.setup_model(model, config.align)
         #trainable_variables = model.parameters()
@@ -110,8 +109,8 @@ def train(args):
         model = AbFold(config = config.model)
         trainable_variables = model.parameters()
 
-    for n, p in model.named_parameters():
-        print(n, p.requires_grad)
+    #for n, p in model.named_parameters():
+    #    print(n, p.requires_grad)
 
     logging.info('AbFold.config: %s', config)
 
@@ -157,21 +156,13 @@ def train(args):
 
         for it, batch in enumerate(train_loader):
             jt = (it + 1) % args.gradient_accumulation_it
-            
-            batch_start_time = time.time()
 
-            if jt == 0:
+            ctx = nullcontext if jt == 0 else model.no_sync
+            with ctx():
                 r = model(batch=batch, compute_loss=True)
                 loss_results = loss_object(r, batch)
                 loss = loss_results['loss'] / args.gradient_accumulation_it
-            
                 loss.backward()
-            else:
-                with model.no_sync():
-                    r = model(batch=batch, compute_loss=True)
-                    loss_results = loss_object(r, batch)
-                    loss = loss_results['loss'] / args.gradient_accumulation_it
-                    loss.backward()
             
             logging.info('traing examples ' + ','.join(batch['name']))
             running_loss += MetricDict({'all': loss_results['loss']})
@@ -197,7 +188,7 @@ def train(args):
                 optim.zero_grad()
                 
                 for k, v in running_loss.items():
-                    #v = v / args.gradient_accumulation_it
+                    v = v / args.gradient_accumulation_it
                     log_metric_dict(v, epoch, it, prefix=f'Loss/train@{k}')
 
                 running_loss = MetricDict()

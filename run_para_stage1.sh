@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH -N 4 --gres=gpu:4 --qos=gpugpu -p vip_gpu_scx6023
 
-
 module load anaconda/2021.11
 module load compilers/cuda/11.6
 
@@ -18,7 +17,6 @@ export NCCL_IB_TIMEOUT=23
 export NCCL_IB_RETRY_CNT=7
 export NCCL_DEBUG=INFO
 
-
 ### 获取每个节点的hostname
 for i in `scontrol show hostnames`
 do
@@ -27,9 +25,11 @@ do
 	echo ${host[$k]}
 done
 
-
 local_world_size=4
 nnodes=4
+
+gradient_accumulation_it=8
+decay_steps=20000
 
 output_dir=./studies/stage1_v1
 batch_size=1
@@ -47,8 +47,8 @@ python -m torch.distributed.launch\
     --batch_size ${batch_size} \
     --num_epoch 1024 \
     --warmup_steps 0 \
-    --flat_steps 16384 \
-    --decay_steps 16384 \
+    --flat_steps 0 \
+    --decay_steps ${decay_steps} \
     --learning_rate 0.0001 \
     --gradient_accumulation_it ${gradient_accumulation_it} \
     --prefix ${output_dir} \
@@ -75,8 +75,8 @@ do	echo node ${r}
         --batch_size ${batch_size} \
         --num_epoch 1024 \
         --warmup_steps 0 \
-        --flat_steps 16384 \
-        --decay_steps 16384 \
+        --flat_steps 0 \
+        --decay_steps ${decay_steps} \
         --learning_rate 0.0001 \
         --gradient_accumulation_it ${gradient_accumulation_it} \
         --prefix ${output_dir} \

@@ -44,7 +44,7 @@ class MultiheadAttention(E.MultiheadAttention):
         query,
         key: Optional[Tensor],
         value: Optional[Tensor],
-        index: Optional[Tensor] = None,
+        residx: Optional[Tensor] = None,
         key_padding_mask: Optional[Tensor] = None,
         incremental_state: Optional[Dict[str, Dict[str, Optional[Tensor]]]] = None,
         need_weights: bool = True,
@@ -238,12 +238,12 @@ class MultiheadAttention(E.MultiheadAttention):
                 )
 
         if self.rot_emb:
-            if index is None:
-                index = torch.tile(torch.arange(q.shape[1], device=q.device), [q.shape[0], 1])
+            if residx is None:
+                residx = torch.tile(torch.arange(q.shape[1], device=q.device), [q.shape[0], 1])
             else:
-                index = repeat(index, 'b l -> (b h) l', h=self.num_heads)
+                residx = repeat(residx, 'b l -> (b h) l', h=self.num_heads)
 
-            q, k = self.rot_emb(q, k, index)
+            q, k = self.rot_emb(q, k, residx)
 
         attn_weights = torch.bmm(q, k.transpose(1, 2))
         attn_weights = MultiheadAttention.apply_sparse_mask(attn_weights, tgt_len, src_len, bsz)

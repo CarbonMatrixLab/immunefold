@@ -108,9 +108,13 @@ class Stage1StructureDataset(torch.utils.data.Dataset):
         struc = make_stage1_feature_from_pdb(pdb_file) 
 
         str_seq = struc['str_seq']
+
         seq = torch.tensor(str_seq_to_index(str_seq), dtype=torch.int64)
         
         esm_seq, label_esm_seq, label_esm_mask = self._create_train_seq_sample(str_seq)
+        
+        residx = struc['residx']
+        residx = np.concatenate([[0], residx + 1, [residx[-1]+2]], axis=-1)
 
         mask = torch.ones((len(str_seq),))
 
@@ -121,7 +125,7 @@ class Stage1StructureDataset(torch.utils.data.Dataset):
                 esm_seq = torch.from_numpy(esm_seq),
                 label_esm_seq = torch.from_numpy(label_esm_seq),
                 label_esm_mask = torch.from_numpy(label_esm_mask),
-                residx = torch.from_numpy(struc['residx']),
+                residx = torch.from_numpy(residx),
                 atom14_gt_positions = torch.from_numpy(struc['coords']), 
                 atom14_gt_exists =torch.from_numpy(struc['coord_mask']),)
 
@@ -139,11 +143,12 @@ class Stage1StructureDataset(torch.utils.data.Dataset):
             return torch.stack([F.pad(xx, [0, pad_len - xx.shape[-1]], value=pad_value) for xx in x], dim=0)
         
         padded_seq = _pad(seq, max_len, self.alphabet.padding_idx)
+        
         padded_esm_seq = _pad(esm_seq, max_len + 2, self.alphabet.padding_idx)
-        padded_label_esm_seq = _pad(label_esm_seq, max_len, self.alphabet.padding_idx)
-        padded_label_esm_mask = _pad(label_esm_mask, max_len, 0.)
-
-        padded_residx = pad_for_batch(residx, max_len, 'msk')
+        padded_label_esm_seq = _pad(label_esm_seq, max_len + 2, self.alphabet.padding_idx)
+        padded_label_esm_mask = _pad(label_esm_mask, max_len + 2, 0.)
+        padded_residx = pad_for_batch(residx, max_len + 2, 'msk')
+        
         padded_masks = pad_for_batch(mask, max_len, 'msk')
 
         padded_atom14_gt_positions = pad_for_batch(atom14_gt_positions, max_len, 'crd')

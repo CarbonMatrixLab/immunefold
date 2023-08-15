@@ -6,6 +6,7 @@ import torch
 from torch import nn
 
 from abfold.model.lm.pretrained import load_model_and_alphabet_local
+#from esm.pretrained import load_model_and_alphabet_local
 
 from abfold.common import residue_constants
 from abfold.model.seqformer import EmbeddingAndSeqformer
@@ -56,15 +57,16 @@ class AbFold(nn.Module):
         super().__init__()
 
         self.esm, _, _ = load_model_and_alphabet_local(config['esm2_model_file'])
+        #self.esm, _ = load_model_and_alphabet_local(config['esm2_model_file'])
 
         self.impl = AbFoldIteration(config)
 
         self.config = config
 
-    def _compute_language_model(self, tokens):
+    def _compute_language_model(self, tokens, residx):
         repr_layers = list(range(self.config.embeddings_and_seqformer.esm.num_layers + 1))
 
-        results = self.esm(tokens, repr_layers=repr_layers, need_head_weights=False)
+        results = self.esm(tokens, repr_layers=repr_layers, residx=residx, need_head_weights=False)
 
         ret = {}
         ret['esm_embed'] = torch.stack([results['representations'][k][:,1:-1] for k in repr_layers], dim=-1)
@@ -79,7 +81,7 @@ class AbFold(nn.Module):
 
         batch_size, num_residues, device = *seq.shape[:2], seq.device
 
-        batch.update(self._compute_language_model(batch['esm_seq']))
+        batch.update(self._compute_language_model(batch['esm_seq'], batch['residx']))
 
         def get_prev(ret):
             prev_pseudo_beta = pseudo_beta_fn_v2(batch['seq'], ret['heads']['folding']['final_atom_positions'])

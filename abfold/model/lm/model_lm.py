@@ -62,7 +62,7 @@ class ModelLM(E.ESM2):
         )
 
     
-    def forward(self, tokens, repr_layers=[], index=None, need_head_weights=False, return_contacts=False):
+    def forward(self, tokens, repr_layers=[], residx=None, need_head_weights=False, return_contacts=False):
         if return_contacts:
             need_head_weights = True
 
@@ -100,7 +100,7 @@ class ModelLM(E.ESM2):
             block_fn = functools.partial(layer,
                     self_attn_padding_mask=padding_mask,
                     need_head_weights=need_head_weights,)
-            x, attn = block_fn(x, index=index)
+            x, attn = block_fn(x, residx=residx)
 
             if (layer_idx + 1) in repr_layers:
                 hidden_representations[layer_idx + 1] = x.transpose(0, 1)

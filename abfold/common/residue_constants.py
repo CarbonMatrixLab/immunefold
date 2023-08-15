@@ -9,7 +9,7 @@ import json
 
 
 num_ab_regions = 14
-residue_chain_index_offset = 512
+residue_chain_index_offset = 512 # just follow ESMFold
 
 restypes = [
     'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P',

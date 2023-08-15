@@ -22,4 +22,3 @@ for k, v in x['model_state_dict'].items():
 x.update(model_state_dict=state_dict)
 
 torch.save(x, '../abdata_2023/esm2/esmfold_no_esm2.ckpt')
-

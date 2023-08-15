@@ -67,10 +67,10 @@ class AbFold(nn.Module):
         results = self.esm(tokens, repr_layers=repr_layers, residx=residx, need_head_weights=False)
 
         ret = {}
-        ret['esm_embed'] = torch.stack([results['representations'][k][:,1:-1] for k in repr_layers], dim=-1)
-        ret['esm_logits'] = results['logits'][:,1:-1]
+        esm_embed = torch.stack([results['representations'][k][:,1:-1] for k in repr_layers], dim=-1)
+        esm_logits = results['logits'][:,1:-1]
 
-        return ret
+        return esm_embed, esm_logits
 
     def forward(self, batch, compute_loss=False):
         c = self.config 
@@ -79,7 +79,8 @@ class AbFold(nn.Module):
 
         batch_size, num_residues, device = *seq.shape[:2], seq.device
 
-        batch.update(self._compute_language_model(batch['esm_seq'], batch['residx']))
+        esm_embed, esm_logits = self._compute_language_model(batch['esm_seq'], batch['residx'])
+        batch.update(esm_embed = esm_embed)
 
         def get_prev(ret):
             prev_pseudo_beta = pseudo_beta_fn_v2(batch['seq'], ret['heads']['folding']['final_atom_positions'])
@@ -116,5 +117,6 @@ class AbFold(nn.Module):
         
         batch.update(is_recycling=False)
         ret = self.impl(batch, compute_loss=compute_loss)
+        ret.update(esm_logits = esm_logits)
         
         return ret

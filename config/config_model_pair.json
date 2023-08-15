@@ -152,6 +152,12 @@
 	 }
    },
    "loss" : {
+      "seq_mask" : {
+      	"enabled": true,
+	"config" : {},
+	"loss_fn": "seq_mask_loss",
+	"weight" : 0.1
+      },
       "distogram" : {
 	 "enabled": true,
          "config" : {},

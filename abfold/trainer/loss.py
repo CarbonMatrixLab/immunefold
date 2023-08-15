@@ -37,6 +37,20 @@ def registry_loss(fn):
     return fn
 
 @registry_loss
+def seq_mask_loss(batch, values, config):
+    labels, label_mask = batch['label_esm_seq'][:,1:-1], batch['label_esm_mask'][:,1:-1]
+    logits = values['esm_logits']
+    eps = 1e-8
+
+    logits = rearrange(logits, 'b l c -> b c l')
+    
+    loss = F.cross_entropy(logits, labels, reduction='none')
+
+    loss = torch.sum(loss * label_mask) / (torch.sum(label_mask) + eps)
+
+    return dict(loss=loss)
+
+@registry_loss
 def distogram_loss(batch, value, config):
     """Log loss of a distogram."""
     c = config

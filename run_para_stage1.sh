@@ -32,7 +32,7 @@ gradient_accumulation_it=8
 decay_steps=40000
 
 output_dir=./studies/stage1_all_v1
-batch_size=1
+batch_size=2
 
 cd /home/bingxing2/home/scx6023/zhang/carbonmatrix
 

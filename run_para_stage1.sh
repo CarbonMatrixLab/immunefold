@@ -29,9 +29,9 @@ local_world_size=4
 nnodes=4
 
 gradient_accumulation_it=8
-decay_steps=20000
+decay_steps=40000
 
-output_dir=./studies/stage1_v1
+output_dir=./studies/stage1_all_v1
 batch_size=1
 
 cd /home/bingxing2/home/scx6023/zhang/carbonmatrix
@@ -56,7 +56,7 @@ python -m torch.distributed.launch\
     --restore_esm2_model ../abdata_2023/esm2/esm2_t36_3B_UR50D.pt \
     --model_features ./config/config_data_stage1.json \
     --model_config ./config/config_model_stage1.json \
-    --train_name_idx ../oas_data/stage1_pdb.list \
+    --train_name_idx ../oas_data/shuffled_train_pdb.list \
     --train_data ../oas_data/ >>  train_rank0_${SLURM_JOB_ID}.log 2>&1 &
 
 ### 使用srun 运行第二个节点
@@ -84,7 +84,7 @@ do	echo node ${r}
         --restore_esm2_model ../abdata_2023/esm2/esm2_t36_3B_UR50D.pt \
         --model_features ./config/config_data_stage1.json \
         --model_config ./config/config_model_stage1.json \
-        --train_name_idx ../oas_data/stage1_pdb.list \
+        --train_name_idx ../oas_data/shuffled_train_pdb.list \
         --train_data ../oas_data/ >> train_rank${rr}_${SLURM_JOB_ID}.log 2>&1 &
 done
 

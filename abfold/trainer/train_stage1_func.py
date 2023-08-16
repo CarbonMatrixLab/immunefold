@@ -57,6 +57,12 @@ def setup_dataset(args):
 
     with open(args.train_name_idx) as f:
         name_idx = [i.strip() for i in f]
+    
+    real_batch_size = args.batch_size * args.world_size * args.gradient_accumulation_it
+    reduced_num = len(name_idx) - len(name_idx) % real_batch_size
+    name_idx = name_idx[:reduced_num]
+
+    logging.info(f'traing sampels {len(name_idx)}')
 
     train_loader = dataset.load(
             data_dir = args.train_data,
@@ -130,18 +136,24 @@ def train(args):
         if not os.path.exists(ckpt_dir):
             os.path.makedirs(ckpt_dir)
         
-        ckpt_file = os.path.join(ckpt_dir, f'epoch_{it}.ckpt')
+        ckpt_file = os.path.join(ckpt_dir, f'step_{it}.ckpt')
         
         saved_model = model.module if isinstance(model, nn.parallel.DistributedDataParallel) else model
 
         torch.save(dict(
-            model_state_dict = saved_model.state_dict(),
-            optim_state_dict = optim.state_dict(),
+            model_state_dict = saved_model.esm.state_dict(),
+            #optim_state_dict = optim.state_dict(),
             model_config = config.model,
             train_config = config,
             feature_config = feats,
             args = args,
             train_steps = optim.cur_step), ckpt_file)
+
+
+    #test save
+    _save_checkpoint(0)
+    import sys
+    sys.exit()
 
     # setup train
     model.train()
@@ -197,6 +209,5 @@ def train(args):
                 logging.info(f'{it} batch time {batch_end_time - batch_start_time} s.')
                 batch_start_time = time.time()
 
-        # Save a checkpoint every epoch
-        if args.world_rank == 0 and (epoch + 1) % args.checkpoint_it == 0:
-            _save_checkpoint(epoch)
+                if optim.cur_step % args.checkpoint_it == 0:
+                    _save_checkpoint(optim.cur_step)

@@ -149,12 +149,6 @@ def train(args):
             args = args,
             train_steps = optim.cur_step), ckpt_file)
 
-
-    #test save
-    _save_checkpoint(0)
-    import sys
-    sys.exit()
-
     # setup train
     model.train()
     

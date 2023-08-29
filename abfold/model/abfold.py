@@ -105,16 +105,17 @@ class AbFold(nn.Module):
         
         num_recycle = c.num_recycle
        
-        with torch.no_grad():
-            batch.update(is_recycling=True)
-            for i in range(num_recycle):
-                ret = self.impl(batch, compute_loss=False)
-            
-                prev = get_prev(ret)
-                batch.update(prev)
+        with torch.cuda.amp.autocast(enabled=False, dtype=torch.float16):
+            with torch.no_grad():
+                batch.update(is_recycling=True)
+                for i in range(num_recycle):
+                    ret = self.impl(batch, compute_loss=False)
+                
+                    prev = get_prev(ret)
+                    batch.update(prev)
 
-            #batch.update(is_recycling=False)
-            ret = self.impl(batch, compute_loss=compute_loss)
-            ret.update(esm_logits = esm_logits)
+                #batch.update(is_recycling=False)
+                ret = self.impl(batch, compute_loss=compute_loss)
+                ret.update(esm_logits = esm_logits)
         
         return ret

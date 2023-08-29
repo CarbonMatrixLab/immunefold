@@ -12,7 +12,6 @@ from abfold.model import quat_affine
 from abfold.model.common_modules import(
         Linear,
         LayerNorm)
-from abfold.model.seqformer import SpatialDepthWiseInception
 from abfold.model.sidechain import MultiRigidSidechain
 
 logger = logging.getLogger(__name__)

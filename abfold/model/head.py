@@ -125,10 +125,12 @@ class TMscoreHead(nn.Module):
             tmscore = 0.
             for b in range(preds.shape[0]):
                 mask = gt_mask[b]
-                pred_aligned, label_aligned = Kabsch(
-                        rearrange(preds[b][mask], 'c d -> d c'),
-                        rearrange(labels[b][mask], 'c d -> d c'))
 
+                with torch.cuda.amp.autocast(enabled=False):
+                    pred_aligned, label_aligned = kabsch_torch(
+                            rearrange(preds[b][mask], 'c d -> d c'),
+                            rearrange(labels[b][mask], 'c d -> d c'))
+    
                 tmscore += TMscore(pred_aligned[None,:,:], label_aligned[None,:,:], L=torch.sum(mask).item())
 
             return dict(loss = tmscore / preds.shape[0])

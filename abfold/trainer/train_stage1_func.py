@@ -41,7 +41,7 @@ def setup_model(model, args):
     #model._set_static_graph()
     
     logging.info('wrap model with nn.parallel.DistributedDataParallel class')
-    return model
+    return model, device
 
 def setup_dataset(args):
     # feature
@@ -121,7 +121,7 @@ def train(args):
 
     logging.info('AbFold.config: %s', config)
 
-    model = setup_model(model, args)
+    model, device = setup_model(model, args)
 
     # optimizer
     optim = Optimizer(trainable_variables,
@@ -157,6 +157,9 @@ def train(args):
     optim.zero_grad()
     batch_start_time = time.time()
 
+
+    scaler = torch.cuda.amp.GradScaler()
+
     for epoch in range(args.num_epoch):
         running_loss = MetricDict()
         optim.zero_grad()
@@ -166,10 +169,13 @@ def train(args):
 
             ctx = nullcontext if jt == 0 else model.no_sync
             with ctx():
-                r = model(batch=batch, compute_loss=True)
-                loss_results = loss_object(r, batch)
-                loss = loss_results['loss'] / args.gradient_accumulation_it
-                loss.backward()
+                with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):
+                    r = model(batch=batch, compute_loss=True)
+                    loss_results = loss_object(r, batch)
+                    loss = loss_results['loss'] / args.gradient_accumulation_it
+                
+                scaler.scale(loss).backward()
+                #loss.backward()
             
             logging.info('traing examples ' + ','.join(batch['name']))
             running_loss += MetricDict({'all': loss_results['loss']})
@@ -198,7 +204,9 @@ def train(args):
 
                 logging.info(f'optim step= {optim.cur_step} lr= {optim.get_values()}')
 
-                optim.step()
+                #optim.step()
+                scaler.step(optim)
+                scaler.update()
                 optim.zero_grad()
                 
                 for k, v in running_loss.items():

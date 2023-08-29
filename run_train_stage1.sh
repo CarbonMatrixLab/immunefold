@@ -12,7 +12,7 @@ local_world_size=1; python -m torch.distributed.launch\
     --flat_steps 16384 \
     --decay_steps 16384 \
     --learning_rate 0.0001 \
-    --gradient_accumulation_it 2 \
+    --gradient_accumulation_it 2\
     --prefix ./studies/v1\
     --restore_model_ckpt ../abdata_2023/esm2/esmfold_no_esm2.ckpt \
     --restore_esm2_model ../abdata_2023/esm2/esm2_t36_3B_UR50D.pt \

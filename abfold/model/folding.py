@@ -179,11 +179,13 @@ class StructureModule(nn.Module):
         for fold_it in range(c.num_layer):
             is_last = (fold_it == (c.num_layer - 1))
             seq_act = seq_act + self.attention_module(inputs_1d = seq_act, inputs_2d = static_pair_act, mask = batch['mask'], in_rigids=(rotations, translations))
-            seq_act = F.dropout(seq_act, p = c.dropout, training=self.training)
+            if self.training and c.dropout > 0.0:
+                seq_act = F.dropout(seq_act, p = c.dropout, training=self.training)
             seq_act = self.attention_layer_norm(seq_act)
             
             seq_act = seq_act + self.transition_module(seq_act)
-            seq_act = F.dropout(seq_act, p = c.dropout, training=self.training)
+            if self.training and c.dropout > 0.0:
+                seq_act = F.dropout(seq_act, p = c.dropout, training=self.training)
             seq_act = self.transition_layer_norm(seq_act)
             
             quaternion_update, translation_update = self.affine_update(seq_act).chunk(2, dim = -1)

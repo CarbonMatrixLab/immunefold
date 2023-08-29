@@ -113,9 +113,7 @@ class EmbeddingAndSeqformer(nn.Module):
 
 class Attention(nn.Module):
     def __init__(self, input_dim, key_dim, value_dim, output_dim, num_head,
-            split_first=True, 
-            gating=True,
-            inp_kernels=None):
+            split_first=True, gating=True):
         super().__init__()
         assert key_dim % num_head == 0
         assert value_dim % num_head == 0
@@ -140,12 +138,6 @@ class Attention(nn.Module):
 
         self.proj_out = Linear(value_dim, output_dim, init='final')
          
-        self.inp_kernels = inp_kernels
-        if inp_kernels:
-            self.inp_q = SpatialDepthWiseInception(key_dim // num_head, inp_kernels)
-            self.inp_k = SpatialDepthWiseInception(key_dim // num_head, inp_kernels)
-            self.inp_v = SpatialDepthWiseInception(value_dim // num_head, inp_kernels)
-
     def forward(self, q_data, k_data=None, bias=None, k_mask=None):
         """
         Arguments:
@@ -168,14 +160,7 @@ class Attention(nn.Module):
             assert (k_data is None)
             t = rearrange(self.proj_in(q_data), "... l (h d) -> ... h l d", h=self.num_head)
             q, k, v = torch.chunk(t, 3, dim=-1)
-        
-        if self.inp_kernels:
-            q, k, v = map(lambda t: rearrange(t, 'b s h l d-> b (s h) l d'), (q, k, v))
-            q = self.inp_q(q)
-            k = self.inp_k(k)
-            v = self.inp_v(v)
-            q, k, v = map(lambda t: rearrange(t, 'b (s h) l d-> b s h l d', h = self.num_head), (q, k, v))
-        
+       
         q = q* key_dim**(-0.5)
 
         logits = torch.einsum('... h q d, ... h k d -> ... h q k', q, k)
@@ -191,7 +176,7 @@ class Attention(nn.Module):
         weights = F.softmax(logits, dim = -1)
         weighted_avg = torch.einsum('b s h q k, b s h k d -> b s h q d', weights, v)
         weighted_avg = rearrange(weighted_avg, 'b s h q d -> b s q (h d)')
-        
+
         if self.gating:
             gate_values = torch.sigmoid(self.gate(q_data))
             weighted_avg = weighted_avg * gate_values
@@ -215,9 +200,7 @@ class SeqAttentionWithPairBias(nn.Module):
                 value_dim=num_in_seq_channel,
                 output_dim=num_in_seq_channel,
                 num_head=c.num_head,
-                split_first=False,
-                inp_kernels=c.inp_kernels)
-
+                split_first=False)
         self.config = config
 
     def forward(self, seq_act, pair_act, mask):
@@ -313,10 +296,6 @@ class TriangleMultiplication(nn.Module):
         self.proj_out = Linear(c.num_intermediate_channel, num_in_channel, init='final')
 
         
-        if c.inp_kernels:
-            self.inp_left = SpatialDepthWiseInception(c.num_intermediate_channel // c.num_head, c.inp_kernels)
-            self.inp_right = SpatialDepthWiseInception(c.num_intermediate_channel // c.num_head, c.inp_kernels)
-
         self.config = c
 
     def forward(self, act, mask):
@@ -335,26 +314,6 @@ class TriangleMultiplication(nn.Module):
 
         left_proj_act = self.left_proj(act)
         right_proj_act = self.right_proj(act)
-        
-        if c.inp_kernels:
-            if c.orientation == 'per_row':
-                equation = 'b i j (h d) -> b (i h) j d'
-            else:
-                equation = 'b i j (h d) -> b (j h) i d'
-
-            left_proj_act, right_proj_act = map(
-                    lambda t: rearrange(t, equation, h = c.num_head), (left_proj_act, right_proj_act))
-
-            left_proj_act = self.inp_left(left_proj_act)
-            right_proj_act = self.inp_right(right_proj_act)
-            
-            if c.orientation == 'per_row':
-                equation = 'b (i h) j d -> b i j (h d)'
-            else:
-                equation = 'b (j h) i d -> b i j (h d)'
-            
-            left_proj_act, right_proj_act = map(
-                    lambda t: rearrange(t, equation, h = c.num_head), (left_proj_act, right_proj_act))
         
         left_proj_act = pair_mask * left_proj_act
         right_proj_act = pair_mask * right_proj_act
@@ -397,8 +356,7 @@ class TriangleAttention(nn.Module):
                 value_dim=num_in_pair_channel,
                 output_dim=num_in_pair_channel,
                 num_head=c.num_head,
-                gating=c.gating,
-                inp_kernels=c.inp_kernels)
+                gating=c.gating)
 
         self.config = config
 
@@ -490,7 +448,8 @@ class Seqformer(nn.Module):
         for it, block in enumerate(self.blocks):
             block_fn = functools.partial(block, seq_mask=mask)
             if self.training and not is_recycling:
-                seq_act, pair_act = checkpoint(block_fn, seq_act, pair_act)
+                #seq_act, pair_act = checkpoint(block_fn, seq_act, pair_act)
+                seq_act, pair_act = block_fn(seq_act, pair_act)
             else:
                 seq_act, pair_act = block_fn(seq_act, pair_act)
 

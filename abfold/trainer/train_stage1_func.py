@@ -35,8 +35,9 @@ def setup_model(model, args):
     model = nn.parallel.DistributedDataParallel(
         model,
         device_ids=[args.gpu_list[args.local_rank]], 
-        output_device=args.gpu_list[args.local_rank],
-        find_unused_parameters=True)
+        output_device=args.gpu_list[args.local_rank],)
+    #find_unused_parameters=True)
+        #static_graph=False)
     #model._set_static_graph()
     
     logging.info('wrap model with nn.parallel.DistributedDataParallel class')
@@ -188,6 +189,13 @@ def train(args):
                         running_loss += MetricDict({f'{k}@{kk}': vv})
 
             if jt == 0:
+
+                for n, p in model.named_parameters():
+                    if p.requires_grad:
+                        print(it, n, p.grad)
+                
+                print('weights module.esm.layers.35.fc1.weight',it,  model.module.esm.layers[35].fc1.weight, model.module.esm.layers[35].fc1.weight.grad)
+
                 logging.info(f'optim step= {optim.cur_step} lr= {optim.get_values()}')
 
                 optim.step()

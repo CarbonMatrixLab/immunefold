@@ -21,11 +21,11 @@ def setup_model(model, config):
 
     if c.esm.enabled:
         for n, p in model.esm.named_parameters():
-            if 'embed_tokens' not in n:
+            if 'embed_tokens' in n or 'lm_head' in n or 'contact_head' in n:
+                p.requires_grad = False
+            else:
                 p.requires_grad = True
                 trainable_variables.append(p)
-            else:
-                p.requires_grad = False
     '''
     if c.seqformer.enabled:
         if isinstance(c.seqformer.align_layers, str) and c.seqformer.align_layers == 'all':

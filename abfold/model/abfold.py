@@ -64,7 +64,7 @@ class AbFold(nn.Module):
     def _compute_language_model(self, tokens, residx):
         repr_layers = list(range(self.config.embeddings_and_seqformer.esm.num_layers + 1))
 
-        results = self.esm(tokens, repr_layers=repr_layers, residx=residx, need_head_weights=False)
+        results = self.esm(tokens, repr_layers=repr_layers, residx=residx, need_head_weights=False, return_contacts=False)
 
         ret = {}
         esm_embed = torch.stack([results['representations'][k][:,1:-1] for k in repr_layers], dim=-1)
@@ -79,8 +79,9 @@ class AbFold(nn.Module):
 
         batch_size, num_residues, device = *seq.shape[:2], seq.device
 
-        esm_embed, esm_logits = self._compute_language_model(batch['esm_seq'], batch['residx'])
-        batch.update(esm_embed = esm_embed)
+        with torch.enable_grad():
+            esm_embed, esm_logits = self._compute_language_model(batch['esm_seq'], batch['residx'])
+            batch.update(esm_embed = esm_embed)
 
         def get_prev(ret):
             prev_pseudo_beta = pseudo_beta_fn_v2(batch['seq'], ret['heads']['folding']['final_atom_positions'])
@@ -102,10 +103,7 @@ class AbFold(nn.Module):
         }
         batch.update(prev)
         
-        if self.training:
-            num_recycle = random.randint(0, c.num_recycle)
-        else:
-            num_recycle = c.num_recycle
+        num_recycle = c.num_recycle
        
         with torch.no_grad():
             batch.update(is_recycling=True)
@@ -114,9 +112,9 @@ class AbFold(nn.Module):
             
                 prev = get_prev(ret)
                 batch.update(prev)
-        
-        batch.update(is_recycling=False)
-        ret = self.impl(batch, compute_loss=compute_loss)
-        ret.update(esm_logits = esm_logits)
+
+            #batch.update(is_recycling=False)
+            ret = self.impl(batch, compute_loss=compute_loss)
+            ret.update(esm_logits = esm_logits)
         
         return ret

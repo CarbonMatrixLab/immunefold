@@ -20,20 +20,6 @@
             "pair_enabled" : false,
             "embed_pair_channel" : 660
          },
-         "abrep" : {
-            "enabled" : false,
-            "embed_channel" : 512,
-	    "num_layers":32,
-	    "dropout_rate":0.1,
-	    "norm":true,
-            "pair_enabled" : false,
-            "embed_pair_channel" : 512
-         },
-	 "antiberty": {
-            "enabled" : false,
-            "norm":false,
-            "embed_channel" :512
-	 },
 	 "recycle_features" :true,
          "recycle_pos" : true,
          "prev_pos" : {
@@ -46,19 +32,19 @@
                "orientation" : "per_row",
                "num_head" : 32,
 	       "inp_kernels":[],
-               "dropout_rate" : 0.1,
+               "dropout_rate" : 0.0,
                "shared_dropout" : false
             },
             "seq_transition" : {
                "orientation" : "per_row",
                "num_intermediate_factor" : 4,
-               "dropout_rate" : 0,
+               "dropout_rate" : 0.0,
                "shared_dropout" : true
             },
             "outer_product_mean" : {
                "orientation" : "per_row",
                "num_outer_channel" : 64,
-               "dropout_rate" : 0,
+               "dropout_rate" : 0.0,
                "shared_dropout" : true
             },
             "triangle_multiplication_outgoing" : {
@@ -67,7 +53,7 @@
 	       "gating":true,
 	       "num_head":4,
 	       "inp_kernels":[],
-               "dropout_rate" : 0.1,
+               "dropout_rate" : 0.0,
                "shared_dropout" : false
             },
             "triangle_multiplication_incoming" : {
@@ -76,7 +62,7 @@
 	       "gating":true,
 	       "num_head":4,
 	       "inp_kernels":[],
-               "dropout_rate" : 0.1,
+               "dropout_rate" : 0.0,
                "shared_dropout" : false
             },
             "triangle_attention_starting_node" : {
@@ -84,7 +70,7 @@
                "num_head" : 4,
 	       "gating":true,
 	       "inp_kernels":[],
-               "dropout_rate" : 0.1,
+               "dropout_rate" : 0.0,
                "shared_dropout" : false
             },
             "triangle_attention_ending_node" : {
@@ -92,13 +78,13 @@
                "num_head" : 4,
 	       "gating":true,
 	       "inp_kernels":[],
-               "dropout_rate" : 0.1,
+               "dropout_rate" : 0.0,
                "shared_dropout" : false
             },
             "pair_transition" : {
                "orientation" : "per_row",
                "num_intermediate_factor" : 4,
-               "dropout_rate" : 0,
+               "dropout_rate" : 0.0,
                "shared_dropout" : true
             }
          }
@@ -125,7 +111,7 @@
             "num_scalar_v" : 16,
             "num_point_qk" : 4,
             "num_point_v" : 8,
-            "dropout" : 0.1
+            "dropout" : 0.0
          },
          "tmscore" : {
             "num_atom" : 5

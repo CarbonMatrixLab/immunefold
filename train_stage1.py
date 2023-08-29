@@ -106,7 +106,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type=float, default='3e-4')
 
     # distributed training
-    parser.add_argument("--local_rank", type=int, default=0)
+    parser.add_argument("--local-rank", type=int, default=0)
     parser.add_argument('--gpu_list', type=int, nargs='+')
 
     # verbose
@@ -115,6 +115,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     # distributed training
+    #args.local_rank = int(os.environ['LOCAL_RANK'])
+
     args.world_rank = int(os.environ['RANK'])
     args.world_size = int(os.environ['WORLD_SIZE'])
     args.local_world_size = int(os.environ['LOCAL_WORLD_SIZE'])

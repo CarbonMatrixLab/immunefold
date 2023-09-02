@@ -53,20 +53,12 @@ def worker_load(rank, args):  # pylint: disable=redefined-outer-name
     
     device = worker_device(rank, args)
     
-    #with open(args.model_config, 'r', encoding='utf-8') as f:
-    #    config = json.loads(f.read())
-    #    config = ml_collections.ConfigDict(config)
+    ckpt = torch.load(args.restore_model_ckpt)
+    model_config = ckpt['model_config']
+    model_config['esm2_model_file'] = args.restore_esm2_model
+    model = CarbonFold(config = model_config)
+    model.impl.load_state_dict(ckpt['model_state_dict'], strict=True)
 
-    checkpoint = torch.load(args.model, map_location='cpu')
-    #model = checkpoint['model']
-    print(checkpoint.keys())
-    model_config = checkpoint['model_config']
-    model_state_dict = checkpoint['model_state_dict']
-   
-    #model_config.num_recycle = 0
-    model = AbFold(config=model_config)
-    model.load_state_dict(model_state_dict, strict=True)
-    
     with open(args.model_features, 'r', encoding='utf-8') as f:
         feats = json.loads(f.read())
         for i in range(len(feats)):
@@ -128,15 +120,14 @@ def evaluate(rank, log_queue, args):
         name_idx=name_idx,
         feats=feats,
         batch_size=args.batch_size,
-        data_type=args.mode)
+        data_type=args.mode,
+        is_training=False)
 
     for i, batch in enumerate(test_loader):
         try:
             logging.debug('name: %s', ','.join(batch['name']))
             logging.debug('len : %s', batch['seq'].shape[1])
-            #logging.debug('seq : %s', batch['str_seq'][0])
-            #if batch['seq'].shape[1] > 600:
-            #    continue
+            logging.debug('seq : %s', batch['str_seq'][0])
 
             with torch.no_grad():
                 r = model(batch=batch, compute_loss=False)

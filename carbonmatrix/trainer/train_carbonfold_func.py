@@ -16,7 +16,7 @@ from torch import nn
 from torch.optim import Adam
 
 from carbonmatrix.model import CarbonFold, MetricDict
-from carbonmatrix.trainer import dataset_stage as dataset
+from carbonmatrix.trainer import dataset_carbonfold as dataset
 from carbonmatrix.trainer.optimizer import OptipizerInverseSquarRootDecay as Optimizer
 from carbonmatrix.trainer.loss import Loss
 from carbonmatrix.trainer import model_align

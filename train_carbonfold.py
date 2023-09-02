@@ -5,7 +5,7 @@ import resource
 
 import torch
 
-from carbon.trainer.train_stage1_func import train
+from carbon.trainer.train_carbonfold_func import train
 
 class WorkerLogFilter(logging.Filter):
     def __init__(self, rank=-1):
@@ -72,19 +72,19 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, choices=['gpu', 'cpu', 'mlu'], default='gpu')
     parser.add_argument('--prefix', type=str, default='./studies')
-    
+
     # dataset
     parser.add_argument('--train_data', type=str, required=True)
     parser.add_argument('--train_name_idx', type=str, required=True)
-    
+
     parser.add_argument('--max_seq_len', type=int, default=None)
 
     parser.add_argument('--eval_data', type=str)
-    
+
     # random seed
     parser.add_argument('--random_seed', type=int, default=2023)
-    
-    # model 
+
+    # model
     parser.add_argument('--model_features', type=str, required=True)
     parser.add_argument('--model_config', type=str, required=True)
     parser.add_argument('--restore_model_ckpt', type=str)
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', action='store_true', help='verbose')
 
     args = parser.parse_args()
-    
+
     # distributed training
     #args.local_rank = int(os.environ['LOCAL_RANK'])
 

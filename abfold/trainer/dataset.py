@@ -127,7 +127,7 @@ class Stage1StructureDataset(torch.utils.data.Dataset):
                     logger.warn(f'{name} too long. heavy - {heavy_len}, light - {light_len}')
             yield ret
 
-    def def __getitem__(self, idx):
+    def __getitem__(self, idx):
         name = self.name_idx[idx]
 
         return self.get_structure_from_pdb(name)

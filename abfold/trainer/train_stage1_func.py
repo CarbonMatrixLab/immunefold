@@ -196,12 +196,6 @@ def train(args):
 
             if jt == 0:
 
-                for n, p in model.named_parameters():
-                    if p.requires_grad:
-                        print(it, n, p.grad)
-                
-                print('weights module.esm.layers.35.fc1.weight',it,  model.module.esm.layers[35].fc1.weight, model.module.esm.layers[35].fc1.weight.grad)
-
                 logging.info(f'optim step= {optim.cur_step} lr= {optim.get_values()}')
 
                 #optim.step()

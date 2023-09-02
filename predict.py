@@ -150,8 +150,6 @@ def evaluate(rank, log_queue, args):
                 r = model(batch=batch, compute_loss=False)
 
             assert 'folding' in r['heads'] and 'final_atom14_positions' in r['heads']['folding']
-            coords = r['heads']['folding']['final_atom14_positions']  # (b l c d)
-            
             postprocess_predictions(batch, coords.to('cpu').numpy(), args)
         except:
             logging.error('fails in predicting', batch['name'])
@@ -216,9 +214,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu_list', type=int, nargs='+', default=[0])
     parser.add_argument('--device', type=str, choices=['gpu', 'cpu', 'mlu'], default='gpu')
-    
-    parser.add_argument('--model', type=str, required=True)
+   
+    # model
     parser.add_argument('--model_features', type=str, required=True)
+    parser.add_argument('--model_config', type=str, required=True)
+    parser.add_argument('--restore_model_ckpt', type=str)
+    parser.add_argument('--restore_esm2_model', type=str)
     
     parser.add_argument('--name_idx', type=str, required=True)
     parser.add_argument('--data_dir', type=str, required=True)
@@ -226,7 +227,7 @@ if __name__ == '__main__':
     
     parser.add_argument('--batch_size', type=int, default=1)
     
-    parser.add_argument('--mode', type=str, choices=['ig', 'general'], required=True)
+    parser.add_argument('--mode', type=str, choices=['ig', 'general'], default='general')
     parser.add_argument('--verbose', action='store_true')
     args = parser.parse_args()
 

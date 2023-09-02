@@ -7,7 +7,7 @@ from einops import repeat
 
 from esm import multihead_attention as E
 
-from carbon.model.lm.rotary_embedding import RotaryEmbedding
+from carbonmatrix.model.lm.rotary_embedding import RotaryEmbedding
 
 class MultiheadAttention(E.MultiheadAttention):
     """Multi-headed attention.

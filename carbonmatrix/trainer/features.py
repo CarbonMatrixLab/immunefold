@@ -1,14 +1,14 @@
 import torch
 from torch.nn import functional as F
 
-from carbon.model.features import take1st, _feats_fn 
-from carbon.model.r3 import rigids_from_3_points
-from carbon.utils import default,exists
-from carbon.common import residue_constants
-from carbon.model.common_modules import pseudo_beta_fn
-from carbon.model.utils import batched_select
+from carbonmatrix.model.features import take1st, _feats_fn 
+from carbonmatrix.model.r3 import rigids_from_3_points
+from carbonmatrix.utils import default,exists
+from carbonmatrix.common import residue_constants
+from carbonmatrix.model.common_modules import pseudo_beta_fn
+from carbonmatrix.model.utils import batched_select
 
-from carbon.trainer import geometry
+from carbonmatrix.trainer import geometry
 
 @take1st
 def make_atom14_alt_gt_positions(batch, is_training=True):

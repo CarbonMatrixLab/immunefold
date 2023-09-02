@@ -6,9 +6,9 @@ import torch
 from torch.nn import functional as F
 from einops import rearrange
 
-from carbon.common import residue_constants
-from carbon.data.utils import pad_for_batch
-from carbon.model.utils import batched_select
+from carbonmatrix.common import residue_constants
+from carbonmatrix.data.utils import pad_for_batch
+from carbonmatrix.model.utils import batched_select
 
 _feats_fn = {}
 

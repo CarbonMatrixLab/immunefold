@@ -3,7 +3,7 @@ import re
 
 import torch
 import esm
-from carbon.model.lm.model_lm import ModelLM
+from carbonmatrix.model.lm.model_lm import ModelLM
 
 def _has_regression_weights(model_name):
     """Return whether we expect / require regression weights;

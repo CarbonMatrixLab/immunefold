@@ -6,7 +6,7 @@ from torch.utils.checkpoint import checkpoint
 
 import esm
 from esm.model import esm2 as E
-from carbon.model.lm.transformer import TransformerLayer
+from carbonmatrix.model.lm.transformer import TransformerLayer
 
 class ModelLM(E.ESM2):
     def __init__(self,

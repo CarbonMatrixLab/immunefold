@@ -3,9 +3,9 @@ from torch import nn
 from torch.nn import functional as F
 from einops import rearrange
 
-from carbon.model import atom
-from carbon.model.utils import l2_normalize
-from carbon.model.common_modules import Linear
+from carbonmatrix.model import atom
+from carbonmatrix.model.utils import l2_normalize
+from carbonmatrix.model.common_modules import Linear
 
 class ResNetBlock(nn.Module):
     def __init__(self, dim):

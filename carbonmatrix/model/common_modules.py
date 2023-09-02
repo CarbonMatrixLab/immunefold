@@ -6,7 +6,7 @@ from torch.nn import functional as F
 from torch.nn import LayerNorm as LayerNorm
 from einops import rearrange
 
-from carbon.common import residue_constants
+from carbonmatrix.common import residue_constants
 
 class Linear(nn.Linear):
     def __init__(self, input_dim, output_dim, init, bias=True):

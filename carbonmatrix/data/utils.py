@@ -13,8 +13,8 @@ from Bio.PDB.PDBIO import PDBIO
 import torch
 from torch.nn import functional as F
 
-from carbon.common import protein, residue_constants
-from carbon.utils import exists
+from carbonmatrix.common import protein, residue_constants
+from carbonmatrix.utils import exists
 
 def pad_for_batch(items, batch_length, dtype):
     """Pad a list of items to batch_length using values dependent on the item type.

@@ -3,7 +3,7 @@ import torch
 from typing import Tuple
 
 from esm import rotary_embedding as E
-from carbon.model.utils import batched_select
+from carbonmatrix.model.utils import batched_select
 
 def apply_rotary_pos_emb_with_index(x, cos, sin, index):
     cos = batched_select(cos, index)

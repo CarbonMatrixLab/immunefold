@@ -4,7 +4,7 @@ import torch
 from torch.nn import functional as F
 from einops import rearrange
 
-from carbon.model.utils import l2_normalize
+from carbonmatrix.model.utils import l2_normalize
 
 # pylint: disable=bad-whitespace
 QUAT_TO_ROT = np.zeros((4, 4, 3, 3), dtype=np.float32)

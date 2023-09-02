@@ -1,6 +1,6 @@
 import numpy as np
 
-from carbon.common import residue_constants
+from carbonmatrix.common import residue_constants
 
 def str_seq_to_index(str_seq, mapping=residue_constants.restype_order_with_x, map_unknown_to_x=True):
     seq = []

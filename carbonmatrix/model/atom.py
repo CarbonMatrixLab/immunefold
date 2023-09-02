@@ -2,9 +2,9 @@ import torch
 from torch.nn import functional as F
 from einops import rearrange
 
-from carbon.model import r3
-from carbon.common import residue_constants
-from carbon.model.utils import batched_select
+from carbonmatrix.model import r3
+from carbonmatrix.common import residue_constants
+from carbonmatrix.model.utils import batched_select
 
 def torsion_angles_to_frames(aatype, backb_to_global, torsion_angles_sin_cos):
     num_batch, num_residues = aatype.shape

@@ -2,9 +2,9 @@ import numpy as np
 import torch
 from torch.nn import functional as F
 
-from carbon.model import r3
-from carbon.common import residue_constants
-from carbon.model.utils import batched_select
+from carbonmatrix.model import r3
+from carbonmatrix.common import residue_constants
+from carbonmatrix.model.utils import batched_select
 
 def atom37_to_frames(aatype, all_atom_positions, all_atom_mask):
   aatype_in_shape = aatype.shape

@@ -5,11 +5,11 @@ import random
 import torch
 from torch import nn
 
-from carbon.common import residue_constants
-from carbon.model.lm.pretrained import load_model_and_alphabet_local
-from carbon.model.seqformer import EmbeddingAndSeqformer
-from carbon.model.head import HeaderBuilder
-from carbon.model.common_modules import (
+from carbonmatrix.common import residue_constants
+from carbonmatrix.model.lm.pretrained import load_model_and_alphabet_local
+from carbonmatrix.model.seqformer import EmbeddingAndSeqformer
+from carbonmatrix.model.head import HeaderBuilder
+from carbonmatrix.model.common_modules import (
         pseudo_beta_fn_v2,
         dgram_from_positions)
 

@@ -2,7 +2,7 @@ from torch import nn
 
 from esm import modules  as E
 
-from carbon.model.lm.multihead_attention import MultiheadAttention
+from carbonmatrix.model.lm.multihead_attention import MultiheadAttention
 
 class TransformerLayer(nn.Module):
     """Transformer layer block."""

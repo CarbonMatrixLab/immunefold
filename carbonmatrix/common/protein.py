@@ -20,7 +20,7 @@ from Bio.PDB import PDBParser
 import dataclasses
 import numpy as np
 
-from carbon.common import residue_constants
+from carbonmatrix.common import residue_constants
 
 FeatureDict = Mapping[str, np.ndarray]
 ModelOutput = Mapping[str, Any]  # Is a nested dict.

@@ -7,7 +7,7 @@ from Bio.PDB.Chain import Chain as PDBChain
 from Bio.PDB.Residue import Residue
 from Bio.PDB.vectors import Vector as Vector, calc_dihedral
 
-from carbon.common import residue_constants
+from carbonmatrix.common import residue_constants
 
 def renum_chain(orig_chain, struc2seq):
     chain = PDBChain(orig_chain.id)

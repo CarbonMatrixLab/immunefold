@@ -6,13 +6,13 @@ from torch import nn
 from torch.nn import functional as F
 from einops import rearrange
 
-from carbon.common import residue_constants
-from carbon.model import atom as functional, folding
-from carbon.model.common_modules import(
+from carbonmatrix.common import residue_constants
+from carbonmatrix.model import atom as functional, folding
+from carbonmatrix.model.common_modules import(
         Linear,
         LayerNorm)
-from carbon.model.utils import squared_difference
-from carbon.utils import contact_precision, kabsch_torch, TMscore
+from carbonmatrix.model.utils import squared_difference
+from carbonmatrix.utils import contact_precision, kabsch_torch, TMscore
 
 class DistogramHead(nn.Module):
     """Head to predict a distogram.

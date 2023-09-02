@@ -5,10 +5,10 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from carbon.model import r3
-from carbon.common import residue_constants
-from carbon.trainer import geometry
-from carbon.model.utils import (
+from carbonmatrix.model import r3
+from carbonmatrix.common import residue_constants
+from carbonmatrix.trainer import geometry
+from carbonmatrix.model.utils import (
         l2_normalize,
         squared_difference,
         batched_select,

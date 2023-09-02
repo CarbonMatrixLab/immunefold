@@ -5,13 +5,13 @@ from torch import nn
 from torch.nn import functional as F
 from einops import rearrange
 
-from carbon.model.utils import batched_select
-from carbon.model import r3
-from carbon.model import quat_affine
-from carbon.model.common_modules import(
+from carbonmatrix.model.utils import batched_select
+from carbonmatrix.model import r3
+from carbonmatrix.model import quat_affine
+from carbonmatrix.model.common_modules import(
         Linear,
         LayerNorm)
-from carbon.model.sidechain import MultiRigidSidechain
+from carbonmatrix.model.sidechain import MultiRigidSidechain
 
 class StructureModule(nn.Module):
     def __init__(self, config, num_in_seq_channel, num_in_pair_channel):

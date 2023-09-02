@@ -15,11 +15,11 @@ import torch
 from torch import nn
 from torch.optim import Adam
 
-from carbon.model import CarbonFold, MetricDict
-from carbon.trainer import dataset_stage as dataset
-from carbon.trainer.optimizer import OptipizerInverseSquarRootDecay as Optimizer
-from carbon.trainer.loss import Loss
-from carbon.trainer import model_align
+from carbonmatrix.model import CarbonFold, MetricDict
+from carbonmatrix.trainer import dataset_stage as dataset
+from carbonmatrix.trainer.optimizer import OptipizerInverseSquarRootDecay as Optimizer
+from carbonmatrix.trainer.loss import Loss
+from carbonmatrix.trainer import model_align
 
 def get_device(args):
     if args.device == 'gpu':
@@ -39,7 +39,7 @@ def setup_model(model, args):
     #find_unused_parameters=True)
         #static_graph=False)
     #model._set_static_graph()
-    
+
     logging.info('wrap model with nn.parallel.DistributedDataParallel class')
     return model, device
 
@@ -58,7 +58,7 @@ def setup_dataset(args):
 
     with open(args.train_name_idx) as f:
         name_idx = [i.strip() for i in f]
-    
+
     real_batch_size = args.batch_size * args.world_size * args.gradient_accumulation_it
     reduced_num = len(name_idx) - len(name_idx) % real_batch_size
     name_idx = name_idx[:reduced_num]
@@ -78,7 +78,7 @@ def setup_dataset(args):
     eval_loader = None
     if eval_loader is not None:
         logging.info(f'eval_data_file= {eval_data_file} eval_name_idx_file= {eval_name_idx_file}')
-    
+
     return feats, train_loader, eval_loader
 
 def log_metric_dict(loss, epoch, it= '', prefix=''):
@@ -127,7 +127,7 @@ def train(args):
     optim = Optimizer(trainable_variables,
             base_lr=args.learning_rate, warmup_steps=args.warmup_steps, flat_steps=args.flat_steps,
             decay_steps=args.decay_steps, decay_type='linear', min_lr=1e-5)
-    
+
     # loss
     loss_object = Loss(config.loss)
    
@@ -136,9 +136,9 @@ def train(args):
         ckpt_dir = os.path.join(args.prefix, 'checkpoints')
         if not os.path.exists(ckpt_dir):
             os.path.makedirs(ckpt_dir)
-        
+
         ckpt_file = os.path.join(ckpt_dir, f'step_{it}.ckpt')
-        
+
         saved_model = model.module if isinstance(model, nn.parallel.DistributedDataParallel) else model
 
         torch.save(dict(
@@ -152,11 +152,10 @@ def train(args):
 
     # setup train
     model.train()
-    
+
     running_loss = MetricDict()
     optim.zero_grad()
     batch_start_time = time.time()
-
 
     scaler = torch.cuda.amp.GradScaler()
 
@@ -169,14 +168,14 @@ def train(args):
 
             ctx = nullcontext if jt == 0 else model.no_sync
             with ctx():
-                with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):
+                with torch.cuda.amp.autocast(enabled=False, dtype=torch.float16):
                     r = model(batch=batch, compute_loss=True)
                     loss_results = loss_object(r, batch)
                     loss = loss_results['loss'] / args.gradient_accumulation_it
-                
+
                 scaler.scale(loss).backward()
                 #loss.backward()
-            
+
             logging.info('traing examples ' + ','.join(batch['name']))
             running_loss += MetricDict({'all': loss_results['loss']})
             for k, v in loss_results.items():
@@ -186,7 +185,7 @@ def train(args):
                     if 'loss' not in kk:
                         continue
                     running_loss += MetricDict({f'{k}@{kk}': vv})
-            
+
             for k, v in r['heads'].items():
                 if k not in ['tmscore', 'metric']:
                     continue
@@ -202,13 +201,13 @@ def train(args):
                 scaler.step(optim)
                 scaler.update()
                 optim.zero_grad()
-                
+
                 for k, v in running_loss.items():
                     v = v / args.gradient_accumulation_it
                     log_metric_dict(v, epoch, it, prefix=f'Loss/train@{k}')
 
                 running_loss = MetricDict()
-            
+
                 batch_end_time = time.time()
                 logging.info(f'{it} batch time {batch_end_time - batch_start_time} s.')
                 batch_start_time = time.time()

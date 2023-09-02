@@ -5,7 +5,7 @@ import resource
 
 import torch
 
-from carbon.trainer.train_carbonfold_func import train
+from carbonmatrix.trainer.train_carbonfold_func import train
 
 class WorkerLogFilter(logging.Filter):
     def __init__(self, rank=-1):

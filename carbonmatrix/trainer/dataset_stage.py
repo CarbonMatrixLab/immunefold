@@ -11,13 +11,13 @@ from torch.nn import functional as F
 
 from esm.data import Alphabet
 
-from carbon.common import residue_constants
-from carbon.model.features import FeatureBuilder
-import carbon.trainer.features
+from carbonmatrix.common import residue_constants
+from carbonmatrix.model.features import FeatureBuilder
+import carbonmatrix.trainer.features
 
-from carbon.data.utils import pad_for_batch
-from carbon.data.parser import make_stage1_feature_from_pdb
-from carbon.common.utils import str_seq_to_index
+from carbonmatrix.data.utils import pad_for_batch
+from carbonmatrix.data.parser import make_stage1_feature_from_pdb
+from carbonmatrix.common.utils import str_seq_to_index
 
 logger = logging.getLogger(__file__)
 

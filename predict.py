@@ -11,17 +11,9 @@ import torch
 import torch.multiprocessing as mp
 from einops import rearrange
 
-#from abfold.data import dataset
-from abfold.trainer import dataset
-from abfold.data.utils import save_ig_pdb, save_general_pdb
-
-from abfold.model.abfold import AbFold
-
-try:
-    import torch_mlu
-    import torch_mlu.core.mlu_model as ct
-except ImportError:
-    pass
+from carbonmatrix.trainer import dataset
+from carbonmatrix.data.utils import save_ig_pdb, save_general_pdb
+from carbonmatrix.model.carbonmatrix import CarbonFold
 
 def worker_setup(rank, log_queue, args):  # pylint: disable=redefined-outer-name
     # logging

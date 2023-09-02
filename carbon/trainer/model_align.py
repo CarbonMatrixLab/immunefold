@@ -17,8 +17,8 @@ def setup_model(model, config):
         if p.requires_grad:
             p.requires_grad = False
     '''
-    trainable_variables = []
 
+    '''
     if c.esm.enabled:
         for n, p in model.esm.named_parameters():
             if 'embed_tokens' in n or 'lm_head' in n or 'contact_head' in n:
@@ -26,7 +26,6 @@ def setup_model(model, config):
             else:
                 p.requires_grad = True
                 trainable_variables.append(p)
-    '''
     if c.seqformer.enabled:
         if isinstance(c.seqformer.align_layers, str) and c.seqformer.align_layers == 'all':
             align_layers = list(range(len(model.impl.seqformer_module.seqformer.blocks)))
@@ -39,6 +38,16 @@ def setup_model(model, config):
                 p.requires_grad = True
                 trainable_variables.append(p)
     '''
-    model.impl.requires_grad_(False)
+    # model.impl.requires_grad_(False)
+    
+    trainable_variables = []
+    
+    model.esm.requires_grad_(False)
+    model.impl.seqformer_module.proj_aa_type.requires_grad = False
+    model.impl.seqformer_module.proj_rel_pos.requires_grad = False
+    
+    for n, p in model.named_parameters():
+        if p.requires_grad:
+            trainable_variables.append(p)
 
     return trainable_variables

@@ -157,7 +157,6 @@ def train(args):
     optim.zero_grad()
     batch_start_time = time.time()
 
-
     scaler = torch.cuda.amp.GradScaler()
 
     for epoch in range(args.num_epoch):
@@ -169,7 +168,7 @@ def train(args):
 
             ctx = nullcontext if jt == 0 else model.no_sync
             with ctx():
-                with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):
+                with torch.cuda.amp.autocast(enabled=False, dtype=torch.float16):
                     r = model(batch=batch, compute_loss=True)
                     loss_results = loss_object(r, batch)
                     loss = loss_results['loss'] / args.gradient_accumulation_it

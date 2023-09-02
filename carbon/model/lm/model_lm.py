@@ -103,10 +103,13 @@ class ModelLM(E.ESM2):
                     self_attn_padding_mask=padding_mask,
                     need_head_weights=need_head_weights,)
 
+            '''
             if self.training and layer_idx > 0:
                 x, attn = checkpoint(block_fn, x)
             else:
                 x, attn = block_fn(x)
+            '''
+            x, attn = block_fn(x)
 
             if (layer_idx + 1) in repr_layers:
                 hidden_representations[layer_idx + 1] = x.transpose(0, 1)

@@ -134,8 +134,8 @@ class Transition(nn.Module):
     def forward(self, act, mask):
         return self.transition(act)
 
-# AF2 and ESM-FOLD have different implementations
-# Here we just follow ESMFOLD
+# AlphaFold and ESMFold have different implementations
+# Here we follow ESMFold.
 class OuterProductMean(nn.Module):
     def __init__(self, config, num_in_channel, num_out_channel):
         super().__init__()

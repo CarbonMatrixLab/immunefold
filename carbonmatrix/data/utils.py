@@ -131,7 +131,7 @@ def pdb_save(step, batch, headers, prefix='/tmp', is_training=False):
 def make_chain(aa_types, coords, chain_id):
     chain = Chain(chain_id)
 
-    serial_number = 0
+    serial_number = 1
 
     def make_residue(i, aatype, coord):
         nonlocal serial_number
@@ -154,7 +154,7 @@ def make_chain(aa_types, coords, chain_id):
         return residue
 
     for i, (aa, coord) in enumerate(zip(aa_types, coords)):
-        chain.add(make_residue(i, aa, coord))
+        chain.add(make_residue(i + 1, aa, coord))
 
     return chain
 

@@ -69,7 +69,7 @@ class SeqDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         name = self.name_idx[idx]
 
-        return self.get_structure_from_pdb(name)
+        return self.get_seq_from_fasta(name)
 
     def _create_esm_seq_sample(self, str_seq):
         L = len(str_seq)
@@ -96,7 +96,9 @@ class SeqDataset(torch.utils.data.Dataset):
         seq = torch.tensor(str_seq_to_index(str_seq), dtype=torch.int64)
         esm_seq = self._create_esm_seq_sample(str_seq)
 
-        residx = struc['residx']
+        N = len(seq)
+
+        residx = np.arange(N)
         residx = np.concatenate([[0], residx + 1, [residx[-1]+2]], axis=-1)
 
         mask = torch.ones((len(str_seq),))

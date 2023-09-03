@@ -11,9 +11,9 @@ import torch
 import torch.multiprocessing as mp
 from einops import rearrange
 
-from carbonmatrix.trainer import dataset
+from carbonmatrix.trainer import dataset_carbonfold as dataset
 from carbonmatrix.data.utils import save_ig_pdb, save_general_pdb
-from carbonmatrix.model.carbonmatrix import CarbonFold
+from carbonmatrix.model.carbonfold import CarbonFold
 
 def worker_setup(rank, log_queue, args):  # pylint: disable=redefined-outer-name
     # logging
@@ -120,7 +120,6 @@ def evaluate(rank, log_queue, args):
         name_idx=name_idx,
         feats=feats,
         batch_size=args.batch_size,
-        data_type=args.mode,
         is_training=False)
 
     for i, batch in enumerate(test_loader):
@@ -133,6 +132,8 @@ def evaluate(rank, log_queue, args):
                 r = model(batch=batch, compute_loss=False)
 
             assert 'folding' in r['heads'] and 'final_atom14_positions' in r['heads']['folding']
+            coords = r['heads']['folding']['final_atom14_positions']
+
             postprocess_predictions(batch, coords.to('cpu').numpy(), args)
         except:
             logging.error('fails in predicting', batch['name'])
@@ -182,7 +183,7 @@ def main(args):
                 nprocs=len(args.gpu_list) if args.gpu_list else 1,
                 join=True)
     else:
-        evaluate(args.gpu_list[0], log_queue, args)
+        evaluate(0, log_queue, args)
 
     logging.info('-----------------')
     logging.info('Resources(myself): %s',
@@ -200,7 +201,6 @@ if __name__ == '__main__':
    
     # model
     parser.add_argument('--model_features', type=str, required=True)
-    parser.add_argument('--model_config', type=str, required=True)
     parser.add_argument('--restore_model_ckpt', type=str)
     parser.add_argument('--restore_esm2_model', type=str)
     

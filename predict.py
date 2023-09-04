@@ -12,7 +12,7 @@ import torch.multiprocessing as mp
 from einops import rearrange
 
 from carbonmatrix.trainer import dataset_carbonfold as dataset
-from carbonmatrix.data.utils import save_ig_pdb, save_general_pdb
+from carbonmatrix.data.pdbio import save_ig_pdb, save_general_pdb
 from carbonmatrix.model.carbonfold import CarbonFold
 
 def worker_setup(rank, log_queue, args):  # pylint: disable=redefined-outer-name

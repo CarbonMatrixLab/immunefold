@@ -15,9 +15,9 @@ from carbonmatrix.common import residue_constants
 from carbonmatrix.model.features import FeatureBuilder
 import carbonmatrix.trainer.features
 
-from carbonmatrix.data.utils import pad_for_batch
+from carbonmatrix.common.operator import pad_for_batch
 from carbonmatrix.data.parser import make_stage1_feature_from_pdb
-from carbonmatrix.common.utils import str_seq_to_index
+from carbonmatrix.data.seq import str_seq_to_index
 
 logger = logging.getLogger(__file__)
 

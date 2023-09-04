@@ -12,7 +12,7 @@ from carbonmatrix.model.common_modules import(
         Linear,
         LayerNorm)
 from carbonmatrix.model.utils import squared_difference
-from carbonmatrix.utils import contact_precision, kabsch_torch, TMscore
+from carbonmatrix.common.metrics import contact_precision, kabsch_torch, TMscore
 
 class DistogramHead(nn.Module):
     """Head to predict a distogram.

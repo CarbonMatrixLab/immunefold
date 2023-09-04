@@ -1,6 +1,8 @@
 import logging
 import os
 
+import torch
+from torch.nn import functional as F
 import numpy as np
 
 from Bio.PDB.Chain import Chain
@@ -9,57 +11,7 @@ from Bio.PDB.Residue import Residue
 from Bio.PDB.Model import Model as PDBModel
 from Bio.PDB.PDBIO import PDBIO
 
-import torch
-from torch.nn import functional as F
-
-from carbonmatrix.common import protein, residue_constants
-
-def pdb_save(step, batch, headers, prefix='/tmp', is_training=False):
-    
-    for x, pid in enumerate(batch['name']):
-        str_seq = batch['str_heavy_seq'][x] + batch['str_light_seq'][x]
-        heavy_len = len(batch['str_heavy_seq'][x])
-        N = len(str_seq)
-        #aatype = batch['seq'][x,...].numpy()
-        aatype = np.array([residue_constants.restype_order_with_x.get(aa, residue_constants.unk_restype_index) for aa in str_seq])
-        features = dict(aatype=aatype, residue_index=np.arange(N), heavy_len=heavy_len)
-
-        if is_training:
-            p = os.path.join(prefix, '{}_{}_{}.pdb'.format(pid, step, x))
-        else:
-            p = os.path.join(prefix, f'{pid}.pdb')
-
-        with open(p, 'w') as f:
-            coords = headers['folding']['final_atom_positions'].detach().cpu()  # (b l c d)
-            _, _, num_atoms, _ = coords.shape
-            coord_mask = np.asarray([residue_constants.restype_atom14_mask[restype][:num_atoms] for restype in aatype])
-
-            result = dict(structure_module=dict(
-                final_atom_mask = coord_mask,
-                final_atom_positions = coords[x,:N].numpy()))
-            prot = protein.from_prediction(features=features, result=result)
-            f.write(protein.to_pdb(prot))
-
-            #logging.debug('step: {}/{} length: {}/{} PDB save: {}'.format(step, x, masked_seq_len, len(str_seq), pid))
-
-            #torsions = headers['folding']['traj'][-1]['torsions_sin_cos'][x,:len(str_seq)]
-            #np.savez(os.path.join(prefix, f'{pid}_{step}_{x}.npz'), torsions = torsions.detach().cpu().numpy())
-
-            if 'coord' in batch:
-                if is_training:
-                    p = os.path.join(prefix, '{}_{}_{}_gt.pdb'.format(pid, step, x))
-                else:
-                    p = os.path.join(prefix, f'{pid}_gt.pdb')
-
-                with open(p, 'w') as f:
-                    coord_mask = batch['coord_mask'].detach().cpu()
-                    coords = batch['coord'].detach().cpu()
-                    result = dict(structure_module=dict(
-                        final_atom_mask = coord_mask[x,...].numpy(),
-                        final_atom_positions = coords[x,...].numpy()))
-                    prot = protein.from_prediction(features=features, result=result)
-                    f.write(protein.to_pdb(prot))
-                    #logging.debug('step: {}/{} length: {}/{} PDB save: {} (groundtruth)'.format(step, x, masked_seq_len, len(str_seq), pid))
+from carbonmatrix.common import residue_constants
 
 def make_chain(aa_types, coords, chain_id):
     chain = Chain(chain_id)

@@ -12,10 +12,8 @@ from torch.nn import functional as F
 from esm.data import Alphabet
 
 from carbonmatrix.common import residue_constants
-from carbonmatrix.model.features import FeatureBuilder
-import carbonmatrix.trainer.features
-
 from carbonmatrix.common.operator import pad_for_batch
+from carbonmatrix.data.base_features import FeatureBuilder
 from carbonmatrix.data.parser import make_stage1_feature_from_pdb
 from carbonmatrix.data.seq import str_seq_to_index
 

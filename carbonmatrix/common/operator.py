@@ -51,4 +51,3 @@ device = item.device)
         raise ValueError('Not implemented yet!')
     batch = torch.stack(batch, dim=0)
     return batch
-

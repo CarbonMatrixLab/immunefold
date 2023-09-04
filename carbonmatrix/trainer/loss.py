@@ -7,34 +7,12 @@ from torch.nn import functional as F
 
 from carbonmatrix.model import r3
 from carbonmatrix.common import residue_constants
-from carbonmatrix.trainer import geometry
+from carbonmatrix.trainer.base_loss import registry_loss
 from carbonmatrix.model.utils import (
         l2_normalize,
         squared_difference,
         batched_select,
         lddt)
-
-_loss_fn = {}
-
-class Loss(nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.config = config
-
-        self.loss_fns = {k : functools.partial(_loss_fn[v.loss_fn], config=v.config) for k, v in config.items()}
-
-    def forward(self, value, batch):
-        outputs = {}
-
-        for k, v in self.config.items():
-            outputs[k] = self.loss_fns[k](batch, value)
-        outputs['loss'] = sum(v.weight * outputs[k]['loss'] for k, v in self.config.items())
-        return outputs
-
-def registry_loss(fn):
-    global _loss_fn
-    _loss_fn[fn.__name__] = fn
-    return fn
 
 @registry_loss
 def seq_mask_loss(batch, values, config):

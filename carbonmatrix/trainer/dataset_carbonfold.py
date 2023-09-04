@@ -13,7 +13,7 @@ from esm.data import Alphabet
 
 from carbonmatrix.common import residue_constants
 from carbonmatrix.common.operator import pad_for_batch
-from carbonmatrix.data.base_features import FeatureBuilder
+from carbonmatrix.data.base_features import FeatureFactory
 from carbonmatrix.data.parser import make_stage1_feature_from_pdb
 from carbonmatrix.data.seq import str_seq_to_index
 
@@ -111,7 +111,7 @@ class SeqDataset(torch.utils.data.Dataset):
 
         return ret
 
-    def collate_fn(self, batch, feat_builder=None):
+    def collate_fn(self, batch, feat_factory=None):
         fields = ('name', 'str_seq', 'seq', 'mask', 'residx', 'esm_seq')
         name, str_seq, seq, mask, residx, esm_seq =\
                 list(zip(*[[b[k] for k in fields] for b in batch]))
@@ -137,8 +137,8 @@ class SeqDataset(torch.utils.data.Dataset):
                 residx = padded_residx,
                 )
 
-        if feat_builder:
-            ret = feat_builder.build(ret)
+        if feat_factory:
+            ret = feat_factory.build(ret)
 
         return ret
 
@@ -214,7 +214,7 @@ class StructureDataset(torch.utils.data.Dataset):
 
         return ret
 
-    def collate_fn(self, batch, feat_builder=None):
+    def collate_fn(self, batch, feat_factory=None):
         fields = ('name', 'str_seq', 'seq', 'mask',
                 'atom14_gt_positions', 'atom14_gt_exists', 'residx', 'esm_seq')
         name, str_seq, seq, mask, atom14_gt_positions, atom14_gt_exists, residx, esm_seq =\
@@ -246,8 +246,8 @@ class StructureDataset(torch.utils.data.Dataset):
                 atom14_gt_exists = padded_atom14_gt_existss,
                 )
 
-        if feat_builder:
-            ret = feat_builder.build(ret)
+        if feat_factory:
+            ret = feat_factory.build(ret)
 
         return ret
 
@@ -268,6 +268,6 @@ def load(data_dir, name_idx,
         dataset = DistributedDataset(dataset, rank, world_size)
 
     kwargs['collate_fn'] =functools.partial(dataset.collate_fn,
-            feat_builder=FeatureBuilder(feats, is_training=is_training))
+            feat_factory=FeatureFactory(feats, is_training=is_training))
 
     return torch.utils.data.DataLoader(dataset, **kwargs)

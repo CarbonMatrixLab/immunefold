@@ -57,7 +57,7 @@ def worker_load(rank, args):  # pylint: disable=redefined-outer-name
     model_config = ckpt['model_config']
     model_config['esm2_model_file'] = args.restore_esm2_model
     model = CarbonFold(config = model_config)
-    model.impl.load_state_dict(ckpt['model_state_dict'], strict=True)
+    model.impl.load_state_dict(ckpt['model_state_dict'], strict=False)
 
     with open(args.model_features, 'r', encoding='utf-8') as f:
         feats = json.loads(f.read())
@@ -131,8 +131,8 @@ def evaluate(rank, log_queue, args):
             with torch.no_grad():
                 r = model(batch=batch, compute_loss=False)
 
-            assert 'folding' in r['heads'] and 'final_atom14_positions' in r['heads']['folding']
-            coords = r['heads']['folding']['final_atom14_positions']
+            assert 'structure_module' in r['heads'] and 'final_atom14_positions' in r['heads']['structure_module']
+            coords = r['heads']['structure_module']['final_atom14_positions']
 
             postprocess_predictions(batch, coords.to('cpu').numpy(), args)
         except:

@@ -4,7 +4,7 @@ local_world_size=1; python -m torch.distributed.launch\
     --master_addr 127.0.0.1 --master_port 2223 \
     train_carbonfold.py  \
     --device gpu \
-    --gpu_list 1 \
+    --gpu_list 0 \
     --max_seq_len 256 \
     --batch_size 1 \
     --num_epoch 1024 \

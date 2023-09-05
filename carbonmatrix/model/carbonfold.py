@@ -8,7 +8,7 @@ from torch import nn
 from carbonmatrix.common import residue_constants
 from carbonmatrix.model.lm.pretrained import load_model_and_alphabet_local
 from carbonmatrix.model.seqformer import EmbeddingAndSeqformer
-from carbonmatrix.model.head import HeaderBuilder
+from carbonmatrix.model.head_factory import HeadFactory
 from carbonmatrix.model.common_modules import (
         pseudo_beta_fn_v2,
         dgram_from_positions)
@@ -21,7 +21,7 @@ class CarbonFoldIteration(nn.Module):
 
         self.seqformer_module = EmbeddingAndSeqformer(c.embeddings_and_seqformer)
 
-        self.heads = HeaderBuilder.build(
+        self.heads = HeadFactory.from_config(
                 c.heads,
                 seq_channel=c.embeddings_and_seqformer.seq_channel,
                 pair_channel=c.embeddings_and_seqformer.pair_channel,
@@ -42,8 +42,8 @@ class CarbonFoldIteration(nn.Module):
 
         ret['heads'] = {}
 
-        for name, module, options in self.heads:
-            if compute_loss or name == 'folding':
+        for name, module in self.heads:
+            if compute_loss or name == 'structure_module':
                 value = module(ret['heads'], representations, batch)
                 if value is not None:
                     ret['heads'][name] = value
@@ -83,7 +83,7 @@ class CarbonFold(nn.Module):
         batch.update(esm_embed = esm_embed)
 
         def get_prev(ret):
-            prev_pseudo_beta = pseudo_beta_fn_v2(batch['seq'], ret['heads']['folding']['final_atom_positions'])
+            prev_pseudo_beta = pseudo_beta_fn_v2(batch['seq'], ret['heads']['structure_module']['final_atom_positions'])
             prev_disto_bins = dgram_from_positions(prev_pseudo_beta, **self.config.embeddings_and_seqformer.prev_pos)
 
             new_prev = {

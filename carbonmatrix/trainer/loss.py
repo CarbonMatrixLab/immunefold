@@ -64,8 +64,8 @@ def distogram_loss(batch, value, config):
 @registry_loss
 def folding_loss(batch, value, config):
     c = config
-    assert 'folding' in value['heads']
-    value = value['heads']['folding']
+    assert 'structure_module' in value['heads']
+    value = value['heads']['structure_module']
 
     backbone_fape_loss = compute_backbone_loss(batch, value, config)
 
@@ -104,7 +104,7 @@ def predicted_lddt_loss(batch, value, config):
     c = config
     logits = value['heads']['predicted_lddt']['logits']
 
-    pred_all_atom_pos = value['heads']['folding']['final_atom14_positions']
+    pred_all_atom_pos = value['heads']['structure_module']['final_atom14_positions']
     true_all_atom_pos = batch['atom14_gt_positions']
     all_atom_mask = batch['atom14_gt_exists']
 

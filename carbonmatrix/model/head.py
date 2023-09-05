@@ -13,17 +13,19 @@ from carbonmatrix.model.common_modules import(
         LayerNorm)
 from carbonmatrix.model.utils import squared_difference
 from carbonmatrix.common.metrics import contact_precision, kabsch_torch, TMscore
+from carbonmatrix.model.head_factory import registry_head
 
+@registry_head(name='distogram')
 class DistogramHead(nn.Module):
     """Head to predict a distogram.
     """
-    def __init__(self, config, num_in_channel):
+    def __init__(self, config, num_in_pair_channel):
         super().__init__()
 
         c = config
 
         self.breaks = torch.linspace(c.first_break, c.last_break, steps=c.num_bins-1)
-        self.proj = Linear(num_in_channel, c.num_bins, init='final')
+        self.proj = Linear(num_in_pair_channel, c.num_bins, init='final')
 
         self.config = config
 
@@ -34,6 +36,7 @@ class DistogramHead(nn.Module):
         breaks = self.breaks.to(logits.device)
         return dict(logits=logits, breaks=breaks)
 
+@registry_head(name='structure_module')
 class FoldingHead(nn.Module):
     """Head to predict 3d struct.
     """
@@ -68,6 +71,7 @@ class MetricDict(dict):
             n[k] = n[k] / o
         return n
 
+@registry_head(name='metric')
 class MetricDictHead(nn.Module):
     """Head to calculate metrics
     """
@@ -103,6 +107,7 @@ class MetricDictHead(nn.Module):
                 metrics['contact'][f'[{i},{j})_{ratio}'] = precision
         return dict(loss=metrics) if metrics else None
 
+@registry_head(name='tmscore')
 class TMscoreHead(nn.Module):
     """Head to predict TM-score.
     """
@@ -116,7 +121,7 @@ class TMscoreHead(nn.Module):
 
         # only for CA atom
         if 'atom14_gt_positions' in batch and 'atom14_gt_exists' in batch:
-            preds, labels = headers['folding']['final_atom_positions'][...,1,:].detach(), batch['atom14_gt_positions'][...,1,:].detach()
+            preds, labels = headers['structure_module']['final_atom_positions'][...,1,:].detach(), batch['atom14_gt_positions'][...,1,:].detach()
             gt_mask = batch['atom14_gt_exists'][...,1]
 
             tmscore = 0.
@@ -133,6 +138,7 @@ class TMscoreHead(nn.Module):
             return dict(loss = tmscore / preds.shape[0])
         return None
 
+@registry_head(name='plddt')
 class PredictedLDDTHead(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -148,35 +154,8 @@ class PredictedLDDTHead(nn.Module):
         self.config = config
 
     def forward(self, headers, representations, batch):
-        assert 'folding' in headers
+        assert 'structure_module' in headers
 
-        act = headers['folding']['representations']['structure_module']
+        act = headers['structure_module']['representations']['structure_module']
 
         return dict(logits=self.net(act))
-
-class HeaderBuilder:
-    @staticmethod
-    def build(config, seq_channel, pair_channel, parent):
-        head_factory = OrderedDict(
-                structure_module = functools.partial(FoldingHead, num_in_seq_channel=seq_channel, num_in_pair_channel=pair_channel),
-                distogram = functools.partial(DistogramHead, num_in_channel=pair_channel),
-                metric = MetricDictHead,
-                tmscore = TMscoreHead,
-                predicted_lddt = PredictedLDDTHead)
-        def gen():
-            for head_name, h in head_factory.items():
-                if head_name not in config:
-                    continue
-                head_config = config[head_name]
-
-                head = h(config=head_config)
-
-                if isinstance(parent, nn.Module):
-                    parent.add_module(head_name, head)
-
-                if head_name == 'structure_module':
-                    head_name = 'folding'
-
-                yield head_name, head, head_config
-
-        return list(gen())

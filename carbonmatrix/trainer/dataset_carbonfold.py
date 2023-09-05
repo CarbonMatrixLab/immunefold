@@ -13,7 +13,7 @@ from esm.data import Alphabet
 
 from carbonmatrix.common import residue_constants
 from carbonmatrix.common.operator import pad_for_batch
-from carbonmatrix.data.base_features import FeatureFactory
+from carbonmatrix.data.feature_factory import FeatureFactory
 from carbonmatrix.data.parser import make_stage1_feature_from_pdb
 from carbonmatrix.data.seq import str_seq_to_index
 

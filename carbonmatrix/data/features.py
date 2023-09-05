@@ -5,7 +5,7 @@ from torch.nn import functional as F
 from einops import rearrange
 
 from carbonmatrix.common import residue_constants
-from carbonmatrix.data.base_features import registry_feature
+from carbonmatrix.data.feature_factory import registry_feature
 from carbonmatrix.model.utils import batched_select
 
 @registry_feature

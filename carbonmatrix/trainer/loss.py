@@ -7,7 +7,7 @@ from torch.nn import functional as F
 
 from carbonmatrix.model import r3
 from carbonmatrix.common import residue_constants
-from carbonmatrix.trainer.base_loss import registry_loss
+from carbonmatrix.trainer.loss_factory import registry_loss
 from carbonmatrix.model.utils import (
         l2_normalize,
         squared_difference,

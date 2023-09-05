@@ -18,7 +18,7 @@ from torch.optim import Adam
 from carbonmatrix.model import CarbonFold, MetricDict
 from carbonmatrix.trainer import dataset_carbonfold as dataset
 from carbonmatrix.trainer.optimizer import OptipizerInverseSquarRootDecay as Optimizer
-from carbonmatrix.trainer.base_loss import LossFactory
+from carbonmatrix.trainer.loss_factory import LossFactory
 from carbonmatrix.trainer import model_align
 
 def get_device(args):

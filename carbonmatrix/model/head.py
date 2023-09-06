@@ -143,14 +143,16 @@ class PredictedLDDTHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         c = config
-        dim = c.num_channels
+
+        dim = c.num_channel
+
         self.net = nn.Sequential(
-                LayerNorm(dim),
+                LayerNorm(c.structure_module_num_channel),
+                Linear(c.structure_module_num_channel, dim, init='relu', bias=True),
+                #nn.ReLU(),
                 Linear(dim, dim, init='relu', bias=True),
-                nn.ReLU(),
-                Linear(dim, dim, init='relu', bias=True),
-                nn.ReLU(),
-                Linear(dim, c.num_bins, init='final', bias=True))
+                #nn.ReLU(),
+                Linear(dim, c.num_bins * 37, init='final', bias=True))
         self.config = config
 
     def forward(self, headers, representations, batch):

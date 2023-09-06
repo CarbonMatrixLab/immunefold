@@ -39,9 +39,6 @@ class EmbeddingAndSeqformer(nn.Module):
                 #nn.Dropout(p=c.esm.dropout_rate),
                 )
 
-            if c.esm.pair_enabled:
-                self.proj_esm_embed_pair = Linear(c.esm.embed_pair_channel, c.pair_channel, init='linear', bias=True)
-
         self.proj_rel_pos = torch.nn.Embedding(c.max_relative_feature * 2 + 2, c.pair_channel)
 
         if c.recycle_features:
@@ -82,9 +79,6 @@ class EmbeddingAndSeqformer(nn.Module):
             esm_embed = self.proj_esm_embed(esm_embed)
             seq_act = seq_act + esm_embed
 
-            if c.esm.pair_enabled and 'esm_embed_pair' in batch:
-                pair_embed = self.proj_esm_embed_pair(batch['esm_embed_pair'])
-                pair_act = pair_act + pair_embed
 
         if c.recycle_features:
             if 'prev_seq' in batch:
@@ -98,7 +92,6 @@ class EmbeddingAndSeqformer(nn.Module):
         seq_act, pair_act = self.seqformer(seq_act, pair_act, mask=mask, is_recycling=batch['is_recycling'])
 
         return seq_act, pair_act
-
 
 class SeqformerIteration(nn.Module):
     def __init__(self, config, seq_channel, pair_channel):

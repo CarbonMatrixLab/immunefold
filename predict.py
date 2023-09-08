@@ -57,7 +57,7 @@ def worker_load(rank, args):  # pylint: disable=redefined-outer-name
     model_config = ckpt['model_config']
     model_config['esm2_model_file'] = args.restore_esm2_model
     model = CarbonFold(config = model_config)
-    model.impl.load_state_dict(ckpt['model_state_dict'], strict=False)
+    model.impl.load_state_dict(ckpt['model_state_dict'], strict=True)
 
     with open(args.model_features, 'r', encoding='utf-8') as f:
         feats = json.loads(f.read())

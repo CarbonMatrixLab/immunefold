@@ -14,72 +14,56 @@ from contextlib import nullcontext
 import torch
 from torch import nn
 from torch.optim import Adam
+from torch.utils.data.distributed import DistributedSampler
+from torch.utils.data import DataLoader
 
 from carbonmatrix.model import CarbonFold, MetricDict
 from carbonmatrix.trainer import dataset_carbonfold as dataset
 from carbonmatrix.trainer.optimizer import OptipizerInverseSquarRootDecay as Optimizer
 from carbonmatrix.trainer.loss_factory import LossFactory
 from carbonmatrix.trainer import model_align
+from carbonmatrix.trainer import utils
 
-def get_device(args):
-    if args.device == 'gpu':
-        return torch.device(f'cuda:{args.gpu_list[args.local_rank]}')
-    elif args.device == 'mlu':
-        return ct.mlu_device(args.local_rank)
-    else:
-        return torch.device('cpu')
 
-def setup_model(model, args):
-    device = get_device(args)
-    model.to(device)
+def setup_model(model, device):
     model = nn.parallel.DistributedDataParallel(
         model,
-        device_ids=[args.gpu_list[args.local_rank]], 
-        output_device=args.gpu_list[args.local_rank],)
-    #find_unused_parameters=True)
-        #static_graph=False)
-    #model._set_static_graph()
+        device_ids=[device], 
+        output_device=cfg.gpu_list[l],
+        find_unused_parameters=True,
+        )
+    
+    # model._set_static_graph()
 
     logging.info('wrap model with nn.parallel.DistributedDataParallel class')
-    return model, device
+    
+    return model
 
-def setup_dataset(args):
-    # feature
-    device = get_device(args)
-    with open(args.model_features, 'r', encoding='utf-8') as f:
-        feats = json.loads(f.read())
-        for i in range(len(feats)):
-            feat_name, feat_args = feats[i]
-            if 'device' in feat_args and feat_args['device'] == '%(device)s':
-                feat_args['device'] = device
-                feats[i] = (feat_name, feat_args)
-
+def setup_dataset(cfg):
+    device = utils.get_device(cfg)
+    
     logging.info('CarbonFold.feats: %s', feats)
 
-    with open(args.train_name_idx) as f:
+    with open(cfg.train_name_idx) as f:
         name_idx = [i.strip() for i in f]
 
-    real_batch_size = args.batch_size * args.world_size * args.gradient_accumulation_it
+    real_batch_size = cfg.batch_size * utils.get_world_size() * cfg.gradient_accumulation_it
     reduced_num = len(name_idx) - len(name_idx) % real_batch_size
-    name_idx = name_idx[:reduced_num]
 
+    name_idx = name_idx[:reduced_num]
+    
+    dataset = StructureDataset(cfg.train_data, name_idx, device=device, feats=cfg.features)
+    sampler = DistributedSampler(dataset, drop_last=True)
+    train_loader = DataLoader(
+            dataset=dataset,
+            sampler=sampler,
+            collate_fn=dataset.collate_fn,
+            batch_size=cfg.batch_size,
+            drop_last=True)
+    
     logging.info(f'traing sampels {len(name_idx)}')
 
-    train_loader = dataset.load(
-            data_dir = args.train_data,
-            name_idx = name_idx,
-            feats=feats, max_seq_len=args.max_seq_len,
-            is_cluster_idx = False,
-            rank = args.world_rank, world_size = args.world_size,
-            batch_size = args.batch_size)
-
-    logging.info(f'world_rank={args.world_rank} data_world_size={args.world_size}')
-
-    eval_loader = None
-    if eval_loader is not None:
-        logging.info(f'eval_data_file= {eval_data_file} eval_name_idx_file= {eval_name_idx_file}')
-
-    return feats, train_loader, eval_loader
+    return train_loader
 
 def log_metric_dict(loss, epoch, it= '', prefix=''):
     if isinstance(loss, MetricDict):
@@ -91,22 +75,25 @@ def log_metric_dict(loss, epoch, it= '', prefix=''):
         loss = loss.item()
         logging.info(f'{epoch} {it} {prefix}: {loss}')
 
-def train(args):
-    random.seed(args.random_seed)
-    np.random.seed(args.random_seed)
+def train(cfg):
+    random.seed(cfg.random_seed)
+    np.random.seed(cfg.random_seed)
 
     # dataset
-    feats, train_loader, eval_loader = setup_dataset(args)
+    feats, train_loader, eval_loader = setup_dataset(cfg)
 
     # model
-    with open(args.model_config, 'r', encoding='utf-8') as f:
-        config = json.loads(f.read())
+    with open(cfg.model_config, 'r', encoding='utf-8') as f:
+        config = json.loads(f.read(), object_pairs_hook=OrderedDict)
+        print('1', config)
         config = ml_collections.ConfigDict(config)
+        print('2', config)
 
-    if args.restore_model_ckpt is not None:
-        ckpt = torch.load(args.restore_model_ckpt)
+    if cfg.restore_model_ckpt is not None:
+        ckpt = torch.load(cfg.restore_model_ckpt)
         model_config = ckpt['model_config']
-        model_config['esm2_model_file'] = args.restore_esm2_model
+        print('3', model_config)
+        model_config['esm2_model_file'] = cfg.restore_esm2_model
         model = CarbonFold(config = model_config)
         model.impl.load_state_dict(ckpt['model_state_dict'], strict=True)
 
@@ -121,19 +108,19 @@ def train(args):
 
     logging.info('CarbonFold.config: %s', config)
 
-    model, device = setup_model(model, args)
+    model, device = setup_model(model, cfg)
 
     # optimizer
     optim = Optimizer(trainable_variables,
-            base_lr=args.learning_rate, warmup_steps=args.warmup_steps, flat_steps=args.flat_steps,
-            decay_steps=args.decay_steps, decay_type='linear', min_lr=1e-5)
+            base_lr=cfg.learning_rate, warmup_steps=cfg.warmup_steps, flat_steps=cfg.flat_steps,
+            decay_steps=cfg.decay_steps, decay_type='linear', min_lr=1e-5)
 
     # loss
     loss_object = LossFactory(config.loss)
    
     # checkpoint
     def _save_checkpoint(it):
-        ckpt_dir = os.path.join(args.prefix, 'checkpoints')
+        ckpt_dir = os.path.join(cfg.prefix, 'checkpoints')
         if not os.path.exists(ckpt_dir):
             os.path.makedirs(ckpt_dir)
 
@@ -147,7 +134,7 @@ def train(args):
             model_config = config.model,
             train_config = config,
             feature_config = feats,
-            args = args,
+            cfg = cfg,
             train_steps = optim.cur_step), ckpt_file)
 
     # setup train
@@ -159,19 +146,19 @@ def train(args):
 
     scaler = torch.cuda.amp.GradScaler()
 
-    for epoch in range(args.num_epoch):
+    for epoch in range(cfg.num_epoch):
         running_loss = MetricDict()
         optim.zero_grad()
 
         for it, batch in enumerate(train_loader):
-            jt = (it + 1) % args.gradient_accumulation_it
+            jt = (it + 1) % cfg.gradient_accumulation_it
 
             ctx = nullcontext if jt == 0 else model.no_sync
             with ctx():
                 with torch.cuda.amp.autocast(enabled=False, dtype=torch.float16):
                     r = model(batch=batch, compute_loss=True)
                     loss_results = loss_object(r, batch)
-                    loss = loss_results['loss'] / args.gradient_accumulation_it
+                    loss = loss_results['loss'] / cfg.gradient_accumulation_it
 
                 scaler.scale(loss).backward()
                 #loss.backward()
@@ -203,7 +190,7 @@ def train(args):
                 optim.zero_grad()
 
                 for k, v in running_loss.items():
-                    v = v / args.gradient_accumulation_it
+                    v = v / cfg.gradient_accumulation_it
                     log_metric_dict(v, epoch, it, prefix=f'Loss/train@{k}')
 
                 running_loss = MetricDict()
@@ -212,5 +199,5 @@ def train(args):
                 logging.info(f'{it} batch time {batch_end_time - batch_start_time} s.')
                 batch_start_time = time.time()
 
-                if optim.cur_step % args.checkpoint_it == 0:
+                if optim.cur_step % cfg.checkpoint_it == 0:
                     _save_checkpoint(optim.cur_step)

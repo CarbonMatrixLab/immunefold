@@ -143,7 +143,10 @@ class SeqDataset(torch.utils.data.Dataset):
         return ret
 
 class StructureDataset(torch.utils.data.Dataset):
-    def __init__(self, data_dir, name_idx, max_seq_len=None, reduce_num=None, is_cluster_idx=False):
+    def __init__(self,
+            data_dir, name_idx,
+            device=None, feats=None,
+            max_seq_len=None, reduce_num=None, is_cluster_idx=False,):
         super().__init__()
 
         self.data_dir = pathlib.Path(data_dir)

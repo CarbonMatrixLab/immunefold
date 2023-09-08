@@ -1,24 +1,21 @@
 import os
-import argparse
+#import argparse
 import json
-from collections import OrderedDict
 import torch
-import ml_collections
+import argparse
+from collections import OrderedDict
 
-from abfold.model.abfold import AbFold
+import hydra
+from omegaconf import DictConfig, OmegaConf
+
+from carbonmatrix.model.carbonfold import CarbonFold
 
 def load(args):
-    with open(args.model_config, 'r', encoding='utf-8') as f:
-        config = json.loads(f.read())
-        config = ml_collections.ConfigDict(config)
-
-
-    #checkpoint = torch.load(args.model, map_location=args.map_location)
-    #model = checkpoint['model']
-    abfold = AbFold(config=config.model)
-    esmfold = torch.load(args.esmfold_ckpt)['model_state_dict']
+    config = OmegaConf.load(args.model_config)
+    carbonfold = CarbonFold(config=config)
+    esmfold = torch.load(args.esmfold_ckpt)['model']
     
-    c = config.model
+    c = config
 
     assigned_param_set = set()
     
@@ -50,7 +47,7 @@ def load(args):
         assigned_param_set.add(n)
 
     def _load_seqformer_block(it):
-        block = abfold.impl.seqformer.seqformer.blocks[it]
+        block = carbonfold.impl.seqformer_module.seqformer.blocks[it]
         prefix = f'trunk.blocks.{it}.'
         
         # SeqAttention
@@ -140,7 +137,7 @@ def load(args):
         _assign(tran.transition[3], prefix + f'mlp_pair.mlp.3')
      
     def _load_embedding():
-        embed = abfold.impl.seqformer
+        embed = carbonfold.impl.seqformer_module
         _assign_data(embed.esm_embed_weights, 'esm_s_combine')
         
         _assign(embed.proj_aa_type, 'embedding') 
@@ -151,7 +148,7 @@ def load(args):
         _assign(embed.proj_esm_embed[3], 'esm_s_mlp.3')
 
     def _load_structure_module():
-        struc = abfold.impl.structure_module.struct_module
+        struc = carbonfold.impl.structure_module.struct_module
         _assign(struc.proj_init_seq_act, 'trunk.trunk2sm_s') 
         _assign(struc.proj_init_pair_act, 'trunk.trunk2sm_z') 
         
@@ -201,14 +198,20 @@ def load(args):
         _assign(sc.projection, prefix + 'linear_out')
 
     def _load_recycling():
-        r = abfold.impl.seqformer
+        r = carbonfold.impl.seqformer_module
         _assign(r.prev_seq_norm, 'trunk.recycle_s_norm')
         _assign(r.prev_pair_norm, 'trunk.recycle_z_norm')
         _assign(r.proj_prev_pos, 'trunk.recycle_disto')
 
     def _load_heads():
-        dist = abfold.impl.distogram
+        dist = carbonfold.impl.distogram
         _assign(dist.proj, 'distogram_head')
+
+        plddt = carbonfold.impl.plddt
+        _assign(plddt.net[0], 'lddt_head.0')
+        _assign(plddt.net[1], 'lddt_head.1')
+        _assign(plddt.net[2], 'lddt_head.2')
+        _assign(plddt.net[3], 'lddt_head.3')
 
     # load embedding
     _load_embedding()
@@ -235,12 +238,11 @@ def load(args):
     for n in esmfold:
         if n not in assigned_param_set and not n.startswith('esm.'):
             print(n)
-
     
     torch.save({
-        'model_config' : config.model,
-        'model_state_dict' : abfold.state_dict()
-        }, args.output_abfold_ckpt)
+        'model_config' : config,
+        'model_state_dict' : carbonfold.impl.state_dict()
+        }, args.output_carbonfold_ckpt)
 
 def main(args):
     load(args)
@@ -249,7 +251,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_config', type=str, required=True)
     parser.add_argument('--esmfold_ckpt', type=str, default=None)
-    parser.add_argument('--output_abfold_ckpt', type=str, default=None)
+    parser.add_argument('--output_carbonfold_ckpt', type=str, default=None)
     parser.add_argument('--verbose', action='store_true')
     args = parser.parse_args()
 

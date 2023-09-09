@@ -9,7 +9,7 @@ from carbonmatrix.data.feature_factory import registry_feature
 from carbonmatrix.model.utils import batched_select
 
 @registry_feature
-def make_restype_atom_constants(batch, is_training=False):
+def make_restype_atom_constants(batch):
     device = batch['seq'].device
 
     batch['atom14_atom_exists'] = batched_select(torch.tensor(residue_constants.restype_atom14_mask, device=device), batch['seq'])
@@ -24,7 +24,7 @@ def make_restype_atom_constants(batch, is_training=False):
     return batch
 
 @registry_feature
-def make_to_device(protein, fields, device, is_training=True):
+def make_to_device(protein, fields, device):
     if isfunction(device):
         device = device()
 

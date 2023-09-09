@@ -18,31 +18,31 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 
 from carbonmatrix.model import CarbonFold, MetricDict
-from carbonmatrix.trainer import dataset_carbonfold as dataset
+from carbonmatrix.trainer.dataset_carbonfold import StructureDataset, TransformedDataLoader
 from carbonmatrix.trainer.optimizer import OptipizerInverseSquarRootDecay as Optimizer
 from carbonmatrix.trainer.loss_factory import LossFactory
 from carbonmatrix.trainer import model_align
 from carbonmatrix.trainer import utils
 
-
 def setup_model(model, device):
+    model.to(device)
     model = nn.parallel.DistributedDataParallel(
         model,
-        device_ids=[device], 
-        output_device=cfg.gpu_list[l],
-        find_unused_parameters=True,
+        device_ids=[device],
+        output_device=device,
+        #find_unused_parameters=True,
         )
-    
-    # model._set_static_graph()
+
+    model._set_static_graph()
 
     logging.info('wrap model with nn.parallel.DistributedDataParallel class')
-    
+
     return model
 
 def setup_dataset(cfg):
-    device = utils.get_device(cfg)
-    
-    logging.info('CarbonFold.feats: %s', feats)
+    device = utils.get_device(cfg.gpu_list)
+
+    logging.info('CarbonFold.feats: %s', cfg.features)
 
     with open(cfg.train_name_idx) as f:
         name_idx = [i.strip() for i in f]
@@ -51,16 +51,20 @@ def setup_dataset(cfg):
     reduced_num = len(name_idx) - len(name_idx) % real_batch_size
 
     name_idx = name_idx[:reduced_num]
-    
+
     dataset = StructureDataset(cfg.train_data, name_idx, device=device, feats=cfg.features)
     sampler = DistributedSampler(dataset, drop_last=True)
-    train_loader = DataLoader(
+
+    train_loader = TransformedDataLoader(
             dataset=dataset,
+            feats=cfg.features,
+            device = device,
             sampler=sampler,
             collate_fn=dataset.collate_fn,
             batch_size=cfg.batch_size,
-            drop_last=True)
-    
+            drop_last=True,
+            pin_memory=True)
+
     logging.info(f'traing sampels {len(name_idx)}')
 
     return train_loader
@@ -80,24 +84,16 @@ def train(cfg):
     np.random.seed(cfg.random_seed)
 
     # dataset
-    feats, train_loader, eval_loader = setup_dataset(cfg)
-
-    # model
-    with open(cfg.model_config, 'r', encoding='utf-8') as f:
-        config = json.loads(f.read(), object_pairs_hook=OrderedDict)
-        print('1', config)
-        config = ml_collections.ConfigDict(config)
-        print('2', config)
+    train_loader = setup_dataset(cfg)
 
     if cfg.restore_model_ckpt is not None:
         ckpt = torch.load(cfg.restore_model_ckpt)
         model_config = ckpt['model_config']
-        print('3', model_config)
         model_config['esm2_model_file'] = cfg.restore_esm2_model
         model = CarbonFold(config = model_config)
         model.impl.load_state_dict(ckpt['model_state_dict'], strict=True)
 
-        trainable_variables = model_align.setup_model(model, config.align)
+        trainable_variables = model_align.setup_model(model, cfg.model_align)
         #trainable_variables = model.parameters()
     else:
         model = CarbonFold(config = config.model)
@@ -106,9 +102,10 @@ def train(cfg):
     #for n, p in model.named_parameters():
     #    print(n, p.requires_grad)
 
-    logging.info('CarbonFold.config: %s', config)
+    logging.info('CarbonFold.config: %s', cfg)
 
-    model, device = setup_model(model, cfg)
+    device = utils.get_device(cfg.gpu_list)
+    model = setup_model(model, device)
 
     # optimizer
     optim = Optimizer(trainable_variables,
@@ -116,8 +113,8 @@ def train(cfg):
             decay_steps=cfg.decay_steps, decay_type='linear', min_lr=1e-5)
 
     # loss
-    loss_object = LossFactory(config.loss)
-   
+    loss_object = LossFactory(cfg.loss)
+
     # checkpoint
     def _save_checkpoint(it):
         ckpt_dir = os.path.join(cfg.prefix, 'checkpoints')
@@ -131,8 +128,8 @@ def train(cfg):
         torch.save(dict(
             model_state_dict = saved_model.esm.state_dict(),
             #optim_state_dict = optim.state_dict(),
-            model_config = config.model,
-            train_config = config,
+            model_config = cfg.model,
+            train_config = cfg,
             feature_config = feats,
             cfg = cfg,
             train_steps = optim.cur_step), ckpt_file)
@@ -152,6 +149,10 @@ def train(cfg):
 
         for it, batch in enumerate(train_loader):
             jt = (it + 1) % cfg.gradient_accumulation_it
+
+            for k, v in batch.items():
+                if isinstance(v, torch.Tensor):
+                    print('model', k, v.device)
 
             ctx = nullcontext if jt == 0 else model.no_sync
             with ctx():

@@ -19,6 +19,18 @@ from carbonmatrix.data.seq import str_seq_to_index
 
 logger = logging.getLogger(__file__)
 
+class TransformedDataLoader(torch.utils.data.DataLoader):
+    def __init__(self, dataset, feats, device, *args, **kwargs):
+        super().__init__(dataset, *args, **kwargs)
+
+        self.feature_factory = FeatureFactory(feats)
+        self.device = device
+
+    def __iter__(self,):
+        for batch in super().__iter__():
+            batch = {k : v.to(device=self.device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
+            yield self.feature_factory(batch)
+
 class DistributedDataset(torch.utils.data.Dataset):
     def __init__(self, dataset, rank, world_size):
         super().__init__()
@@ -146,7 +158,8 @@ class StructureDataset(torch.utils.data.Dataset):
     def __init__(self,
             data_dir, name_idx,
             device=None, feats=None,
-            max_seq_len=None, reduce_num=None, is_cluster_idx=False,):
+            max_seq_len=None, reduce_num=None,
+            is_cluster_idx=False,):
         super().__init__()
 
         self.data_dir = pathlib.Path(data_dir)
@@ -159,6 +172,13 @@ class StructureDataset(torch.utils.data.Dataset):
         logger.info(f'dataset size= {len(name_idx)} max_seq_len= {max_seq_len} reduce_num= {reduce_num} is_cluster_idx= {is_cluster_idx}')
 
         self.epoch_count = 0
+
+        self.device = device
+
+        if feats is not None:
+            self.feat_factory = FeatureFactory(feats)
+        else:
+            self.feat_factory = None
 
     def __len__(self):
         return len(self.name_idx)
@@ -217,7 +237,7 @@ class StructureDataset(torch.utils.data.Dataset):
 
         return ret
 
-    def collate_fn(self, batch, feat_factory=None):
+    def collate_fn(self, batch):
         fields = ('name', 'str_seq', 'seq', 'mask',
                 'atom14_gt_positions', 'atom14_gt_exists', 'residx', 'esm_seq')
         name, str_seq, seq, mask, atom14_gt_positions, atom14_gt_exists, residx, esm_seq =\
@@ -249,8 +269,8 @@ class StructureDataset(torch.utils.data.Dataset):
                 atom14_gt_exists = padded_atom14_gt_existss,
                 )
 
-        if feat_factory:
-            ret = feat_factory.build(ret)
+        if self.feat_factory:
+            ret = self.feat_factory(ret)
 
         return ret
 

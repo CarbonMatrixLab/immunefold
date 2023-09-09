@@ -138,7 +138,7 @@ class TMscoreHead(nn.Module):
             return dict(loss = tmscore / preds.shape[0])
         return None
 
-@registry_head(name='plddt')
+#@registry_head(name='plddt')
 class PredictedLDDTHead(nn.Module):
     def __init__(self, config):
         super().__init__()

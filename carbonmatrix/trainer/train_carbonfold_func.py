@@ -33,7 +33,7 @@ def setup_model(model, device):
         #find_unused_parameters=True,
         )
 
-    model._set_static_graph()
+    #model._set_static_graph()
 
     logging.info('wrap model with nn.parallel.DistributedDataParallel class')
 
@@ -47,7 +47,7 @@ def setup_dataset(cfg):
     with open(cfg.train_name_idx) as f:
         name_idx = [i.strip() for i in f]
 
-    real_batch_size = cfg.batch_size * utils.get_world_size() * cfg.gradient_accumulation_it
+    real_batch_size = cfg.batch_size * utils.get_world_size()
     reduced_num = len(name_idx) - len(name_idx) % real_batch_size
 
     name_idx = name_idx[:reduced_num]
@@ -88,10 +88,10 @@ def train(cfg):
 
     if cfg.restore_model_ckpt is not None:
         ckpt = torch.load(cfg.restore_model_ckpt)
-        model_config = ckpt['model_config']
-        model_config['esm2_model_file'] = cfg.restore_esm2_model
-        model = CarbonFold(config = model_config)
-        model.impl.load_state_dict(ckpt['model_state_dict'], strict=True)
+        #model_config = ckpt['model_config']
+        #model_config['esm2_model_file'] = cfg.restore_esm2_model
+        model = CarbonFold(config = cfg.model)
+        model.impl.load_state_dict(ckpt['model_state_dict'], strict=False)
 
         trainable_variables = model_align.setup_model(model, cfg.model_align)
         #trainable_variables = model.parameters()
@@ -150,10 +150,6 @@ def train(cfg):
         for it, batch in enumerate(train_loader):
             jt = (it + 1) % cfg.gradient_accumulation_it
 
-            for k, v in batch.items():
-                if isinstance(v, torch.Tensor):
-                    print('model', k, v.device)
-
             ctx = nullcontext if jt == 0 else model.no_sync
             with ctx():
                 with torch.cuda.amp.autocast(enabled=False, dtype=torch.float16):
@@ -182,7 +178,6 @@ def train(cfg):
                         running_loss += MetricDict({f'{k}@{kk}': vv})
 
             if jt == 0:
-
                 logging.info(f'optim step= {optim.cur_step} lr= {optim.get_values()}')
 
                 #optim.step()
@@ -200,5 +195,5 @@ def train(cfg):
                 logging.info(f'{it} batch time {batch_end_time - batch_start_time} s.')
                 batch_start_time = time.time()
 
-                if optim.cur_step % cfg.checkpoint_it == 0:
-                    _save_checkpoint(optim.cur_step)
+                #if optim.cur_step % cfg.checkpoint_it == 0:
+                #    _save_checkpoint(optim.cur_step)

@@ -1,6 +1,9 @@
 import numpy as np
 
+from esm.data import Alphabet 
 from carbonmatrix.common import residue_constants
+
+esm_alphabet = Alphabet.from_architecture(name='ESM-1b')
 
 def str_seq_to_index(str_seq, mapping=residue_constants.restype_order_with_x, map_unknown_to_x=True):
     seq = []

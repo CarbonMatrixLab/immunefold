@@ -7,8 +7,6 @@ import numpy as np
 import tree
 import json
 
-
-num_ab_regions = 14
 residue_chain_index_offset = 512 # just follow ESMFold
 
 restypes = [

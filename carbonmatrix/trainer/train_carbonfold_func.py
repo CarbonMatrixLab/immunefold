@@ -17,8 +17,9 @@ from torch.optim import Adam
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 
+from carbonmatrix.trainer.dataset import StructureDatasetNpzIO as StructureDataset 
+from carbonmatrix.data.base_dataset import  TransformedDataLoader
 from carbonmatrix.model import CarbonFold, MetricDict
-from carbonmatrix.trainer.dataset_carbonfold import StructureDataset, TransformedDataLoader
 from carbonmatrix.trainer.optimizer import OptipizerInverseSquarRootDecay as Optimizer
 from carbonmatrix.trainer.loss_factory import LossFactory
 from carbonmatrix.trainer import model_align

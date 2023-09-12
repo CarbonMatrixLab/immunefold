@@ -19,18 +19,6 @@ from carbonmatrix.data.seq import str_seq_to_index
 
 logger = logging.getLogger(__file__)
 
-class TransformedDataLoader(torch.utils.data.DataLoader):
-    def __init__(self, dataset, feats, device, *args, **kwargs):
-        super().__init__(dataset, *args, **kwargs)
-
-        self.feature_factory = FeatureFactory(feats)
-        self.device = device
-
-    def __iter__(self,):
-        for batch in super().__iter__():
-            batch = {k : v.to(device=self.device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
-            yield self.feature_factory(batch)
-
 class DistributedDataset(torch.utils.data.Dataset):
     def __init__(self, dataset, rank, world_size):
         super().__init__()

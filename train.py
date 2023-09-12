@@ -7,7 +7,7 @@ from omegaconf import DictConfig
 
 import torch
 
-from carbonmatrix.trainer.train_carbonfold_func import train
+from carbonmatrix.trainer.train_func import train
 from carbonmatrix.trainer import utils
 
 class WorkerLogFilter(logging.Filter):

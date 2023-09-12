@@ -15,10 +15,10 @@ import torch
 from torch import nn
 from torch.optim import Adam
 from torch.utils.data.distributed import DistributedSampler
-from torch.utils.data import DataLoader
 
+from carbonmatrix.data.base_dataset import  TransformedDataLoader as DataLoader
+from carbonmatrix.trainer.base_dataset import collate_fn_struc
 from carbonmatrix.trainer.dataset import StructureDatasetNpzIO as StructureDataset 
-from carbonmatrix.data.base_dataset import  TransformedDataLoader
 from carbonmatrix.model import CarbonFold, MetricDict
 from carbonmatrix.trainer.optimizer import OptipizerInverseSquarRootDecay as Optimizer
 from carbonmatrix.trainer.loss_factory import LossFactory
@@ -42,6 +42,7 @@ def setup_model(model, device):
 
 def setup_dataset(cfg):
     device = utils.get_device(cfg.gpu_list)
+    print('device=', device)
 
     logging.info('CarbonFold.feats: %s', cfg.features)
 
@@ -53,20 +54,18 @@ def setup_dataset(cfg):
 
     name_idx = name_idx[:reduced_num]
 
-    dataset = StructureDataset(cfg.train_data, name_idx, device=device, feats=cfg.features)
-    sampler = DistributedSampler(dataset, drop_last=True)
+    dataset = StructureDataset(cfg.train_data, cfg.train_name_idx, cfg.max_seq_len)
+    sampler = DistributedSampler(dataset, shuffle=True, drop_last=True)
 
-    train_loader = TransformedDataLoader(
+    train_loader = DataLoader(
             dataset=dataset,
             feats=cfg.features,
             device = device,
             sampler=sampler,
-            collate_fn=dataset.collate_fn,
+            collate_fn=collate_fn_struc,
             batch_size=cfg.batch_size,
             drop_last=True,
-            pin_memory=True)
-
-    logging.info(f'traing sampels {len(name_idx)}')
+            )
 
     return train_loader
 
@@ -145,8 +144,9 @@ def train(cfg):
     scaler = torch.cuda.amp.GradScaler()
 
     for epoch in range(cfg.num_epoch):
-        running_loss = MetricDict()
         optim.zero_grad()
+        train_loader.set_epoch(epoch)
+        running_loss = MetricDict()
 
         for it, batch in enumerate(train_loader):
             jt = (it + 1) % cfg.gradient_accumulation_it

@@ -13,7 +13,7 @@ def test_dataset(cfg):
     local_rank = utils.get_local_rank()
     device = utils.get_device()
     dataset = StructureDataset(cfg.train_data, cfg.train_name_idx, cfg.max_seq_len)
-    sampler = DistributedSampler(dataset, drop_last=True)
+    sampler = DistributedSampler(dataset, shuffle=True, drop_last=True)
     dataloader = TransformedDataLoader(
             dataset, feats=cfg.features, device=2,
             collate_fn = collate_fn_struc,
@@ -21,7 +21,7 @@ def test_dataset(cfg):
             batch_size=2,
             )
     
-    for epoch in range(4):
+    for epoch in range(2):
         print('epoch', epoch)
         dataloader.set_epoch(epoch) 
         for i, x in enumerate(dataloader):

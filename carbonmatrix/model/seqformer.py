@@ -22,7 +22,6 @@ class EmbeddingAndSeqformer(nn.Module):
         c = config
 
         self.num_token = residue_constants.restype_num + 3
-        self.num_region = residue_constants.num_ab_regions + 1
 
         self.proj_aa_type = nn.Embedding(self.num_token, c.seq_channel, padding_idx=0)
 

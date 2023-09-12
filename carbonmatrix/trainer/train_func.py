@@ -94,13 +94,13 @@ def train(cfg):
         model.impl.load_state_dict(ckpt['model_state_dict'], strict=False)
 
         trainable_variables = model_align.setup_model(model, cfg.model_align)
-        #trainable_variables = model.parameters()
+
+        for n, p in model.named_parameters():
+            if p.requires_grad:
+                logging.info(f'trainable variable {n}')
     else:
         model = CarbonFold(config = config.model)
         trainable_variables = model.parameters()
-
-    #for n, p in model.named_parameters():
-    #    print(n, p.requires_grad)
 
     logging.info('CarbonFold.config: %s', cfg)
 

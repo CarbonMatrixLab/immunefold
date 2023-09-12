@@ -16,10 +16,6 @@ class StructureDataset(SeqDataset):
 
         return ret
     
-    def __iter__(self,):
-        for item in self._next_item():
-            yield self._create_struc_data(item)
-
     def __getitem__(self, idx):
         item = self._get_item(idx)
         
@@ -38,3 +34,31 @@ def collate_fn_struc(batch):
         )
 
     return ret
+
+def slice_structure(struc_mask, max_seq_len):
+    num_struc = torch.sum(struc_mask)
+    if num_struc > 0 and num_struc < str_len:
+        struc_start, struc_end = 0, str_len
+        while struc_start < str_len and struc_mask[struc_start] == False:
+            struc_start += 1
+        while struc_end > 0 and struc_mask[struc_end - 1] == False:
+            struc_end -= 1
+        if struc_end - struc_start > max_seq_len:
+            start = random.randint(struc_start, struc_end - max_seq_len)
+            end = start + max_seq_len
+        else:
+            extra = max_seq_len - (struc_end - struc_start)
+            left_extra = struc_start - extra // 2 - 10
+            right_extra = struc_end + extra // 2 + 10
+            start = random.randint(left_extra, right_extra)
+            end = start + max_seq_len
+            if start < 0:
+                start = 0
+                end = start + max_seq_len
+            elif end > str_len:
+                end = str_len
+                start = end - max_seq_len
+    else:
+        start = random.randint(0, str_len - max_seq_len)
+        end = start + max_seq_len
+    return start, end

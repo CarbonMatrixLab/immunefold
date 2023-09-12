@@ -11,14 +11,6 @@ class StructureDatasetPDBIO(StructureDataset):
         self.data_dir = data_dir
         self.name_idx = parse_cluster(name_idx_file)
 
-    def _next_item(self,):
-        for c  in self.name_idx:
-            name = c.get_next()
-            file_path = os.path.join(self.data_dir, name + '.npz')
-            struc = make_feature_from_pdb(file_path)
-            struc.update(name = name)
-            yield struc
-
 class StructureDatasetNpzIO(StructureDataset):
     def __init__(self, data_dir, name_idx_file, max_seq_len):
         super().__init__(max_seq_len=max_seq_len)
@@ -29,14 +21,6 @@ class StructureDatasetNpzIO(StructureDataset):
     def __len__(self,):
         return len(self.name_idx)
 
-    def _next_item(self,):
-        for c  in self.name_idx:
-            name = c.get_next()
-            file_path = os.path.join(self.data_dir, name + '.npz')
-            struc = make_feature_from_npz(file_path)
-            struc.update(name = name)
-            yield struc
-    
     def _get_item(self, idx):
         c = self.name_idx[idx]
         name = c.get_next()

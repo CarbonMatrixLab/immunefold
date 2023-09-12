@@ -13,3 +13,14 @@ def str_seq_to_index(str_seq, mapping=residue_constants.restype_order_with_x, ma
       seq.append(mapping.get(aa, mapping['X']))
 
     return np.array(seq)
+    
+def create_esm_seq(str_seq):
+    L = len(str_seq)
+    seq = np.zeros((L + 2,), dtype=np.int64)
+    seq[0] = esm_alphabet.cls_idx
+    seq[-1] = esm_alphabet.eos_idx
+
+    for i, a in enumerate(str_seq):
+        seq[i+1] = esm_alphabet.get_idx(a)
+
+    return seq

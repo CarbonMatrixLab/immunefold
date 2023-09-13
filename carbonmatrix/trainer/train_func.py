@@ -44,7 +44,7 @@ def setup_dataset(cfg):
     device = utils.get_device(cfg.gpu_list)
     print('device=', device)
 
-    logging.info('CarbonFold.feats: %s', cfg.features)
+    logging.info('CarbonFold.feats: %s', cfg.transforms)
 
     with open(cfg.train_name_idx) as f:
         name_idx = [i.strip() for i in f]
@@ -59,7 +59,7 @@ def setup_dataset(cfg):
 
     train_loader = DataLoader(
             dataset=dataset,
-            feats=cfg.features,
+            feats=cfg.transforms,
             device = device,
             sampler=sampler,
             collate_fn=collate_fn_struc,

@@ -6,11 +6,11 @@ from einops import rearrange
 
 from carbonmatrix.data.seq import create_esm_seq, esm_alphabet
 from carbonmatrix.common import residue_constants
-from carbonmatrix.data.feature_factory import registry_feature
+from carbonmatrix.data.transform_factory import registry_transform
 from carbonmatrix.model.utils import batched_select
 from carbonmatrix.common.operator import pad_for_batch
 
-@registry_feature
+@registry_transform
 def make_restype_atom_constants(batch):
     device = batch['seq'].device
 
@@ -25,7 +25,7 @@ def make_restype_atom_constants(batch):
 
     return batch
 
-@registry_feature
+@registry_transform
 def make_esm_seq(batch,):
     device = batch['seq'].device
     bs = batch['seq'].shape[0]
@@ -42,7 +42,7 @@ def make_esm_seq(batch,):
 
     return batch
 
-@registry_feature
+# @registry_transform
 def make_sliced_sample(batch, max_seq_len):
     batch_len = batch['seq'].shape[1]
     if batch_len <= max_seq_len:

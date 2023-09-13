@@ -18,7 +18,7 @@ def test_dataset(cfg):
     sampler = DistributedSampler(dataset, shuffle=True, drop_last=True)
 
     dataloader = TransformedDataLoader(
-            dataset, feats=cfg.features, device=2,
+            dataset, feats=cfg.transforms, device=2,
             collate_fn = collate_fn_struc,
             sampler=sampler,
             batch_size=2,

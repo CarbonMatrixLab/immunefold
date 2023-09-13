@@ -2,13 +2,13 @@ import torch
 from torch.nn import functional as F
 
 from carbonmatrix.common import residue_constants
-from carbonmatrix.data.feature_factory import registry_feature
+from carbonmatrix.data.transform_factory import registry_transform
 from carbonmatrix.model.r3 import rigids_from_3_points
 from carbonmatrix.model.common_modules import pseudo_beta_fn
 from carbonmatrix.model.utils import batched_select
 from carbonmatrix.trainer import geometry
 
-@registry_feature
+@registry_transform
 def make_atom14_alt_gt_positions(batch, is_training=True):
     assert 'atom14_gt_positions' in batch and 'atom14_gt_exists' in batch
     device = batch['seq'].device
@@ -19,7 +19,7 @@ def make_atom14_alt_gt_positions(batch, is_training=True):
 
     return batch
 
-@registry_feature
+@registry_transform
 def make_pseudo_beta(batch, is_training=True):
     if 'atom37_gt_positions' not in batch:
         batch = make_atom37_positions(batch)
@@ -29,7 +29,7 @@ def make_pseudo_beta(batch, is_training=True):
 
     return batch
 
-@registry_feature
+@registry_transform
 def make_gt_frames(batch, is_training=True):
     if 'atom37_gt_positions' not in batch:
         batch = make_atom37_positions(batch)
@@ -39,7 +39,7 @@ def make_gt_frames(batch, is_training=True):
     
     return batch
 
-@registry_feature
+@registry_transform
 def make_calpha3_frames(batch, is_training=True):
     calpha_pos = batch['atom37_gt_positions'][:,:,1]
     calpha_mask = batch['atom37_gt_exists'][:,:,1]
@@ -48,7 +48,7 @@ def make_calpha3_frames(batch, is_training=True):
 
     return batch
 
-@registry_feature
+@registry_transform
 def make_torsion_angles(batch, is_training=True):
     if 'atom37_gt_positions' not in batch:
         batch = make_atom37_positions(batch)

@@ -1,5 +1,5 @@
 defaults:
-  - features: carbonfold
+  - transforms: carbonfold
 
 max_seq_len: 256
 train_name_idx: /home/zhanghaicang/neo/data/carbonfold/clean_bc40_cluster.idx

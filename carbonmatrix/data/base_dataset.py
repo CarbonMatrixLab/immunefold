@@ -12,7 +12,7 @@ from torch.nn import functional as F
 from carbonmatrix.common import residue_constants
 from carbonmatrix.common.operator import pad_for_batch
 from carbonmatrix.data.seq import str_seq_to_index
-from carbonmatrix.data.feature_factory import FeatureFactory
+from carbonmatrix.data.transform_factory import TransformFactory
 
 class Cluster(object):
     def __init__(self, names):
@@ -45,7 +45,7 @@ class TransformedDataLoader(torch.utils.data.DataLoader):
     def __init__(self, dataset, feats, device, *args, **kwargs):
         super().__init__(dataset, *args, **kwargs)
 
-        self.feature_factory = FeatureFactory(feats)
+        self.transform_factory = TransformFactory(feats)
         self.device = device
         
     def set_epoch(self, epoch):
@@ -55,7 +55,7 @@ class TransformedDataLoader(torch.utils.data.DataLoader):
     def __iter__(self,):
         for batch in super().__iter__():
             batch = {k : v.to(device=self.device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
-            yield self.feature_factory(batch)
+            yield self.transform_factory(batch)
 
 class SeqDataset(torch.utils.data.Dataset):
     def __init__(self, max_seq_len=None):

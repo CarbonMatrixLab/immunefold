@@ -2,21 +2,21 @@ import functools
 
 import torch
 
-_feature_factory = {}
+_transform_factory = {}
 
-def registry_feature(fn):
-    global _feature_factory
-    _feature_factory[fn.__name__] = fn
+def registry_transform(fn):
+    global _transform_factory
+    _transform_factory[fn.__name__] = fn
 
     return fn
 
-class FeatureFactory:
+class TransformFactory:
     def __init__(self, config):
         self.config = config
 
     def _transform(self, batch):
         for fn, kwargs in self.config.items():
-            batch = _feature_factory[fn](batch, **kwargs)
+            batch = _transform_factory[fn](batch, **kwargs)
         return batch
 
     def __call__(self, batch):

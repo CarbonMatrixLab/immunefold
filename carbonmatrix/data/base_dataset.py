@@ -50,7 +50,6 @@ class TransformedDataLoader(torch.utils.data.DataLoader):
         
     def set_epoch(self, epoch):
         if self.sampler is not None:
-            print('set_epoch')
             self.sampler.set_epoch(epoch)
     
     def __iter__(self,):
@@ -58,15 +57,11 @@ class TransformedDataLoader(torch.utils.data.DataLoader):
             batch = {k : v.to(device=self.device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
             yield self.feature_factory(batch)
 
-#class SeqDataset(torch.utils.data.IterableDataset):
 class SeqDataset(torch.utils.data.Dataset):
     def __init__(self, max_seq_len=None):
         super().__init__()
 
         self.max_seq_len = max_seq_len
-
-    def _next_item(self,):
-        raise NotImplementedError('_get_next_seq not implemented')
 
     def __get_item(self, idx):
         raise NotImplementedError('_get_next_seq not implemented')
@@ -76,13 +71,19 @@ class SeqDataset(torch.utils.data.Dataset):
         return dict(
                 name = name,
                 str_seq = str_seq,
-                seq = torch.from_numpy(str_seq_to_index(str_seq)),
-                mask = torch.ones((N,), dtype=torch.bool)
+                seq = str_seq_to_index(str_seq),
+                mask = np.ones((N,), dtype=np.bool_)
                 )
     
     def __getitem__(self, idx):
         name, str_seq = self._get_item(idx)
-        return self._create_seq_data(name, str_seq)
+        
+        ret = self._create_seq_data(name, str_seq)
+        
+        for k, v in ret.items():
+            ret[k] = torch.from_numpy(v) if isinstance(v, np.ndarray) else v
+
+        return ret
 
 def collate_fn_seq(batch):
     def _gather(n):

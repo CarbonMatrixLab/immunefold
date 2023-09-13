@@ -1,5 +1,6 @@
 import hydra
 
+import torch
 from torch.utils.data.distributed import DistributedSampler
 
 from carbonmatrix.trainer.base_dataset import collate_fn_struc
@@ -12,20 +13,24 @@ def test_dataset(cfg):
     world_rank = utils.get_world_rank()
     local_rank = utils.get_local_rank()
     device = utils.get_device()
+
     dataset = StructureDataset(cfg.train_data, cfg.train_name_idx, cfg.max_seq_len)
     sampler = DistributedSampler(dataset, shuffle=True, drop_last=True)
+
     dataloader = TransformedDataLoader(
             dataset, feats=cfg.features, device=2,
             collate_fn = collate_fn_struc,
             sampler=sampler,
             batch_size=2,
             )
-    
+
     for epoch in range(2):
-        print('epoch', epoch)
         dataloader.set_epoch(epoch) 
         for i, x in enumerate(dataloader):
             print('batch', local_rank, x['name'])
+            for k, v in x.items():
+                if isinstance(v, torch.Tensor):
+                    print(k, v.shape)
             if i == 2:
                 break
 

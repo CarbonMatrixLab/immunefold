@@ -69,6 +69,21 @@ class Attention(nn.Module):
 
         weights = F.softmax(logits, dim = -1)
         weighted_avg = torch.einsum('b s h q k, b s h k d -> b s h q d', weights, v)
+
+        '''
+        attn_mask = None
+        if bias is not None:
+            attn_mask = rearrange(bias,  'b h q k -> b () h q k')
+
+        if k_mask is not None:
+            mask_value = torch.finfo(q.dtype).min
+            k_mask = rearrange(k_mask, 'b s k -> b s () () k')
+            attn_mask = attn_mask.masked_fill(~k_mask.bool(), mask_value)
+
+        with torch.backends.cuda.sdp_kernel():
+            weighted_avg = F.scaled_dot_product_attention(q, k, v, attn_mask = attn_mask)
+        '''
+
         weighted_avg = rearrange(weighted_avg, 'b s h q d -> b s q (h d)')
 
         if self.gating:

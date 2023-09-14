@@ -70,5 +70,5 @@ def load_model_and_alphabet_local(model_location):
 
     model.load_state_dict(model_state, strict=regression_data is not None)
 
-    return model, alphabet, cfg
+    return model, alphabet
 

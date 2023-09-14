@@ -6,7 +6,7 @@ import numpy as np
 from carbonmatrix.common.operator import pad_for_batch
 from carbonmatrix.data.base_dataset import SeqDataset, collate_fn_seq
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger()
 
 class StructureDataset(SeqDataset):
     def __init__(self, max_seq_len=None):

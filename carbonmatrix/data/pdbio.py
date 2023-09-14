@@ -57,10 +57,10 @@ def save_ig_pdb(str_heavy_seq, str_light_seq, coord, pdb_path):
     pdb.set_structure(model)
     pdb.save(pdb_path)
 
-def save_general_pdb(str_seq, coord, pdb_path, coord_mask=None):
+def save_pdb(str_seq, coord, pdb_path,):
     assert len(str_seq) == coord.shape[0]
 
-    chain = make_chain(str_seq, coord[:len(str_seq)], 'A')
+    chain = make_chain(str_seq, coord, 'A')
 
     model = PDBModel(id=0)
     model.add(chain)

@@ -7,6 +7,8 @@ from torch import nn
 
 from carbonmatrix.common import residue_constants
 from carbonmatrix.model.lm.pretrained import load_model_and_alphabet_local
+#from esm.pretrained import load_model_and_alphabet_local
+
 from carbonmatrix.model.seqformer import EmbeddingAndSeqformer
 from carbonmatrix.model.head_factory import HeadFactory
 from carbonmatrix.model.common_modules import (
@@ -54,7 +56,8 @@ class CarbonFold(nn.Module):
     def __init__(self, config):
         super().__init__()
 
-        self.esm, _, _ = load_model_and_alphabet_local(config['esm2_model_file'])
+        self.esm, _ = load_model_and_alphabet_local(config['esm2_model_file'])
+        self.esm.half()
 
         self.impl = CarbonFoldIteration(config)
 

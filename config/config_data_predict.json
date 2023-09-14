@@ -1,8 +1,0 @@
-[
-  ["make_to_device", {
-    "fields":["seq", "mask", "chain_id", "atom14_gt_positions", "atom14_gt_exists"],
-    "device":"%(device)s"}],
-  ["make_restype_atom_constants", {}],
-  ["make_esm_embed", {"force":true, "return_attnw": false, "repr_layer":33, "device":"%(device)s", "model_path":"../ab_data/esm2/esm2_t33_650M_UR50D.pt"}],
-  ["make_progen_embed", {"return_attnw": false, "device":"%(device)s", "model_path":"../ab_data/progen/progen2-base", "token_path": "../ab_data/progen/tokenizer.json"}]
-]

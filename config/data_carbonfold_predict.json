@@ -1,6 +1,0 @@
-[
-  ["make_to_device", {
-    "fields":["seq", "mask", "esm_seq", "residx"],
-    "device":"%(device)s"}],
-  ["make_restype_atom_constants", {}]
-]

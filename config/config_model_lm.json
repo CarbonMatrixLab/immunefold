@@ -1,5 +1,0 @@
-{
-    "finetuning": {
-    	"num_frozen_layers" : 18
-    }
-}

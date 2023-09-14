@@ -14,14 +14,15 @@ def load(args):
     config = OmegaConf.load(args.model_config)
     carbonfold = CarbonFold(config=config)
     esmfold = torch.load(args.esmfold_ckpt)['model']
-    
+    print(config)
+
     c = config
 
     assigned_param_set = set()
-    
+
     def _load(des, source):
         des.load_weights(source)
-    
+
     def _has(n):
         return n in esmfold
 
@@ -33,7 +34,7 @@ def load(args):
 
     def _del(n):
         del esmfold[n]
-    
+
     def _assign(m, n):
         if not _has(n + '.bias'):
             m.load_state_dict(OrderedDict(weight = _get(n + '.weight'), ), strict=True)
@@ -49,7 +50,7 @@ def load(args):
     def _load_seqformer_block(it):
         block = carbonfold.impl.seqformer_module.seqformer.blocks[it]
         prefix = f'trunk.blocks.{it}.'
-        
+
         # SeqAttention
         seq_attn = block.seq_attn
         _assign(seq_attn.seq_norm, prefix + 'layernorm_1')
@@ -57,7 +58,7 @@ def load(args):
         _assign(seq_attn.proj_pair, prefix + 'pair_to_sequence.linear')
 
         _assign(seq_attn.attn.proj_in, prefix + 'seq_attention.proj')
-        
+
         _assign(seq_attn.attn.gate, prefix + 'seq_attention.g_proj')
         _assign(seq_attn.attn.proj_out, prefix + 'seq_attention.o_proj')
 
@@ -67,7 +68,7 @@ def load(args):
         _assign(seq_tran.transition[1], prefix + f'mlp_seq.mlp.1')
         _assign(seq_tran.transition[3], prefix + f'mlp_seq.mlp.3')
 
-        # Outer 
+        # Outer
         outer = block.outer_product_mean
         prefix2 = prefix + 'sequence_to_pair.'
         _assign(outer.norm, prefix2 + 'layernorm')
@@ -82,7 +83,7 @@ def load(args):
         _assign(outer.left_proj, prefix2 + 'left_proj')
         _assign(outer.right_proj, prefix2 + 'right_proj')
         _assign(outer.out_proj, prefix2 + 'o_proj')
-        
+
         # triangle_multiplication_outgoing
         mul = block.triangle_multiplication_outgoing
         prefix2 = prefix + 'tri_mul_out.'
@@ -107,7 +108,7 @@ def load(args):
         _assign(mul.final_gate, prefix2 + 'linear_g')
         _assign(mul.proj_out, prefix2 + 'linear_z')
 
-        # triangle_attention_starting_node 
+        # triangle_attention_starting_node
         tri = block.triangle_attention_starting_node
         prefix2 = prefix + 'tri_att_start.'
         _assign(tri.norm, prefix2 + 'layer_norm')
@@ -135,33 +136,33 @@ def load(args):
         _assign(tran.transition[0], prefix + f'mlp_pair.mlp.0')
         _assign(tran.transition[1], prefix + f'mlp_pair.mlp.1')
         _assign(tran.transition[3], prefix + f'mlp_pair.mlp.3')
-     
+
     def _load_embedding():
         embed = carbonfold.impl.seqformer_module
         _assign_data(embed.esm_embed_weights, 'esm_s_combine')
-        
-        _assign(embed.proj_aa_type, 'embedding') 
+
+        _assign(embed.proj_aa_type, 'embedding')
         _assign(embed.proj_rel_pos, 'trunk.pairwise_positional_embedding.embedding')
-        
+
         _assign(embed.proj_esm_embed[0], 'esm_s_mlp.0')
         _assign(embed.proj_esm_embed[1], 'esm_s_mlp.1')
         _assign(embed.proj_esm_embed[3], 'esm_s_mlp.3')
 
     def _load_structure_module():
         struc = carbonfold.impl.structure_module.struct_module
-        _assign(struc.proj_init_seq_act, 'trunk.trunk2sm_s') 
-        _assign(struc.proj_init_pair_act, 'trunk.trunk2sm_z') 
-        
+        _assign(struc.proj_init_seq_act, 'trunk.trunk2sm_s')
+        _assign(struc.proj_init_pair_act, 'trunk.trunk2sm_z')
+
         prefix = 'trunk.structure_module.'
         _assign(struc.init_seq_layer_norm, prefix + 'layer_norm_s')
         _assign(struc.init_pair_layer_norm, prefix + 'layer_norm_z')
 
         _assign(struc.proj_seq, prefix + 'linear_in')
 
-        # ipa 
+        # ipa
         ipa = struc.attention_module
         prefix = 'trunk.structure_module.ipa.'
-        _assign_data(ipa.trainable_point_weights, prefix + 'head_weights') 
+        _assign_data(ipa.trainable_point_weights, prefix + 'head_weights')
         _assign(ipa.proj_q_scalar, prefix + 'linear_q')
         _assign(ipa.proj_kv_scalar, prefix + 'linear_kv')
         _assign(ipa.proj_q_point_local, prefix + 'linear_q_points')
@@ -180,11 +181,10 @@ def load(args):
         _assign(tran[4], prefix + '0.linear_3')
 
         # transition layer norm
-        _assign(struc.transition_layer_norm, 'trunk.structure_module.transition.layer_norm') 
+        _assign(struc.transition_layer_norm, 'trunk.structure_module.transition.layer_norm')
 
         # bb update
         _assign(struc.affine_update, 'trunk.structure_module.bb_update.linear')
-
 
         # sidechain
         sc =  struc.sidechain_module.torsion_module
@@ -207,11 +207,13 @@ def load(args):
         dist = carbonfold.impl.distogram
         _assign(dist.proj, 'distogram_head')
 
+        '''
         plddt = carbonfold.impl.plddt
         _assign(plddt.net[0], 'lddt_head.0')
         _assign(plddt.net[1], 'lddt_head.1')
         _assign(plddt.net[2], 'lddt_head.2')
         _assign(plddt.net[3], 'lddt_head.3')
+        '''
 
     # load embedding
     _load_embedding()
@@ -231,14 +233,15 @@ def load(args):
 
     # check
     print('assigned params')
-    for n in assigned_param_set:
-        print(n)
+    print(assigned_param_set)
 
     print('unassigned params')
+    unassigned_params = []
     for n in esmfold:
         if n not in assigned_param_set and not n.startswith('esm.'):
-            print(n)
-    
+            unassigned_params.append(n)
+    print(unassigned_params)
+
     torch.save({
         'model_config' : config,
         'model_state_dict' : carbonfold.impl.state_dict()

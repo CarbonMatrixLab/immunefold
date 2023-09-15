@@ -1,8 +1,10 @@
 from inspect import isfunction
 
+from einops import rearrange
+import numpy as np
+
 import torch
 from torch.nn import functional as F
-from einops import rearrange
 
 from carbonmatrix.data.seq import create_esm_seq, esm_alphabet
 from carbonmatrix.common import residue_constants
@@ -29,15 +31,34 @@ def make_restype_atom_constants(batch):
 def make_esm_seq(batch,):
     device = batch['seq'].device
     bs = batch['seq'].shape[0]
-    
+
     esm_seq = [torch.from_numpy(create_esm_seq(s)) for s in batch['str_seq']]
-    
+
     max_len = max([x.shape[0] for x in esm_seq])
     padded_esm_seq = pad_for_batch(esm_seq, max_len, esm_alphabet.padding_idx)
 
+    residx = np.tile(np.arange(max_len), (bs, 1))
+
+    for i, multimer_str_seq in enumerate(batch['multimer_str_seq']):
+        is_multimer = (len(multimer_str_seq) > 1)
+        if not is_multimer:
+            continue
+
+        relative_pos, start_pos = 0, 1 + len(multimer_str_seq[0])
+
+        for str_seq in multimer_str_seq[1:]:
+            end_pos = start_pos + len(str_seq)
+
+            relative_pos += residue_constants.residue_chain_index_offset
+            residx[i, start_pos:end_pos] += relative_pos
+
+            start_pos = end_pos
+
+        residx[i, end_pos:] += residue_constants.residue_chain_index_offset
+
     batch.update(
             esm_seq = padded_esm_seq.to(device=device),
-            residx = torch.tile(torch.arange(max_len, device=device), [bs, 1]),
+            residx = torch.tensor(residx, device=device),
             )
 
     return batch
@@ -47,7 +68,7 @@ def make_sliced_sample(batch, max_seq_len):
     batch_len = batch['seq'].shape[1]
     if batch_len <= max_seq_len:
         return batch
-    
+
     for k, v in batch.items():
         if isinstance(k, list):
             batch[k] = [x[:max_seq_len] for x in v]

@@ -57,14 +57,29 @@ def save_ig_pdb(str_heavy_seq, str_light_seq, coord, pdb_path):
     pdb.set_structure(model)
     pdb.save(pdb_path)
 
-def save_pdb(str_seq, coord, pdb_path,):
-    assert len(str_seq) == coord.shape[0]
-
-    chain = make_chain(str_seq, coord, 'A')
-
+def save_pdb(multimer_str_seq, coord, pdb_path, chain_ids = None):
     model = PDBModel(id=0)
-    model.add(chain)
+    
+    if isinstance(multimer_str_seq, str):
+        multimer_str_seq = [multimer_str_seq]
+
+    assert(len(''.join(multimer_str_seq)) == coord.shape[0])
+
+    if chain_ids is None:
+        chain_ids = [chr(ord('A') + i) for i in range(len(multimer_str_seq))] 
+    
+    assert(len(multimer_str_seq) == len(chain_ids))
+
+    start_pos = 0
+    for str_seq, chain_id in zip(multimer_str_seq, chain_ids):
+        end_pos = start_pos + len(str_seq)
+        chain = make_chain(str_seq, coord[start_pos:end_pos], chain_id)
+        start_pos = end_pos
+
+        model.add(chain)
     
     pdb = PDBIO()
     pdb.set_structure(model)
     pdb.save(pdb_path)
+
+    return

@@ -8,7 +8,7 @@ from omegaconf import DictConfig
 
 from carbonmatrix.data.pdbio import save_pdb
 from carbonmatrix.model.carbonfold import CarbonFold
-from carbonmatrix.data.dataset import SeqDatsetDirIO as SeqDataset
+from carbonmatrix.data.dataset import SeqDatasetDirIO, SeqDatasetFastaIO
 from carbonmatrix.data.base_dataset import TransformedDataLoader as DataLoader
 from carbonmatrix.data.base_dataset import collate_fn_seq
 
@@ -53,20 +53,29 @@ def setup(cfg):
 def to_numpy(x):
     return x.detach().cpu().numpy()
 
-def save_batch_pdb(values, batch, pdb_dir):
+def save_batch_pdb(values, batch, pdb_dir, data_type='general'):
     N = len(batch['str_seq'])
     pred_atom14_coords = to_numpy(values['heads']['structure_module']['final_atom14_positions'])
     names = batch['name']
     str_seqs = batch['str_seq']
+    multimer_str_seqs = batch['multimer_str_seq']
 
     for i in range(N):
         pdb_file = os.path.join(pdb_dir, f'{names[i]}.pdb')
-        save_pdb(str_seqs[i], pred_atom14_coords[i], pdb_file)
+        multimer_str_seq = multimer_str_seqs[i]
+        chain_ids = ['H', 'L'] if data_type == 'ig' else None
+        save_pdb(multimer_str_seq, pred_atom14_coords[i], pdb_file, chain_ids)
 
     return
 
 def predict(cfg):
-    dataset = SeqDataset(cfg.test_data, cfg.test_name_idx)
+    if cfg.data_io == 'dir':
+        dataset = SeqDatasetDirIO(cfg.test_data, cfg.test_name_idx)
+    elif cfg.data_io == 'fasta':
+        dataset = SeqDatasetFastaIO(cfg.test_data)
+    else:
+        raise NotImplementedError(f'data io {cfg.data_io} not implemented')
+
     device = cfg.gpu
 
     test_loader = DataLoader(
@@ -83,12 +92,18 @@ def predict(cfg):
     model.impl.load_state_dict(ckpt['model_state_dict'], strict=False)
     model.to(device)
     model.eval()
-    
-    for batch in test_loader:
-        ret = model(batch)
-        save_batch_pdb(ret, batch, cfg.output_dir)
+   
+    data_type = cfg.get('data_type', 'general')
 
-        break
+    for batch in test_loader:
+        print(batch['str_seq'], 'str_seq')
+        print(batch['multimer_str_seq'], 'multimer')
+        print(batch['seq'].shape, 'seq')
+        
+        with torch.no_grad():
+            ret = model(batch)
+        
+        save_batch_pdb(ret, batch, cfg.output_dir, data_type)
 
 @hydra.main(version_base=None, config_path="config", config_name="inference")
 def main(cfg : DictConfig):

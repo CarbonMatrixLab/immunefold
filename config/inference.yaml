@@ -9,6 +9,7 @@ gpu: 3
 
 batch_size: 1
 
+data_io: dir
 test_name_idx:  /home/zhutian/data/CASP15_whole/name.idx
 test_data: /home/zhutian/data/CASP15_whole/fasta
 

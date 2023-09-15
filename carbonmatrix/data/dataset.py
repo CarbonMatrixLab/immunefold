@@ -5,7 +5,7 @@ from carbonmatrix.common.operator import pad_for_batch
 from carbonmatrix.data.base_dataset import SeqDataset
 from carbonmatrix.data.base_dataset import parse_cluster
 
-class SeqDatsetFastaIO(SeqDataset):
+class SeqDatasetFastaIO(SeqDataset):
     def __init__(self, fasta_file, max_seq_len=None):
         super().__init__(max_seq_len=max_seq_len)
 
@@ -13,9 +13,10 @@ class SeqDatsetFastaIO(SeqDataset):
         with open(fasta_file, 'r') as fr:
             seq = None
             for line in fr:
-                if line.startswith('>') and seq is not one:
+                if line.startswith('>'):
                     name = line[1:].strip().split()[0]
-                    data.append((name, seq))
+                    if seq is not None:
+                        data.append((name, seq))
                 else:
                     seq = line.strip()
             if seq is not None:
@@ -29,9 +30,9 @@ class SeqDatsetFastaIO(SeqDataset):
     def _get_item(self, idx):
         (name, seq) = self.data[idx]
 
-        return (name, seq)
+        return dict(name=name, seq=seq)
 
-class SeqDatsetDirIO(SeqDataset):
+class SeqDatasetDirIO(SeqDataset):
     def __init__(self, fasta_dir, name_idx_file, max_seq_len=None):
         super().__init__(max_seq_len=max_seq_len)
         self.fasta_dir = fasta_dir
@@ -50,4 +51,4 @@ class SeqDatsetDirIO(SeqDataset):
             head = fr.readline()
             seq = fr.readline().strip()
 
-        return (name, seq)
+        return dict(name=name, seq=seq)

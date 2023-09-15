@@ -67,18 +67,23 @@ class SeqDataset(torch.utils.data.Dataset):
         raise NotImplementedError('_get_next_seq not implemented')
 
     def _create_seq_data(self, name, str_seq):
+        multimer_str_seq = str_seq.split(':')
+
+        str_seq = ''.join(multimer_str_seq)
+
         N = len(str_seq)
         return dict(
                 name = name,
                 str_seq = str_seq,
                 seq = str_seq_to_index(str_seq),
-                mask = np.ones((N,), dtype=np.bool_)
+                mask = np.ones((N,), dtype=np.bool_),
+                multimer_str_seq = multimer_str_seq,
                 )
     
     def __getitem__(self, idx):
-        name, str_seq = self._get_item(idx)
+        ret = self._get_item(idx)
         
-        ret = self._create_seq_data(name, str_seq)
+        ret = self._create_seq_data(ret['name'], ret['seq'])
         
         for k, v in ret.items():
             ret[k] = torch.from_numpy(v) if isinstance(v, np.ndarray) else v
@@ -91,11 +96,14 @@ def collate_fn_seq(batch):
     
     name = _gather('name')
     str_seq = _gather('str_seq')
+    multimer_str_seq = _gather('multimer_str_seq')
+
     max_len = max(tuple(len(s) for s in str_seq))
         
     return dict(
             name=name,
             str_seq = str_seq,
+            multimer_str_seq = multimer_str_seq,
             seq = pad_for_batch(_gather('seq'), max_len, residue_constants.unk_restype_index),
             mask = pad_for_batch(_gather('mask'), max_len, 0),
             batch_len = max_len, 

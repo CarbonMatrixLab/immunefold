@@ -63,8 +63,9 @@ def save_batch_pdb(values, batch, pdb_dir, data_type='general'):
     for i in range(N):
         pdb_file = os.path.join(pdb_dir, f'{names[i]}.pdb')
         multimer_str_seq = multimer_str_seqs[i]
+        str_seq = str_seqs[i]
         chain_ids = ['H', 'L'] if data_type == 'ig' else None
-        save_pdb(multimer_str_seq, pred_atom14_coords[i], pdb_file, chain_ids)
+        save_pdb(multimer_str_seq, pred_atom14_coords[i, :len(str_seq)], pdb_file, chain_ids)
 
     return
 

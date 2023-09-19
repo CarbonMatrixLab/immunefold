@@ -11,15 +11,15 @@ class SeqDatasetFastaIO(SeqDataset):
 
         data = []
         with open(fasta_file, 'r') as fr:
-            seq = None
+            name = None
             for line in fr:
                 if line.startswith('>'):
-                    name = line[1:].strip().split()[0]
-                    if seq is not None:
+                    if name is not None:
                         data.append((name, seq))
+                    name = line[1:].strip().split()[0]
                 else:
                     seq = line.strip()
-            if seq is not None:
+            if name is not None:
                 data.append((name, seq))
 
         self.data = data

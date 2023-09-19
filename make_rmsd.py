@@ -6,8 +6,8 @@ from collections import OrderedDict
 import numpy as np
 import pandas as pd
 
-from abfold.common.ab_utils import calc_ab_metrics
-from abfold.common import residue_constants
+from carbonmatrix.common.ab.metrics import calc_ab_metrics
+from carbonmatrix.common import residue_constants
 
 from Bio.PDB.PDBParser import PDBParser
 
@@ -51,6 +51,8 @@ def make_one(name, gt_npz_file, pred_file, alg_type):
 
     pred_ca = make_pred_coords(pred_file, len(str_heavy_seq), len(str_light_seq), alg_type)
 
+    print('shape', name, gt_ca.shape, pred_ca.shape, len(str_heavy_seq), len(str_light_seq))
+
     assert (gt_ca.shape[0] == pred_ca.shape[0] and gt_ca.shape[0] == cdr_def.shape[0])
 
     ab_metrics = calc_ab_metrics(gt_ca, pred_ca, ca_mask, cdr_def)
@@ -92,7 +94,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-c', '--name_idx', type=str, required=True)
-    parser.add_argument('-t', '--alg_type', type=str, choices=['igfold', 'esmfold', 'omegafold', 'abfold'], required=True)
+    parser.add_argument('-t', '--alg_type', type=str, choices=['igfold', 'esmfold', 'omegafold', 'carbonmatrix'], required=True)
     parser.add_argument('-g', '--gt_dir', type=str, required=True)
     parser.add_argument('-p', '--pred_dir', type=str, required=True)
     parser.add_argument('-o', '--output', type=str, required=True)

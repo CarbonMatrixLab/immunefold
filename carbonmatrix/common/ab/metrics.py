@@ -5,7 +5,7 @@ from collections import OrderedDict
 from Bio.PDB.Chain import Chain as PDBChain
 from Bio.PDB.Residue import Residue
 
-from abfold.utils import Kabsch
+from carbonmatrix.common.metrics import Kabsch
 
 def get_antibody_regions(N, struc2seq, chain_id, schema='imgt'):
     assert chain_id in 'HL'

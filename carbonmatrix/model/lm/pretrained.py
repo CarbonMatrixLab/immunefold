@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 import re
 
@@ -8,7 +9,7 @@ from carbonmatrix.model.lm.model_lm import ModelLM
 def _has_regression_weights(model_name):
     """Return whether we expect / require regression weights;
     Right now that is all models except ESM-1v, ESM-IF, and partially trained ESM2 models"""
-    return not ("esm1v" in model_name or "esm_if" in model_name or "270K" in model_name or "500K" in model_name)
+    return 'lora' not in model_name and not ("esm1v" in model_name or "esm_if" in model_name or "270K" in model_name or "500K" in model_name)
 
 def load_model_and_alphabet_local(model_location):
     # load from local checkpoint
@@ -64,7 +65,7 @@ def load_model_and_alphabet_local(model_location):
                 )
             )
         if expected_missing - found_keys:
-            warnings.warn(
+            logging.warn(
                 "Regression weights not found, predicting contacts will not produce correct results."
             )
 

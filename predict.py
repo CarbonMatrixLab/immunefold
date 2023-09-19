@@ -87,29 +87,35 @@ def predict(cfg):
             batch_size=cfg.batch_size,
             drop_last=False,
             )
-    
+
     ckpt = torch.load(cfg.restore_model_ckpt)
+
+    if cfg.restore_esm2_model is not None:
+        cfg.model.esm2_model_file = cfg.restore_esm2_model
+
+    logging.info(f'esm2-model-{cfg.model.esm2_model_file}')
+
     model = CarbonFold(config = cfg.model)
     model.impl.load_state_dict(ckpt['model_state_dict'], strict=False)
     model.to(device)
     model.eval()
-   
+
     data_type = cfg.get('data_type', 'general')
 
     for batch in test_loader:
         print(batch['str_seq'], 'str_seq')
         print(batch['multimer_str_seq'], 'multimer')
         print(batch['seq'].shape, 'seq')
-        
+
         with torch.no_grad():
             ret = model(batch)
-        
+
         save_batch_pdb(ret, batch, cfg.output_dir, data_type)
 
 @hydra.main(version_base=None, config_path="config", config_name="inference")
 def main(cfg : DictConfig):
     setup(cfg)
-    
+
     predict(cfg)
 
 if __name__ == '__main__':

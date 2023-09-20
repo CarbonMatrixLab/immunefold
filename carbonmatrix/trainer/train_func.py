@@ -18,7 +18,7 @@ from torch.utils.data.distributed import DistributedSampler
 
 from carbonmatrix.data.base_dataset import  TransformedDataLoader as DataLoader
 from carbonmatrix.trainer.base_dataset import collate_fn_struc
-from carbonmatrix.trainer.dataset import StructureDatasetNpzIO as StructureDataset 
+from carbonmatrix.trainer.dataset import StructureDatasetNpzIO, AbStructureDatasetNpzIO
 from carbonmatrix.model import CarbonFold, MetricDict
 from carbonmatrix.trainer.optimizer import OptipizerInverseSquarRootDecay as Optimizer
 from carbonmatrix.trainer.loss_factory import LossFactory
@@ -54,7 +54,15 @@ def setup_dataset(cfg):
 
     name_idx = name_idx[:reduced_num]
 
-    dataset = StructureDataset(cfg.train_data, cfg.train_name_idx, cfg.max_seq_len)
+    if not cfg.get('is_ab_feature', False):
+        dataset = StructureDatasetNpzIO(cfg.train_data, cfg.train_name_idx, cfg.max_seq_len)
+    else:
+        dataset = AbStructureDatasetNpzIO(
+                cfg.train_data,
+                cfg.train_name_idx,
+                cfg.max_seq_len,
+                shuffle_multimer_seq=cfg.get('shuffle_multimer_seq', False))
+
     sampler = DistributedSampler(dataset, shuffle=True, drop_last=True)
 
     train_loader = DataLoader(

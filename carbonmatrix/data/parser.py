@@ -94,18 +94,43 @@ def make_chain_feature(chain):
 
 def make_feature_from_pdb(pdb_file):
     struc = parse_pdb(pdb_file)
-    
+
     chain_num = len(list(struc.get_chains()))
     assert (chain_num == 1)
-    
+
     feat = make_chain_feature(struc.get_chains[0])
-    
+
     return feat
 
-def make_feature_from_npz(npz_file):
+def make_feature_from_npz(npz_file, is_ab_feature=False, shuffle_multimer_seq=False):
     x = np.load(npz_file)
 
+    if not is_ab_feature:
+        str_seq = str(x['seq'])
+        coords = x['coords']
+        coord_mask = x['coord_mask']
+    else:
+        assert ('heavy_str_seq' in x)
+        str_seq = [str(x['heavy_str_seq'])]
+        coords = x['heavy_coords']
+        coord_mask = x['heavy_coord_mask']
+
+        if 'light_str_seq' in x:
+            coords = [coords,  x['light_coords']]
+            coord_mask = [coord_mask,  x['light_coord_mask']]
+            str_seq.append(str(x['light_str_seq']))
+
+            if shuffle_multimer_seq and np.random.rand() > 0.5:
+                coords = coords[::-1]
+                coord_mask = coord_mask[::-1]
+                str_seq = str_seq[::-1]
+
+            coords = np.concatenate(coords, axis=0)
+            coord_mask = np.concatenate(coord_mask, axis=0)
+
+        str_seq = ':'.join(str_seq)
+
     return dict(
-            str_seq=str(x['seq']),
-            coords=x['coords'],
-            coord_mask=x['coord_mask'])
+            str_seq = str_seq,
+            coords = coords,
+            coord_mask = coord_mask)

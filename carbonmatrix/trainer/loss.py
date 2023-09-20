@@ -53,7 +53,7 @@ def distogram_loss(batch, value, config):
 
     true_bins = torch.sum(dist2 > sq_breaks, dim=-1)
 
-    errors = -torch.sum(F.one_hot(true_bins, logits.shape[-1]) * F.log_softmax(logits, dim=-1), dim=-1)
+    errors = F.cross_entropy(rearrange(logits, 'b i j c -> b c i j'), true_bins, reduce=False)
 
     square_mask = rearrange(mask, 'b l -> b () l') * rearrange(mask, 'b l -> b l ()')
 
@@ -102,7 +102,7 @@ def folding_loss(batch, value, config):
             )
 
 @registry_loss
-def plddt_loss(batch, value, config):
+def predicted_lddt_loss(batch, value, config):
     c = config
     logits = value['heads']['predicted_lddt']['logits']
 
@@ -121,15 +121,15 @@ def plddt_loss(batch, value, config):
 
     bin_index = torch.clip(torch.floor(lddt_ca * num_bins).long(), max=num_bins - 1)
 
-    lddt_ca_one_hot = F.one_hot(bin_index, num_bins).to(dtype=logits.dtype)
-
-    errors = -torch.sum(lddt_ca_one_hot * F.log_softmax(logits, dim=-1), dim=-1)
+    errors = F.cross_entropy(rearrange(logits, 'b l c -> b c l'), bin_index, reduce=False)
 
     mask_ca = all_atom_mask[:,:,1]
 
     loss = torch.sum(errors * mask_ca) / (1e-8 + torch.sum(mask_ca))
 
-    return dict(loss=loss)
+    lddt_ca = torch.sum(lddt_ca * mask_ca) / (1e-8 + torch.sum(mask_ca))
+
+    return dict(loss=loss, lddt_ca_loss=lddt_ca)
 
 def compute_chi_loss(batch, value, config):
     device = batch['seq'].device

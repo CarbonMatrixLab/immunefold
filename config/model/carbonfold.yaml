@@ -93,7 +93,7 @@ heads:
     num_channel: 128
     structure_module_num_channel: 384
   tmscore:
-    enabled: true
+    enabled: false
     num_atom: 5
   metric:
     enabled: false

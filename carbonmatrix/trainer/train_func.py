@@ -16,10 +16,11 @@ from torch import nn
 from torch.optim import Adam
 from torch.utils.data.distributed import DistributedSampler
 
+from carbonmatrix.model import CarbonFold
+from carbonmatrix.common import MetricDict
 from carbonmatrix.data.base_dataset import  TransformedDataLoader as DataLoader
 from carbonmatrix.trainer.base_dataset import collate_fn_struc
 from carbonmatrix.trainer.dataset import StructureDatasetNpzIO, AbStructureDatasetNpzIO
-from carbonmatrix.model import CarbonFold, MetricDict
 from carbonmatrix.trainer.optimizer import OptipizerInverseSquarRootDecay as Optimizer
 from carbonmatrix.trainer.loss_factory import LossFactory
 from carbonmatrix.trainer import model_align

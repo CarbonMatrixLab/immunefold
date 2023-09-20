@@ -4,10 +4,33 @@ from functools import wraps
 from inspect import isfunction
 import uuid
 
+from collections import OrderedDict
 from einops import rearrange
 
 import numpy as np
 import torch
+
+class MetricDict(dict):
+    def __add__(self, o):
+        n = MetricDict(**self)
+        for k in o:
+            if k in n:
+                n[k] = n[k] + o[k]
+            else:
+                n[k] = o[k]
+        return n
+
+    def __mul__(self, o):
+        n = MetricDict(**self)
+        for k in n:
+            n[k] = n[k] * o
+        return n
+
+    def __truediv__(self, o):
+        n = MetricDict(**self)
+        for k in n:
+            n[k] = n[k] / o
+        return n
 
 def compute_lddt(pred_points, true_points, points_mask, cutoff=15.):
     """Computes the lddt score for a batch of coordinates.

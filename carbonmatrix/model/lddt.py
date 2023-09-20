@@ -1,3 +1,4 @@
+import torch
 
 def lddt(pred_points, true_points, points_mask, cutoff=15.):
     """Computes the lddt score for a batch of coordinates.

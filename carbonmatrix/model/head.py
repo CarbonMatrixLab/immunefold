@@ -138,7 +138,7 @@ class TMscoreHead(nn.Module):
             return dict(loss = tmscore / preds.shape[0])
         return None
 
-#@registry_head(name='plddt')
+@registry_head(name='predicted_lddt')
 class PredictedLDDTHead(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -149,10 +149,10 @@ class PredictedLDDTHead(nn.Module):
         self.net = nn.Sequential(
                 LayerNorm(c.structure_module_num_channel),
                 Linear(c.structure_module_num_channel, dim, init='relu', bias=True),
-                #nn.ReLU(),
+                nn.ReLU(),
                 Linear(dim, dim, init='relu', bias=True),
-                #nn.ReLU(),
-                Linear(dim, c.num_bins * 37, init='final', bias=True))
+                nn.ReLU(),
+                Linear(dim, c.num_bins, init='final', bias=True))
         self.config = config
 
     def forward(self, headers, representations, batch):

@@ -12,7 +12,8 @@ from carbonmatrix.model.utils import (
         l2_normalize,
         squared_difference,
         batched_select,
-        lddt)
+        )
+from carbonmatrix.common.metrics import compute_lddt
 
 @registry_loss
 def seq_mask_loss(batch, values, config):
@@ -59,7 +60,7 @@ def distogram_loss(batch, value, config):
     avg_error = (
         torch.sum(errors * square_mask) /
         (1e-6 + torch.sum(square_mask)))
-    return dict(loss=avg_error, true_dist=torch.sqrt(dist2+1e-6))
+    return dict(loss=avg_error) #true_dist=torch.sqrt(dist2+1e-6))
 
 @registry_loss
 def folding_loss(batch, value, config):
@@ -100,7 +101,8 @@ def folding_loss(batch, value, config):
             #**violation_loss_items
             )
 
-def predicted_lddt_loss(batch, value, config):
+@registry_loss
+def plddt_loss(batch, value, config):
     c = config
     logits = value['heads']['predicted_lddt']['logits']
 
@@ -111,10 +113,11 @@ def predicted_lddt_loss(batch, value, config):
     num_bins = logits.shape[-1]
 
     with torch.no_grad():
-        lddt_ca = lddt(
+        lddt_ca = compute_lddt(
                 pred_all_atom_pos[:,:,1],
                 true_all_atom_pos[:,:,1],
-                all_atom_mask[:,:,1]).detach()
+                all_atom_mask[:,:,1],
+                cutoff=15.).detach()
 
     bin_index = torch.clip(torch.floor(lddt_ca * num_bins).long(), max=num_bins - 1)
 
@@ -124,7 +127,7 @@ def predicted_lddt_loss(batch, value, config):
 
     mask_ca = all_atom_mask[:,:,1]
 
-    loss = torch.sum(errors * mask_ca) / (1e-6 + torch.sum(mask_ca))
+    loss = torch.sum(errors * mask_ca) / (1e-8 + torch.sum(mask_ca))
 
     return dict(loss=loss)
 
@@ -192,31 +195,6 @@ def compute_sidechain_loss(batch, value, config):
         pred_positions=pred_positions,
         target_positions=value['renamed_atom14_gt_positions'],
         positions_mask=value['renamed_atom14_gt_exists'],
-        clamp_distance=config.fape.clamp_distance,
-        length_scale=config.fape.loss_unit_distance,
-        unclamped_ratio=config.fape.unclamped_ratio)
-
-    return fape
-
-def compute_final_backbone_loss(batch, value, config):
-
-    atom_n, frame_n = 5, 4
-
-    pred_frames = r3.rigids_op(value['sidechains'][-1]['frames'], lambda x: x[:,:,:frame_n])
-    pred_positions = value['sidechains'][-1]['atom_pos'][:,:,:atom_n]
-
-    gt_frames = r3.rigids_op(batch['rigidgroups_gt_frames'], lambda x: x[:,:,:frame_n])
-    gt_frame_mask = batch['rigidgroups_group_exists'][:,:,:frame_n]
-    gt_positions = batch['atom14_gt_positions'][:,:,:atom_n]
-    gt_position_mask = batch['atom14_gt_exists'][:,:,:atom_n]
-
-    fape = frame_aligned_point_error(
-        pred_frames=pred_frames,
-        target_frames=gt_frames,
-        frames_mask=gt_frame_mask,
-        pred_positions=pred_positions,
-        target_positions=gt_positions,
-        positions_mask=gt_position_mask,
         clamp_distance=config.fape.clamp_distance,
         length_scale=config.fape.loss_unit_distance,
         unclamped_ratio=config.fape.unclamped_ratio)

@@ -4,6 +4,7 @@ from torch.nn import functional as F
 from einops import rearrange
 
 from carbonmatrix.model.common_modules import Linear, LayerNorm
+from carbonmatrix.model.common_modules import get_lora_config
 
 class Attention(nn.Module):
     def __init__(self, input_dim, key_dim, value_dim, output_dim, num_head,

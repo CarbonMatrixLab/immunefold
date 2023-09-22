@@ -8,10 +8,40 @@ from einops import rearrange
 
 from carbonmatrix.common import residue_constants
 
-class Linear(nn.Linear):
-    def __init__(self, input_dim, output_dim, init, bias=True):
-        super().__init__(input_dim, output_dim, bias=bias)
+def get_lora_config(config):
+    return dict(
+            lora_r = config.get('lora_r', 0),
+            lora_alpha = config.get('lora_alpha', 1.),
+            lora_dropout = config.get('lora_dropout', 0.),
+            )
 
+class Linear(nn.Linear):
+    def __init__(self, in_features, out_features, init,
+            bias=True, device=None, dtype=None,
+            lora_r = 0, lora_alpha = 1., lora_dropout = 0.):
+
+        self.init = init
+        self.lora_r = lora_r
+
+        if self.lora_r > 0:
+            factory_kwargs = {'device': device, 'dtype': dtype}
+            self.lora_A = nn.Parameter(torch.empty((in_features, lora_r), **factory_kwargs))
+            self.lora_B = nn.Parameter(torch.empty((lora_r, out_features), **factory_kwargs))
+            self.scaling = self.lora_alpha / self.lora_r
+
+            if lora_dropout > 0.:
+                self.lora_dropout = nn.Dropout(p=lora_dropout)
+            else:
+                self.lora_dropout = lambda x: x
+
+        super().__init__(in_features, out_features, bias=bias, device=device, dtype=dtype)
+
+        if self.lora_r > 0:
+            # Freezing the pre-trained weight matrix
+            self.weight.requires_grad = False
+
+    def reset_parameters(self, ):
+        init = self.init
         assert init in ['gate', 'final', 'attn', 'relu', 'linear']
 
         if init in ['gate', 'final']:
@@ -24,16 +54,29 @@ class Linear(nn.Linear):
             # linear, Le cun
             distribution_stddev = 0.87962566103423978
             scale = 2. if init == 'relu' else 1.
-            stddev = np.sqrt(scale / input_dim) / distribution_stddev
+            stddev = np.sqrt(scale / self.in_features) / distribution_stddev
             nn.init.trunc_normal_(self.weight, mean=0., std=stddev)
         else:
             raise NotImplementedError(f'{init} not Implemented')
 
-        if bias:
+        if self.bias is not None:
             if init == 'gate':
                 nn.init.constant_(self.bias, 1.)
             else:
                 nn.init.constant_(self.bias, 0.)
+
+        if hasattr(self, 'lora_A'):
+            # initialize A the same way as the default for nn.Linear and B to zero
+            nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5.))
+            nn.init.zeros_(self.lora_B)
+
+    def forward(self, x: torch.Tensor):
+        if self.lora_r > 0:
+            result = F.linear(x, self.weight, self.bias)
+            result = result + (self.lora_dropout(x) @ self.lora_A @ self.lora_B) * self.scaling
+            return result
+        else:
+            return F.linear(x, self.weight, self.bias)
 
 def apply_dropout(tensor, rate, is_training, broadcast_dim=None):
     if is_training and rate > 0.0:

@@ -11,6 +11,7 @@ from carbonmatrix.model import quat_affine
 from carbonmatrix.model.common_modules import(
         Linear,
         LayerNorm)
+from carbonmatrix.model.common_modules import get_lora_config
 from carbonmatrix.model.sidechain import MultiRigidSidechain
 
 class StructureModule(nn.Module):
@@ -18,14 +19,15 @@ class StructureModule(nn.Module):
         super().__init__()
 
         c = config
+        lora_config = get_lora_config(c)
 
-        self.proj_init_seq_act = Linear(num_in_seq_channel, c.num_channel, init='linear')
-        self.proj_init_pair_act = Linear(num_in_pair_channel, num_in_pair_channel, init='linear')
+        self.proj_init_seq_act = Linear(num_in_seq_channel, c.num_channel, init='linear', **lora_config)
+        self.proj_init_pair_act = Linear(num_in_pair_channel, num_in_pair_channel, init='linear', **lora_config)
 
         self.init_seq_layer_norm = LayerNorm(c.num_channel)
         self.init_pair_layer_norm = LayerNorm(num_in_pair_channel)
 
-        self.proj_seq = Linear(c.num_channel, c.num_channel, init='linear')
+        self.proj_seq = Linear(c.num_channel, c.num_channel, init='linear', **lora_config)
 
         self.attention_module = InvariantPointAttention(c, num_in_pair_channel)
         self.attention_layer_norm = LayerNorm(c.num_channel)
@@ -34,13 +36,13 @@ class StructureModule(nn.Module):
         for k in range(c.num_layer_in_transition):
             is_last = (k == c.num_layer_in_transition - 1)
             transition_moduel.append(
-                    Linear(c.num_channel, c.num_channel, init='linear' if is_last else 'final'))
+                    Linear(c.num_channel, c.num_channel, init='linear' if is_last else 'final', **lora_config))
             if not is_last:
                 transition_moduel.append(nn.ReLU())
         self.transition_module = nn.Sequential(*transition_moduel)
         self.transition_layer_norm = LayerNorm(c.num_channel)
 
-        self.affine_update = Linear(c.num_channel, 6, init='final')
+        self.affine_update = Linear(c.num_channel, 6, init='final', **lora_config)
 
         self.sidechain_module = MultiRigidSidechain(config, num_in_seq_channel)
 
@@ -111,21 +113,22 @@ class InvariantPointAttention(nn.Module):
         super().__init__()
 
         c = config
+        lora_config = get_lora_config(c)
 
         bias=True
-        self.proj_q_scalar = Linear(c.num_channel, c.num_head * c.num_scalar_qk, init='attn', bias=bias)
-        self.proj_kv_scalar = Linear(c.num_channel, c.num_head * (c.num_scalar_v + c.num_scalar_qk), init='attn', bias=bias)
+        self.proj_q_scalar = Linear(c.num_channel, c.num_head * c.num_scalar_qk, init='attn', bias=bias, **lora_config)
+        self.proj_kv_scalar = Linear(c.num_channel, c.num_head * (c.num_scalar_v + c.num_scalar_qk), init='attn', bias=bias, **lora_config)
 
-        self.proj_q_point_local = Linear(c.num_channel, 3 * c.num_head * c.num_point_qk, init='attn', bias=bias)
-        self.proj_kv_point_local = Linear(c.num_channel, 3 * c.num_head * (c.num_point_v + c.num_point_qk), init='attn', bias=bias)
+        self.proj_q_point_local = Linear(c.num_channel, 3 * c.num_head * c.num_point_qk, init='attn', bias=bias, **lora_config)
+        self.proj_kv_point_local = Linear(c.num_channel, 3 * c.num_head * (c.num_point_v + c.num_point_qk), init='attn', bias=bias, **lora_config)
 
-        self.proj_pair = Linear(num_in_pair_channel, c.num_head, init='attn', bias=bias)
+        self.proj_pair = Linear(num_in_pair_channel, c.num_head, init='attn', bias=bias, **lora_config)
 
         point_weight_init_value = torch.log(torch.exp(torch.full((c.num_head,), 1.)) - 1.)
         self.trainable_point_weights = nn.Parameter(point_weight_init_value)
 
         self.final_proj = Linear(
-                c.num_head * (c.num_scalar_v + num_in_pair_channel + c.num_point_v * (3 + 1)), c.num_channel, init='final')
+                c.num_head * (c.num_scalar_v + num_in_pair_channel + c.num_point_v * (3 + 1)), c.num_channel, init='final', **lora_config)
 
         self.config = c
         self.dist_epsilon = dist_epsilon

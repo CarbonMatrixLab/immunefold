@@ -10,6 +10,7 @@ from carbonmatrix.model import atom as functional, folding
 from carbonmatrix.model.common_modules import(
         Linear,
         LayerNorm)
+from carbonmatrix.model.common_modules import get_lora_config
 from carbonmatrix.model.utils import squared_difference
 from carbonmatrix.common.metrics import contact_precision, kabsch_torch, TMscore
 from carbonmatrix.model.head_factory import registry_head
@@ -22,9 +23,10 @@ class DistogramHead(nn.Module):
         super().__init__()
 
         c = config
+        lora_config = get_lora_config(c)
 
         self.breaks = torch.linspace(c.first_break, c.last_break, steps=c.num_bins-1)
-        self.proj = Linear(num_in_pair_channel, c.num_bins, init='final')
+        self.proj = Linear(num_in_pair_channel, c.num_bins, init='final', **lora_config)
 
         self.config = config
 

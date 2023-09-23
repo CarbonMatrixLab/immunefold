@@ -27,7 +27,6 @@ class EmbeddingAndSeqformer(nn.Module):
 
         if c.esm.enabled:
             esm_embed_weights = torch.zeros((c.esm.num_layers + 1,))
-            #esm_embed_weights = torch.log(torch.tensor([(1-0.5)/c.esm.num_layers] * c.esm.num_layers + [0.5]))
             self.esm_embed_weights = nn.Parameter(esm_embed_weights)
 
             self.proj_esm_embed = nn.Sequential(

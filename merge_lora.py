@@ -28,15 +28,17 @@ scaling = 1. / lora_r
 for k, v in model_state_dict.items():
         if k.endswith('lora_A') or k.endswith('lora_B'):
              continue
-        
+
         if k in lora_keys:
             k_lora_A, k_lora_B = lora_keys[k]
             print(model_state_dict[k].shape, model_state_dict[k_lora_A].shape, model_state_dict[k_lora_B].shape)
             print(model_state_dict[k_lora_A].device, 'device')
-            new_model_state_dict[k] = model_state_dict[k] + torch.matmul(model_state_dict[k_lora_B], model_state_dict[k_lora_A]) * scaling
+            delta = torch.matmul(model_state_dict[k_lora_B], model_state_dict[k_lora_A]) * scaling
+            new_model_state_dict[k] = model_state_dict[k] + delta
+            print(k, torch.sqrt(torch.sum(torch.square(delta))), torch.sqrt(torch.sum(torch.square(model_state_dict[k]))))
         else:
             new_model_state_dict[k] = v
 
-out_file = in_file.split('.ckpt')[0] + '_lora_merged.ckpt'
+#out_file = in_file.split('.ckpt')[0] + '_lora_merged.ckpt'
 
-torch.save(dict(model=new_model_state_dict, cfg=orig_x['cfg']), out_file)
+#torch.save(dict(model=new_model_state_dict, cfg=orig_x['cfg']), out_file)

@@ -6,6 +6,7 @@ from einops import rearrange
 from carbonmatrix.model import atom
 from carbonmatrix.model.utils import l2_normalize
 from carbonmatrix.model.common_modules import Linear
+from carbonmatrix.model.common_modules import get_lora_config
 
 class ResNetBlock(nn.Module):
     def __init__(self, dim):
@@ -24,20 +25,21 @@ class TorsionModule(nn.Module):
     def __init__(self, config, num_in_channel, num_in_initial_channel):
         super().__init__()
         c = config
+        lora_config = get_lora_config(c)
 
         self.proj_act = nn.Sequential(
                 nn.ReLU(),
-                Linear(num_in_channel, c.num_channel, init='linear'),
+                Linear(num_in_channel, c.num_channel, init='linear', **lora_config),
                 )
         self.proj_init_act = nn.Sequential(
                 nn.ReLU(),
-                Linear(num_in_initial_channel, c.num_channel, init='linear'),
+                Linear(num_in_initial_channel, c.num_channel, init='linear', **lora_config),
                 )
         self.blocks = nn.Sequential(
                 *[ResNetBlock(c.num_channel) for _ in range(c.num_residual_block)])
 
         # (preomega, phi, psi)
-        self.projection = Linear(c.num_channel, 7 * 2, init='linear')
+        self.projection = Linear(c.num_channel, 7 * 2, init='linear', **lora_config)
 
     def forward(self, act, init_act):
 

@@ -8,7 +8,7 @@ from carbonmatrix.model.common_modules import get_lora_config
 
 class Attention(nn.Module):
     def __init__(self, input_dim, key_dim, value_dim, output_dim, num_head,
-            split_first=True, gating=True):
+            split_first=True, gating=True, lora_config={}):
         super().__init__()
         assert key_dim % num_head == 0
         assert value_dim % num_head == 0
@@ -20,18 +20,18 @@ class Attention(nn.Module):
         self.split_first = split_first
 
         if self.split_first:
-            self.proj_q = Linear(input_dim, key_dim, init='attn', bias=False)
-            self.proj_k = Linear(input_dim, key_dim, init='attn', bias=False)
-            self.proj_v = Linear(input_dim, value_dim, init='attn', bias=False)
+            self.proj_q = Linear(input_dim, key_dim, init='attn', bias=False, **lora_config)
+            self.proj_k = Linear(input_dim, key_dim, init='attn', bias=False, **lora_config)
+            self.proj_v = Linear(input_dim, value_dim, init='attn', bias=False, **lora_config)
         else:
             assert (key_dim == value_dim)
-            self.proj_in = Linear(input_dim, key_dim * 3, init='attn', bias=False)
+            self.proj_in = Linear(input_dim, key_dim * 3, init='attn', bias=False, **lora_config)
 
         self.gating = gating
         if gating:
-            self.gate= Linear(input_dim, value_dim, init='gate')
+            self.gate= Linear(input_dim, value_dim, init='gate', **lora_config)
 
-        self.proj_out = Linear(value_dim, output_dim, init='final')
+        self.proj_out = Linear(value_dim, output_dim, init='final', **lora_config)
 
     def forward(self, q_data, k_data=None, bias=None, k_mask=None):
         """
@@ -100,10 +100,11 @@ class SeqAttentionWithPairBias(nn.Module):
     def __init__(self, config, num_in_seq_channel, num_in_pair_channel):
         super().__init__()
         c = config
+        lora_config = get_lora_config(c)
 
         self.seq_norm = LayerNorm(num_in_seq_channel)
         self.pair_norm = LayerNorm(num_in_pair_channel)
-        self.proj_pair = Linear(num_in_pair_channel, c.num_head, init='linear', bias = False)
+        self.proj_pair = Linear(num_in_pair_channel, c.num_head, init='linear', bias = False, **lora_config)
 
         self.attn = Attention(
                 input_dim=num_in_seq_channel,
@@ -111,7 +112,9 @@ class SeqAttentionWithPairBias(nn.Module):
                 value_dim=num_in_seq_channel,
                 output_dim=num_in_seq_channel,
                 num_head=c.num_head,
-                split_first=False)
+                split_first=False,
+                lora_config=lora_config,
+                )
         self.config = config
 
     def forward(self, seq_act, pair_act, mask):
@@ -139,13 +142,14 @@ class Transition(nn.Module):
         super().__init__()
 
         c = config
+        lora_config = get_lora_config(c)
 
         intermediate_channel = num_in_channel * c.num_intermediate_factor
         self.transition = nn.Sequential(
                 LayerNorm(num_in_channel),
-                Linear(num_in_channel, intermediate_channel, init='linear'),
+                Linear(num_in_channel, intermediate_channel, init='linear', **lora_config),
                 nn.ReLU(),
-                Linear(intermediate_channel, num_in_channel, init='final'),
+                Linear(intermediate_channel, num_in_channel, init='final', **lora_config),
                 )
 
     def forward(self, act, mask):
@@ -158,11 +162,13 @@ class OuterProductMean(nn.Module):
         super().__init__()
 
         c = config
-        self.norm = LayerNorm(num_in_channel)
-        self.left_proj = Linear(num_in_channel, c.num_outer_channel, init='linear')
-        self.right_proj = Linear(num_in_channel, c.num_outer_channel, init='linear')
+        lora_config = get_lora_config(c)
 
-        self.out_proj = Linear(2 * c.num_outer_channel, num_out_channel, init='final')
+        self.norm = LayerNorm(num_in_channel)
+        self.left_proj = Linear(num_in_channel, c.num_outer_channel, init='linear', **lora_config)
+        self.right_proj = Linear(num_in_channel, c.num_outer_channel, init='linear', **lora_config)
+
+        self.out_proj = Linear(2 * c.num_outer_channel, num_out_channel, init='final', **lora_config)
 
     def forward(self, act, mask):
         """
@@ -190,21 +196,23 @@ class TriangleMultiplication(nn.Module):
     def __init__(self, config, num_in_channel):
         super().__init__()
         c = config
+        lora_config = get_lora_config(c)
+
         assert c.orientation in ['per_row', 'per_column']
 
         self.norm = LayerNorm(num_in_channel)
 
-        self.left_proj = Linear(num_in_channel, c.num_intermediate_channel, init='linear')
-        self.right_proj = Linear(num_in_channel, c.num_intermediate_channel, init='linear')
+        self.left_proj = Linear(num_in_channel, c.num_intermediate_channel, init='linear', **lora_config)
+        self.right_proj = Linear(num_in_channel, c.num_intermediate_channel, init='linear', **lora_config)
 
         self.final_norm = LayerNorm(c.num_intermediate_channel)
 
         if c.gating:
-            self.left_gate = Linear(num_in_channel, c.num_intermediate_channel, init='gate')
-            self.right_gate = Linear(num_in_channel, c.num_intermediate_channel, init='gate')
-            self.final_gate = Linear(num_in_channel, num_in_channel, init='gate')
+            self.left_gate = Linear(num_in_channel, c.num_intermediate_channel, init='gate', **lora_config)
+            self.right_gate = Linear(num_in_channel, c.num_intermediate_channel, init='gate', **lora_config)
+            self.final_gate = Linear(num_in_channel, num_in_channel, init='gate', **lora_config)
 
-        self.proj_out = Linear(c.num_intermediate_channel, num_in_channel, init='final')
+        self.proj_out = Linear(c.num_intermediate_channel, num_in_channel, init='final', **lora_config)
 
 
         self.config = c
@@ -256,18 +264,21 @@ class TriangleAttention(nn.Module):
     def __init__(self, config, num_in_pair_channel):
         super().__init__()
         c = config
+        lora_config = get_lora_config(c)
 
         assert c.orientation in ['per_row', 'per_column']
 
         self.norm = LayerNorm(num_in_pair_channel)
-        self.proj_pair = Linear(num_in_pair_channel, c.num_head, init='linear', bias = False)
+        self.proj_pair = Linear(num_in_pair_channel, c.num_head, init='linear', bias = False, **lora_config)
         self.attn = Attention(
                 input_dim=num_in_pair_channel,
                 key_dim=num_in_pair_channel,
                 value_dim=num_in_pair_channel,
                 output_dim=num_in_pair_channel,
                 num_head=c.num_head,
-                gating=c.gating)
+                gating=c.gating,
+                lora_config=lora_config,
+                )
 
         self.config = config
 

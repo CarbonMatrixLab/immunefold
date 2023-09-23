@@ -99,6 +99,11 @@ def train(cfg):
         ckpt = torch.load(cfg.restore_model_ckpt)
         #model_config = ckpt['model_config']
         #model_config['esm2_model_file'] = cfg.restore_esm2_model
+
+        model_align.set_lora_config(cfg.model, cfg.lora_r_seq, cfg.lora_r_pair)
+        logging.info('final model config')
+        logging.info(cfg.model)
+
         model = CarbonFold(config = cfg.model)
         model.impl.load_state_dict(ckpt['model_state_dict'], strict=False)
 

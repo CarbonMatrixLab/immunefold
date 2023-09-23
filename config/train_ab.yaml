@@ -6,6 +6,10 @@ defaults:
 # device
 gpu_list: [3,]
 
+# lora
+lora_r_seq: 16
+lora_r_pair: 8
+
 # optimizer
 num_epoch: 1024
 warmup_steps: 0
@@ -23,7 +27,7 @@ model_align: {}
 # dataset
 is_ab_feature: True
 shuffle_multimer_seq: True
-batch_size: 2 
+batch_size: 1
 gradient_accumulation_it: 1
 max_seq_len: 300 
 train_name_idx: ../abdata_2023/sabdab/train_cluster.idx 

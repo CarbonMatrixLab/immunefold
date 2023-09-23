@@ -9,34 +9,29 @@ from einops import rearrange
 from carbonmatrix.common import residue_constants
 
 def get_lora_config(config):
-    return dict(
-            lora_r = config.get('lora_r', 0),
-            lora_alpha = config.get('lora_alpha', 1.),
-            lora_dropout = config.get('lora_dropout', 0.),
-            )
+    return config.get('lora_config', {})
 
 class Linear(nn.Linear):
     def __init__(self, in_features, out_features, init,
             bias=True, device=None, dtype=None,
             lora_r = 0, lora_alpha = 1., lora_dropout = 0.):
-
-        self.init = init
         self.lora_r = lora_r
+        self.init = init
+        super().__init__(in_features, out_features, bias=bias, device=device, dtype=dtype)
 
         if self.lora_r > 0:
             factory_kwargs = {'device': device, 'dtype': dtype}
             self.lora_A = nn.Parameter(torch.empty((in_features, lora_r), **factory_kwargs))
             self.lora_B = nn.Parameter(torch.empty((lora_r, out_features), **factory_kwargs))
-            self.scaling = self.lora_alpha / self.lora_r
+            self.scaling = lora_alpha / self.lora_r
 
             if lora_dropout > 0.:
                 self.lora_dropout = nn.Dropout(p=lora_dropout)
             else:
                 self.lora_dropout = lambda x: x
 
-        super().__init__(in_features, out_features, bias=bias, device=device, dtype=dtype)
+            self._reset_lora_parameters()
 
-        if self.lora_r > 0:
             # Freezing the pre-trained weight matrix
             self.weight.requires_grad = False
 
@@ -65,10 +60,10 @@ class Linear(nn.Linear):
             else:
                 nn.init.constant_(self.bias, 0.)
 
-        if hasattr(self, 'lora_A'):
-            # initialize A the same way as the default for nn.Linear and B to zero
-            nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5.))
-            nn.init.zeros_(self.lora_B)
+    def _reset_lora_parameters(self, ):
+        # initialize A the same way as the default for nn.Linear and B to zero
+        nn.init.kaiming_uniform_(self.lora_A, a=np.sqrt(5.))
+        nn.init.zeros_(self.lora_B)
 
     def forward(self, x: torch.Tensor):
         if self.lora_r > 0:

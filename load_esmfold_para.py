@@ -43,6 +43,7 @@ def load(args):
             m.load_state_dict(OrderedDict(weight = _get(n + '.weight'), bias = _get(n + '.bias')), strict=True)
             assigned_param_set.add(n + '.weight')
             assigned_param_set.add(n + '.bias')
+
     def _assign_data(m, n):
         m.data = _get(n)
         assigned_param_set.add(n)
@@ -203,17 +204,26 @@ def load(args):
         _assign(r.prev_pair_norm, 'trunk.recycle_z_norm')
         _assign(r.proj_prev_pos, 'trunk.recycle_disto')
 
+    def _assign_lddt(m, n):
+        print(m)
+        weight = _get(n + '.weight')[50:100,:]
+        bias = _get(n + '.bias')[50:100]
+        m.load_state_dict(OrderedDict(weight=weight, bias=bias), strict=True)
+
+        print(n, weight.shape, bias.shape)
+
+        assigned_param_set.add(n + '.weight')
+        assigned_param_set.add(n + '.bias')
+
     def _load_heads():
         dist = carbonfold.impl.distogram
         _assign(dist.proj, 'distogram_head')
 
-        '''
         plddt = carbonfold.impl.plddt
         _assign(plddt.net[0], 'lddt_head.0')
         _assign(plddt.net[1], 'lddt_head.1')
-        _assign(plddt.net[2], 'lddt_head.2')
-        _assign(plddt.net[3], 'lddt_head.3')
-        '''
+        _assign(plddt.net[3], 'lddt_head.2')
+        _assign_lddt(plddt.net[5], 'lddt_head.3')
 
     # load embedding
     _load_embedding()

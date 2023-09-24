@@ -99,6 +99,8 @@ def train(cfg):
         ckpt = torch.load(cfg.restore_model_ckpt)
         #model_config = ckpt['model_config']
         #model_config['esm2_model_file'] = cfg.restore_esm2_model
+        if cfg.get('restore_esm2_model', None) is not None:
+            cfg.model.esm2_model_file = cfg.restore_esm2_model
 
         model_align.set_lora_config(cfg.model, cfg.lora_r_seq, cfg.lora_r_pair)
         logging.info('final model config')
@@ -131,7 +133,7 @@ def train(cfg):
 
     # checkpoint
     def _save_checkpoint(it):
-        ckpt_dir = os.path.join(cfg.prefix, 'checkpoints')
+        ckpt_dir = os.path.join(cfg.output_dir, 'checkpoints')
         if not os.path.exists(ckpt_dir):
             os.path.makedirs(ckpt_dir)
 
@@ -143,13 +145,13 @@ def train(cfg):
             model_state_dict = saved_model.esm.state_dict(),
             #optim_state_dict = optim.state_dict(),
             model_config = cfg.model,
-            train_config = cfg,
-            feature_config = feats,
             cfg = cfg,
             train_steps = optim.cur_step), ckpt_file)
 
     # setup train
     model.train()
+    # save original model
+    _save_checkpoint(0)
 
     running_loss = MetricDict()
     optim.zero_grad()
@@ -210,5 +212,5 @@ def train(cfg):
                 logging.info(f'{it} batch time {batch_end_time - batch_start_time} s.')
                 batch_start_time = time.time()
 
-                #if optim.cur_step % cfg.checkpoint_it == 0:
-                #    _save_checkpoint(optim.cur_step)
+                if optim.cur_step % cfg.checkpoint_every_step == 0:
+                    _save_checkpoint(optim.cur_step)

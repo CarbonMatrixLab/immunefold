@@ -53,7 +53,7 @@ def distogram_loss(batch, value, config):
 
     true_bins = torch.sum(dist2 > sq_breaks, dim=-1)
 
-    errors = F.cross_entropy(rearrange(logits, 'b i j c -> b c i j'), true_bins, reduce=False)
+    errors = F.cross_entropy(rearrange(logits, 'b i j c -> b c i j'), true_bins, reduction='none')
 
     square_mask = rearrange(mask, 'b l -> b () l') * rearrange(mask, 'b l -> b l ()')
 
@@ -120,8 +120,7 @@ def predicted_lddt_loss(batch, value, config):
                 cutoff=15.).detach()
 
     bin_index = torch.clip(torch.floor(lddt_ca * num_bins).long(), max=num_bins - 1)
-
-    errors = F.cross_entropy(rearrange(logits, 'b l c -> b c l'), bin_index, reduce=False)
+    errors = F.cross_entropy(rearrange(logits, 'b l c -> b c l'), bin_index, reduction='none')
 
     mask_ca = all_atom_mask[:,:,1]
 

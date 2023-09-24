@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 import torch
 
-in_file = '../abdata_2023/trained_models/stage1/step_20000.ckpt'
+in_file = './studies/stage1_lora_v3/checkpoints/step_30000.ckpt'
 orig_file = '../abdata_2023/esm2/esm2_t36_3B_UR50D.pt'
 
 x = torch.load(in_file, map_location='cpu')
@@ -39,6 +39,6 @@ for k, v in model_state_dict.items():
         else:
             new_model_state_dict[k] = v
 
-#out_file = in_file.split('.ckpt')[0] + '_lora_merged.ckpt'
+out_file = in_file.split('.ckpt')[0] + '_lora_merged.ckpt'
 
-#torch.save(dict(model=new_model_state_dict, cfg=orig_x['cfg']), out_file)
+torch.save(dict(model=new_model_state_dict, cfg=orig_x['cfg']), out_file)

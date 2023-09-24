@@ -51,7 +51,7 @@ def setup_model(model, config):
     trainable_variables = []
 
     for n, p in model.named_parameters():
-        if n.endswith('lora_A') or n.endswith('lora_B'):
+        if n.endswith('lora_A') or n.endswith('lora_B') or 'predicted_lddt' in n:
             p.requires_grad = True
             trainable_variables.append(p)
         '''

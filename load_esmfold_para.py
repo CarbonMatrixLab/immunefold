@@ -219,7 +219,7 @@ def load(args):
         dist = carbonfold.impl.distogram
         _assign(dist.proj, 'distogram_head')
 
-        plddt = carbonfold.impl.plddt
+        plddt = carbonfold.impl.predicted_lddt
         _assign(plddt.net[0], 'lddt_head.0')
         _assign(plddt.net[1], 'lddt_head.1')
         _assign(plddt.net[3], 'lddt_head.2')

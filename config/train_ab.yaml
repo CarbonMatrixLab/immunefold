@@ -4,7 +4,7 @@ defaults:
   - transforms: carbonfold
 
 # device
-gpu_list: [3,]
+gpu_list: [0, 1, 2, 3]
 
 # lora
 lora_r_seq: 16
@@ -13,28 +13,28 @@ lora_r_pair: 8
 # optimizer
 num_epoch: 1024
 warmup_steps: 0
-flat_steps: 40000
-decay_steps: 40000
+flat_steps: 20000
+decay_steps: 2000
 learning_rate: 0.0001
 
 # model
 restore_model_ckpt: ../abdata_2023/esm2/carbonfold_from_esmfold.ckpt
-restore_esm2_model: ../abdata_2023/esm2/esm2_t36_3B_UR50D.pt
-model_features: ./config/data_carbonfold.json
-model_config: ./config/model_carbonfold.json
+restore_esm2_model: ./studies/stage1_lora_v3/checkpoints/step_30000_lora_merged.ckpt
 model_align: {}
 
 # dataset
 is_ab_feature: True
 shuffle_multimer_seq: True
-batch_size: 1
+batch_size: 3
 gradient_accumulation_it: 1
-max_seq_len: 300 
-train_name_idx: ../abdata_2023/sabdab/train_cluster.idx 
+max_seq_len: 300
+train_name_idx: ../abdata_2023/sabdab/train_cluster.idx
 train_data: ../abdata_2023/sabdab/npz
     
 # output
-output_dir: ./studies/test0
+output_dir: ./studies/stage2_v1
+
+checkpoint_every_step: 2000
 
 verbose: 1
 random_seed: 2023

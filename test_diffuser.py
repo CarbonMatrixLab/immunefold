@@ -89,6 +89,10 @@ def main(cfg):
         print('quat1')
         print(quat1)
         '''
+        trans_t = x['rigids_t'][1]
+        print('trans_t', trans_t)
+        print(torch.mean(trans_t))
+        print(torch.std(trans_t))
         break
 
 if __name__ == '__main__':

@@ -2,8 +2,8 @@ import torch
 from torch.nn import functional as F
 from einops import rearrange, parse_shape
 
-def l2_normalize(v, dim=-1, epsilon=1e-12):
-    norms = torch.sqrt(torch.sum(torch.square(v), dim=dim, keepdims=True) + epsilon)
+def l2_normalize(v, dim=-1, epsilon=1e-8):
+    norms = torch.sqrt(torch.sum(torch.square(v), dim=dim, keepdims=True)) + epsilon
     return v / norms
 
 def squared_difference(x, y):

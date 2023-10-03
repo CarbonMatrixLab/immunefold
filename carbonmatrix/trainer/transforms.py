@@ -9,7 +9,7 @@ from carbonmatrix.model.utils import batched_select
 from carbonmatrix.trainer import geometry
 
 @registry_transform
-def make_center_positions(batch):
+def make_center_positions(batch, ):
     assert 'atom14_gt_positions' in batch and 'atom14_gt_exists' in batch
     ca = batch['atom14_gt_positions'][...,1,:]
     ca_mask = batch['atom14_gt_exists'][...,1]

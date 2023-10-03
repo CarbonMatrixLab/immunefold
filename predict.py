@@ -9,8 +9,10 @@ from omegaconf import DictConfig
 from carbonmatrix.data.pdbio import save_pdb
 from carbonmatrix.model.carbonfold import CarbonFold
 from carbonmatrix.data.dataset import SeqDatasetDirIO, SeqDatasetFastaIO
+from carbonmatrix.trainer.dataset import StructureDatasetNpzIO 
 from carbonmatrix.data.base_dataset import TransformedDataLoader as DataLoader
 from carbonmatrix.data.base_dataset import collate_fn_seq
+from carbonmatrix.trainer.base_dataset import collate_fn_seq, collate_fn_struc
 
 class WorkerLogFilter(logging.Filter):
     def __init__(self, rank=-1):
@@ -72,8 +74,14 @@ def save_batch_pdb(values, batch, pdb_dir, data_type='general'):
 def predict(cfg):
     if cfg.data_io == 'dir':
         dataset = SeqDatasetDirIO(cfg.test_data, cfg.test_name_idx)
+        collate_fn = collate_fn_seq
     elif cfg.data_io == 'fasta':
         dataset = SeqDatasetFastaIO(cfg.test_data)
+        collate_fn = collate_fn_seq
+    elif cfg.data_io == 'npz':
+        print('dataset npz')
+        dataset = StructureDatasetNpzIO(cfg.test_data, cfg.test_name_idx, 1024) 
+        collate_fn = collate_fn_struc
     else:
         raise NotImplementedError(f'data io {cfg.data_io} not implemented')
 
@@ -83,7 +91,7 @@ def predict(cfg):
             dataset=dataset,
             feats=cfg.transforms,
             device = device,
-            collate_fn=collate_fn_seq,
+            collate_fn=collate_fn,
             batch_size=cfg.batch_size,
             drop_last=False,
             )

@@ -62,17 +62,3 @@ def make_esm_seq(batch,):
             )
 
     return batch
-
-# @registry_transform
-def make_sliced_sample(batch, max_seq_len):
-    batch_len = batch['seq'].shape[1]
-    if batch_len <= max_seq_len:
-        return batch
-
-    for k, v in batch.items():
-        if isinstance(k, list):
-            batch[k] = [x[:max_seq_len] for x in v]
-        elif isinstance(k, torch.Tensor):
-            batch[k] = v[:, :max_seq_len]
-
-    return batch

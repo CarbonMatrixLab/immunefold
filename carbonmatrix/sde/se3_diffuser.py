@@ -53,8 +53,6 @@ class SE3Diffuser(object):
         return diffuser_obj_dict[name]
 
     def forward_marginal(self, rigids_0, t, diffuse_mask=None):
-        print('rigids', rigids_0[0].shape, rigids_0[1].shape)
-
         (rot_0, trans_0) = rigids_0
 
         rot_t, rot_score = self._so3_diffuser.forward_marginal(rot_0, t)

@@ -21,9 +21,9 @@ class SO3Diffuser:
 
         igso3_density_data = np.load(so3_conf.igso3_density_data)
 
-        self._cdf = torch.tensor(igso3_density_data['cdf'])
-        self._score_norms = torch.tensor(igso3_density_data['score_norms'])
-        self._score_scaling = torch.tensor(igso3_density_data['score_scaling'])
+        self._cdf = torch.tensor(igso3_density_data['cdf'], dtype=torch.float32)
+        self._score_norms = torch.tensor(igso3_density_data['score_norms'], dtype=torch.float32)
+        self._score_scaling = torch.tensor(igso3_density_data['score_scaling'], dtype=torch.float32)
 
         self.discrete_sigma = self.sigma(torch.linspace(0.0, 1.0, self.num_sigma))
         self.discrete_omega = torch.linspace(0, np.pi, so3_conf.num_omega+1)[1:]
@@ -67,7 +67,6 @@ class SO3Diffuser:
         x = torch.rand(samples_shape, device = device)
         
         t_idx = self.t_to_idx(t) 
-        print('t_idx', t.shape, t_idx.shape)
 
         cdf = batched_select(self._cdf.to(device = device), t_idx)
         omega = torch.tile(self.discrete_omega.to(device = device), (bs, 1))
@@ -97,8 +96,6 @@ class SO3Diffuser:
         t_idx = self.t_to_idx(t)
         sigma = batched_select(self.discrete_sigma.to(device=device), t_idx)
        
-        print('check shape, t, sigma, omega', t_idx.shape, sigma.shape, omega.shape)
-
         omega_scores_t = calc_so3_score(omega, sigma)
         
         score_t = omega_scores_t[..., None] * axis_angle / (omega[..., None] + eps)
@@ -115,10 +112,6 @@ class SO3Diffuser:
         sampled_axis_angle = self.sample(t, samples_shape = samples_shape)
         sampled_quat = quat_affine.axis_angle_to_quaternion(sampled_axis_angle)
         quat_t = quat_affine.quat_multiply(quat_0, sampled_quat) 
-        print('quat_t', torch.linalg.norm(quat_t, dim=-1))
-        print('quat_t', quat_t)
-        print('quat_0', quat_0)
-        print('sampled_angle', torch.linalg.norm(sampled_axis_angle, dim=-1))
         
         score_t = self.score(sampled_axis_angle, t)
 

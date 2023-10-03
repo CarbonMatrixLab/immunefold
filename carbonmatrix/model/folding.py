@@ -64,7 +64,14 @@ class StructureModule(nn.Module):
 
         outputs = dict(traj = [], sidechains=[])
 
-        quaternions, translations = quat_affine.make_identity(out_shape=(b, n), device=seq_act.device)
+        with torch.no_grad():
+            if 'rigids_t' in batch:
+                quaternions, translations = batch['rigids_t']
+                translations = translations / c.position_scale
+                #quaternions, _ = quat_affine.make_identity(out_shape=(b, n), device=seq_act.device)
+            else:
+                quaternions, translations = quat_affine.make_identity(out_shape=(b, n), device=seq_act.device)
+
         rotations = quat_affine.quat_to_rot(quaternions)
 
         for fold_it in range(c.num_layer):

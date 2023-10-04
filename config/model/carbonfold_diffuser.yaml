@@ -1,0 +1,103 @@
+esm2_model_file: '../abdata_2023/esm2/esm2_t36_3B_UR50D.pt'
+num_recycle: 3
+embeddings_and_seqformer:
+  esm:
+    enabled: true
+    norm: true
+    dropout_rate: 0.1
+    embed_channel: 2560
+    num_layers: 36
+  seq_channel: 1024
+  pair_channel: 128
+  timestep_embedder:
+   enabled: True
+   embedding_dim: 32
+   max_positions: 10000
+  max_relative_feature: 32
+  prev_pos:
+    max_bin: 21.375
+    min_bin: 3.375
+    num_bins: 15
+  recycle_features: true
+  recycle_pos: true
+  seqformer:
+    outer_product_mean:
+      dropout_rate: 0.0
+      num_outer_channel: 64
+      orientation: per_row
+      shared_dropout: true
+    pair_transition:
+      dropout_rate: 0.0
+      num_intermediate_factor: 4
+      orientation: per_row
+      shared_dropout: true
+    seq_attention_with_pair_bias:
+      dropout_rate: 0.0
+      num_head: 32
+      orientation: per_row
+      shared_dropout: false
+    seq_transition:
+      dropout_rate: 0.0
+      num_intermediate_factor: 4
+      orientation: per_row
+      shared_dropout: true
+    triangle_attention_ending_node:
+      dropout_rate: 0.0
+      gating: true
+      num_head: 4
+      orientation: per_column
+      shared_dropout: false
+    triangle_attention_starting_node:
+      dropout_rate: 0.0
+      gating: true
+      num_head: 4
+      orientation: per_row
+      shared_dropout: false
+    triangle_multiplication_incoming:
+      dropout_rate: 0.0
+      gating: true
+      num_head: 4
+      num_intermediate_channel: 128
+      orientation: per_column
+      shared_dropout: false
+    triangle_multiplication_outgoing:
+      dropout_rate: 0.0
+      gating: true
+      num_head: 4
+      num_intermediate_channel: 128
+      orientation: per_row
+      shared_dropout: false
+  seqformer_num_block: 48
+heads:
+  distogram:
+    enabled: true
+    first_break: 2.3125
+    last_break: 21.6875
+    num_bins: 64
+  structure_module:
+    enabled: true
+    clash_overlap_tolerance: 1.5
+    dropout: 0.0
+    num_channel: 384
+    num_head: 12
+    num_layer: 8
+    num_layer_in_transition: 3
+    num_point_qk: 4
+    num_point_v: 8
+    num_scalar_qk: 16
+    num_scalar_v: 16
+    position_scale: 10
+    torsion:
+      atom_clamp_distance: 10
+      num_channel: 128
+      num_residual_block: 2
+  predicted_lddt:
+    enabled: true
+    num_bins: 50
+    num_channel: 128
+    structure_module_num_channel: 384
+  tmscore:
+    enabled: false
+    num_atom: 5
+  metric:
+    enabled: false

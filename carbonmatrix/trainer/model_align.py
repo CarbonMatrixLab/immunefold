@@ -20,7 +20,7 @@ def set_lora_config(cfg, lora_r_seq, lora_r_pair):
         with open_dict(x):
             x.lora_config = lora_config_pair
 
-    # evoformer
+    # evoformer iteration
     seqformer = cfg.embeddings_and_seqformer.seqformer
 
     _set_lora_seq(seqformer.seq_attention_with_pair_bias)
@@ -45,18 +45,35 @@ def setup_model(model, config):
 
     model.impl.requires_grad_(False)
     model.esm.requires_grad_(False)
+
+    # assert
     model.impl.seqformer_module.proj_aa_type.requires_grad = False
     model.impl.seqformer_module.proj_rel_pos.requires_grad = False
 
+    bias = c.get('bias', False)
+
+    trainable_variables_dict = dict(list(model.named_parameters()))
     trainable_variables = []
 
-    for n, p in model.named_parameters():
-        if n.endswith('lora_A') or n.endswith('lora_B') or 'predicted_lddt' in n:
+    for n, p in trainable_variables_dict.items():
+        if n.endswith('lora_A'):
             p.requires_grad = True
             trainable_variables.append(p)
-        '''
-        if p.requires_grad:
+
+            lora_B_name = n[:-6] + 'lora_B'
+            lora_B_p = trainable_variables_dict[lora_B_name]
+            lora_B_p.requires_grad = True
+            trainable_variables.append(lora_B_p)
+
+            if bias:
+                bias_name = n[:-6] + 'bias'
+                if bias_name in trainable_variables_dict:
+                    bias_p = trainable_variables_dict[bias_name]
+                    bias_p.requires_grad = True
+                    trainable_variables.append(bias_p)
+
+        if 'predicted_lddt' in n or 'proj_prev_pos' in n or 'timestep_embedder' in n:
+            p.requires_grad = True
             trainable_variables.append(p)
-        '''
 
     return trainable_variables

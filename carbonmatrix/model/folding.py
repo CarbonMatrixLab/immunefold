@@ -39,6 +39,7 @@ class StructureModule(nn.Module):
                     Linear(c.num_channel, c.num_channel, init='linear' if is_last else 'final', **lora_config))
             if not is_last:
                 transition_moduel.append(nn.ReLU())
+
         self.transition_module = nn.Sequential(*transition_moduel)
         self.transition_layer_norm = LayerNorm(c.num_channel)
 

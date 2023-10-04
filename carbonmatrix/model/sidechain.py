@@ -9,14 +9,14 @@ from carbonmatrix.model.common_modules import Linear
 from carbonmatrix.model.common_modules import get_lora_config
 
 class ResNetBlock(nn.Module):
-    def __init__(self, dim):
+    def __init__(self, dim, lora_config={}):
         super().__init__()
 
         self.net = nn.Sequential(
                 nn.ReLU(),
-                Linear(dim, dim, init='relu'),
+                Linear(dim, dim, init='relu', **lora_config),
                 nn.ReLU(),
-                Linear(dim, dim, init='final'))
+                Linear(dim, dim, init='final', **lora_config))
 
     def forward(self, act):
         return act + self.net(act)
@@ -36,7 +36,7 @@ class TorsionModule(nn.Module):
                 Linear(num_in_initial_channel, c.num_channel, init='linear', **lora_config),
                 )
         self.blocks = nn.Sequential(
-                *[ResNetBlock(c.num_channel) for _ in range(c.num_residual_block)])
+                *[ResNetBlock(c.num_channel, lora_config) for _ in range(c.num_residual_block)])
 
         # (preomega, phi, psi)
         self.projection = Linear(c.num_channel, 7 * 2, init='linear', **lora_config)

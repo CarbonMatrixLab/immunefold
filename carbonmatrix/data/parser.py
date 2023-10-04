@@ -106,7 +106,8 @@ def make_feature_from_npz(npz_file, is_ab_feature=False, shuffle_multimer_seq=Fa
     x = np.load(npz_file)
 
     if not is_ab_feature:
-        str_seq = str(x.get('seq', x['str_seq']))
+        str_seq = str(x['seq']) if 'seq' in x else str(x['str_seq'])
+
         coords = x['coords']
         coord_mask = x['coord_mask']
     else:

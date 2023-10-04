@@ -1,4 +1,5 @@
 import functools
+import numpy as np
 
 import torch
 from torch import nn
@@ -48,6 +49,9 @@ class EmbeddingAndSeqformer(nn.Module):
 
         self.seqformer = Seqformer(c)
 
+        if c.get('timestep_embedder', None) is not None and c.timestep_embedder.enabled:
+            self.timestep_embedder = TimestepEmbedder(c.timestep_embedder.embedding_dim, c.pair_channel, c.timestep_embedder.max_positions)
+
         self.config = config
 
     def forward(self, batch):
@@ -77,6 +81,9 @@ class EmbeddingAndSeqformer(nn.Module):
             esm_embed = self.proj_esm_embed(esm_embed)
             seq_act = seq_act + esm_embed
 
+        if c.get('timestep_embedder', None) is not None and c.timestep_embedder.enabled:
+            x = self.timestep_embedder(batch['t'])
+            pair_act = pair_act + rearrange(x, 'b c -> b () () c') 
 
         if c.recycle_features:
             if 'prev_seq' in batch:
@@ -163,3 +170,33 @@ class Seqformer(nn.Module):
                 seq_act, pair_act = block_fn(seq_act, pair_act)
 
         return seq_act, pair_act
+
+class TimestepEmbedder(nn.Module):
+    # Code from https://github.com/hojonathanho/diffusion/blob/master/diffusion_tf/nn.py
+    def __init__(self, embedding_dim, output_dim, max_positions=10000):
+        super().__init__()
+        self.max_positions = max_positions
+
+        half_dim = embedding_dim // 2
+        emb = np.log(max_positions) / (half_dim - 1)
+        self.emb = torch.exp(torch.arange(half_dim, dtype=torch.float32,) * -emb)
+
+        # no lora config for timestep embeddings
+        self.proj_out = Linear(embedding_dim, output_dim, init='final', bias=False)
+
+    def forward(self, timesteps):
+        assert len(timesteps.shape) == 1
+
+        # (batch_size, )
+        timesteps = rearrange(timesteps * self.max_positions, 'b -> b ()')
+        # (embed_dim,)
+        emb = rearrange(self.emb.to(device=timesteps.device), 'c -> () c')
+
+        # (batch_size, embed_dim)
+        emb = timesteps * emb
+        emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1)
+
+        # (batch_size, seq_channel)
+        emb = self.proj_out(emb)
+
+        return emb

@@ -1,5 +1,5 @@
 defaults:
-  - model: carbonfold
+  - model: carbonfold_diffuser
   - transforms: diffuser
 
 restore_model_ckpt: ../abdata_2023/esm2/carbonfold0.ckpt
@@ -13,6 +13,6 @@ data_io: npz
 test_name_idx:  ../casp15_data/name.list
 test_data: /home/zhutian/data/CASP15_whole/npz
 
-output_dir: ./studies/diffuser/casp15_scale1.0/pred
+output_dir: ./studies/diffuser/casp15_0.99_selfconditional/pred1
 
 verbose: 1

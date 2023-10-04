@@ -1,5 +1,6 @@
 import torch
 from torch.nn import functional as F
+from einops import rearrange
 
 from carbonmatrix.common import residue_constants
 from carbonmatrix.data.transform_factory import registry_transform
@@ -15,9 +16,7 @@ def make_center_positions(batch, ):
     ca_mask = batch['atom14_gt_exists'][...,1]
     center = torch.sum(ca * ca_mask[...,None], dim=1) / (torch.sum(ca_mask, dim=1, keepdims=True) + 1e-12)
     
-    print('center', center)
-    
-    batch['atom14_gt_positions'] = batch['atom14_gt_positions'] - center
+    batch['atom14_gt_positions'] = batch['atom14_gt_positions'] - rearrange(center, 'b c -> b () () c')
 
     return batch
 

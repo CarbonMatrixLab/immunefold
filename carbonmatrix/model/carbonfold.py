@@ -7,7 +7,6 @@ from torch import nn
 
 from carbonmatrix.common import residue_constants
 from carbonmatrix.model.lm.pretrained import load_model_and_alphabet_local
-#from esm.pretrained import load_model_and_alphabet_local
 
 from carbonmatrix.model.seqformer import EmbeddingAndSeqformer
 from carbonmatrix.model.head_factory import HeadFactory
@@ -98,14 +97,12 @@ class CarbonFold(nn.Module):
 
         # Just to adapt to ESMFOLD
         emb_config = c.embeddings_and_seqformer
-        '''
         if 'rigids_t' in batch:
             quat_t, trans_t = batch['rigids_t']
             prev_pos = dgram_from_positions(trans_t, **self.config.embeddings_and_seqformer.prev_pos)
         else:
             prev_pos = torch.zeros([batch_size, num_residues, num_residues], device=device, dtype=torch.int64)
-        '''
-        prev_pos = torch.zeros([batch_size, num_residues, num_residues], device=device, dtype=torch.int64)
+        #prev_pos = torch.zeros([batch_size, num_residues, num_residues], device=device, dtype=torch.int64)
 
         prev = {
                 'prev_pos': prev_pos,

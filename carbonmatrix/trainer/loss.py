@@ -207,7 +207,7 @@ def compute_backbone_loss(batch, value, config):
     target_positions, positions_mask = batch['atom14_gt_positions'], batch['atom14_gt_exists']
     target_frames, frames_mask = batch['rigidgroups_gt_frames'], batch['rigidgroups_gt_exists']
 
-    def _yield_backbone_loss(traj, pair_mask, clamp_distance, loss_unit_distance, pos_weight):
+    def _yield_backbone_loss(traj, clamp_distance, loss_unit_distance,):
         target_backbone_frames = tuple(map(lambda x : x[:, :, 0], target_frames))
         for pred_frames in traj:
             rots, trans = pred_frames
@@ -218,7 +218,6 @@ def compute_backbone_loss(batch, value, config):
                     pred_positions=trans,
                     target_positions=target_positions[:,:,1],
                     positions_mask=positions_mask[:,:,1],
-                    pos_weight = pos_weight,
                     clamp_distance=clamp_distance,
                     length_scale=loss_unit_distance,
                     unclamped_ratio=c.fape.unclamped_ratio)
@@ -226,19 +225,9 @@ def compute_backbone_loss(batch, value, config):
 
     traj = value['traj']
 
-    if c.fape.loop_weight.enabled:
-        loop_mask = torch.eq(batch['cdr_def'], 5)
-        loop_mask = torch.logical_or(loop_mask[:,:,None], loop_mask[:,None,:]).to(
-                dtype=target_positions.dtype, device=target_positions.device)
-        loop_weight = (1. - loop_mask) + loop_mask * c.local_fape.loop_weight.weight
-    else:
-        loop_weight = None
-
     fape = sum(_yield_backbone_loss(
-        traj, pair_mask=None,
-        clamp_distance=c.fape.clamp_distance,
-        loss_unit_distance=c.fape.loss_unit_distance,
-        pos_weight=loop_weight)) / len(traj)
+        traj,  clamp_distance=c.fape.clamp_distance,
+        loss_unit_distance=c.fape.loss_unit_distance,)) / len(traj)
 
     return fape
 
@@ -318,7 +307,8 @@ def compute_renamed_ground_truth(batch, atom14_pred_positions):
       'renamed_atom14_gt_exists': renamed_atom14_gt_mask,  # (N, 14)
   }
 
-def frame_aligned_point_error(pred_frames, target_frames, frames_mask, pred_positions, target_positions, positions_mask, pair_mask=None, pos_weight=None, clamp_distance=None, epsilon=1e-8, length_scale=10., unclamped_ratio=0.):
+def frame_aligned_point_error(pred_frames, target_frames, frames_mask, pred_positions, target_positions, positions_mask, 
+        pair_mask=None, pos_weight=None, clamp_distance=None, epsilon=1e-8, length_scale=10., unclamped_ratio=0.):
     assert pred_frames[0].shape == target_frames[0].shape
     assert pred_positions.shape == target_positions.shape
     assert list(frames_mask.shape) == list(target_frames[0].shape[:-2])

@@ -115,8 +115,8 @@ def axis_angle_to_quaternion(axis_angle: torch.Tensor) -> torch.Tensor:
     return quaternions
 
 def quaternion_to_axis_angle(quaternions: torch.Tensor) -> torch.Tensor:
-    minus_sign = torch.lt(quaternions.detach()[...,0], 0.)
-    quaternions[minus_sign] = -1.0 * quaternions[minus_sign]
+    flip = torch.lt(quaternions.detach()[...,:1], 0.) * 1.0
+    quaternions = (-1. * quaternions) * flip + (1. - flip) * quaternions
 
     norms = torch.norm(quaternions[..., 1:], p=2, dim=-1, keepdim=True)
     half_angles = torch.atan2(norms, quaternions[..., :1])

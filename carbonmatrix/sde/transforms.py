@@ -1,11 +1,10 @@
 import torch
 from torch.nn import functional as F
 
-from pytorch3d.transforms import matrix_to_quaternion
-
 from carbonmatrix.model import r3
 from carbonmatrix.data.transform_factory import registry_transform
 from carbonmatrix.sde.se3_diffuser import SE3Diffuser
+from carbonmatrix.model.quat_affine import matrix_to_quaternion
 
 @registry_transform
 def make_t(batch, is_training=True):

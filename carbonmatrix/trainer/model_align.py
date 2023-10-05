@@ -1,16 +1,16 @@
 import torch
 from omegaconf import open_dict
 
-def set_lora_config(cfg, lora_r_seq, lora_r_pair):
+def set_lora_config(cfg, lora_r_seq, lora_r_pair, lora_scaling):
     lora_config_seq = dict(
             lora_r = lora_r_seq,
             lora_dropout = 0.1,
-            lora_alpha = 2 * lora_r_seq)
+            lora_alpha = lora_scaling * lora_r_seq)
 
     lora_config_pair = dict(
             lora_r = lora_r_pair,
             lora_dropout = 0.1,
-            lora_alpha = 2 * lora_r_pair)
+            lora_alpha = lora_scaling * lora_r_pair)
 
     def _set_lora_seq(x):
         with open_dict(x):

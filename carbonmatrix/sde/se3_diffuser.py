@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import torch
 
+from carbonmatrix.model import quat_affine
 from carbonmatrix.sde import so3_diffuser, r3_diffuser
 
 def _extract_trans_rots(rigid):
@@ -94,13 +95,10 @@ class SE3Diffuser(object):
         return self._r3_diffuser.score(
             trans_t, trans_0, t, use_torch=use_torch, scale=scale)
 
-    def calc_rot_score(self, rots_t, rots_0, t):
-        rots_0_inv = rots_0.invert()
-        quats_0_inv = rots_0_inv.get_quats()
-        quats_t = rots_t.get_quats()
-        quats_0t = ru.quat_multiply(quats_0_inv, quats_t)
-        rotvec_0t = du.quat_to_rotvec(quats_0t)
-        return self._so3_diffuser.torch_score(rotvec_0t, t)
+    def calc_rot_score(self, quat, t):
+        axis_angle = quat_affine.quaternion_to_axis_angle(quat)
+
+        return self._so3_diffuser.score(axis_angle, t)
 
     def _apply_mask(self, x_diff, x_fixed, diff_mask):
         return diff_mask * x_diff + (1 - diff_mask) * x_fixed

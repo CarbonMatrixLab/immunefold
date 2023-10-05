@@ -71,11 +71,17 @@ class StructureModule(nn.Module):
                 translations = translations / c.position_scale
             else:
                 quaternions, translations = quat_affine.make_identity(out_shape=(b, n), device=seq_act.device)
-
+        # inital quat and rot is consistent
         rotations = quat_affine.quat_to_rot(quaternions)
 
+        requires_score = False
+        if batch['is_recycling'] == False and self.training and 'rigids_t' in batch:
+            requires_score = True
+            delta_quat, _ = quat_affine.make_identity(out_shape=(b, n), device=seq_act.device)
+
         for fold_it in range(c.num_layer):
-            is_last = (fold_it == (c.num_layer - 1))
+            is_last_it = (fold_it == (c.num_layer - 1))
+
             seq_act = seq_act + self.attention_module(inputs_1d = seq_act, inputs_2d = static_pair_act, mask = batch['mask'], in_rigids=(rotations, translations))
             if self.training and c.dropout > 0.0:
                 seq_act = F.dropout(seq_act, p = c.dropout, training=self.training)
@@ -86,24 +92,26 @@ class StructureModule(nn.Module):
                 seq_act = F.dropout(seq_act, p = c.dropout, training=self.training)
             seq_act = self.transition_layer_norm(seq_act)
 
+            # pre-compose
             quaternion_update, translation_update = self.affine_update(seq_act).chunk(2, dim = -1)
-
             quaternions = quat_affine.quat_precompose_vec(quaternions, quaternion_update)
             translations = r3.rigids_mul_vecs((rotations, translations), translation_update)
             rotations = quat_affine.quat_to_rot(quaternions)
 
+            if requires_score:
+                delta_quat = quat_affine.quat_precompose_vec(delta_quat, quaternion_update)
+
             outputs['traj'].append((rotations, translations * c.position_scale))
 
-            if self.training or is_last:
+            if is_last_it:
                 sidechains = self.sidechain_module(
                         batch['seq'],
                         (rotations, translations * c.position_scale),
-                        [seq_act, initial_seq_act], compute_atom_pos=is_last)
-
+                        [seq_act, initial_seq_act],)
                 outputs['sidechains'].append(sidechains)
-
-            if not is_last:
+            else:
                 rotations = rotations.detach()
+                quaternions = quaternions.detach()
 
         outputs['representations'] = {'structure_module': seq_act}
 
@@ -111,7 +119,9 @@ class StructureModule(nn.Module):
 
         outputs['final_atom_positions'] = batched_select(outputs['final_atom14_positions'], batch['residx_atom37_to_atom14'], batch_dims=2)
         outputs['final_affines'] = outputs['traj'][-1]
-        ca = outputs['traj'][-1][1]
+
+        if requires_score:
+            outputs['delta_quat'] = delta_quat
 
         return outputs
 

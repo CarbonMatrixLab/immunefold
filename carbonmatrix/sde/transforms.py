@@ -14,7 +14,7 @@ def make_t(batch, is_training=True):
 
     eps = 1e-3
     t = torch.rand(bs, device=device) * (1.0 - eps) + eps
-    t = torch.full((bs,), 0.99, device=device)
+    # t = torch.full((bs,), 0.1, device=device)
     batch.update(t=t)
 
     return batch

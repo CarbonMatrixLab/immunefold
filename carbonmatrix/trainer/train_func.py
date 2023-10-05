@@ -215,4 +215,4 @@ def train(cfg):
                 if optim.cur_step % cfg.checkpoint_every_step == 0:
                     _save_checkpoint(optim.cur_step)
 
-                print('model param', model.module.impl.seqformer_module.timestep_embedder.proj_out.weight)
+                logging.info('timestep embedder.weight norm= {}'.format(torch.linalg.norm(model.module.impl.seqformer_module.timestep_embedder.proj_out.weight).detach().cpu().item()))

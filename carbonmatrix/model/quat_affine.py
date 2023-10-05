@@ -91,6 +91,10 @@ def quat_precompose_vec(quaternion, vector_quaternion_update):
 
     return normalized_quaternion
 
+def quat_invert(quaternion: torch.Tensor) -> torch.Tensor:
+    scaling = torch.tensor([1, -1, -1, -1], device=quaternion.device)
+    return quaternion * scaling
+
 def axis_angle_to_quaternion(axis_angle: torch.Tensor) -> torch.Tensor:
     angles = torch.norm(axis_angle, p=2, dim=-1, keepdim=True)
     half_angles = angles * 0.5
@@ -111,6 +115,9 @@ def axis_angle_to_quaternion(axis_angle: torch.Tensor) -> torch.Tensor:
     return quaternions
 
 def quaternion_to_axis_angle(quaternions: torch.Tensor) -> torch.Tensor:
+    minus_sign = torch.lt(quaternions.detach()[...,0], 0.)
+    quaternions[minus_sign] = -1.0 * quaternions[minus_sign]
+
     norms = torch.norm(quaternions[..., 1:], p=2, dim=-1, keepdim=True)
     half_angles = torch.atan2(norms, quaternions[..., :1])
     angles = 2 * half_angles

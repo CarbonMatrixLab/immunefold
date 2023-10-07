@@ -36,14 +36,18 @@ def setup(cfg):
     def _handler_apply(h):
         h.setLevel(level)
         h.setFormatter(logging.Formatter(fmt))
-        h.addFilter(WorkerLogFilter(world_rank))
+        h.addFilter(WorkerLogFilter(world_rank),)
         return h
 
     handlers = [
         logging.StreamHandler(),
-        logging.FileHandler(log_file)]
+        logging.FileHandler(log_file),
+        ]
 
     handlers = list(map(_handler_apply, handlers))
+
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
 
     logging.basicConfig(
         format=fmt,

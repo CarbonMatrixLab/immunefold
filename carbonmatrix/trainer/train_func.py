@@ -8,7 +8,6 @@ import time
 
 import numpy as np
 import pandas as pd
-import ml_collections
 from contextlib import nullcontext
 
 import torch
@@ -77,7 +76,7 @@ def setup_dataset(cfg):
 
     return train_loader
 
-def log_metric_dict(loss, epoch, it= '', prefix=''):
+def log_metric_dict(loss, it= '', prefix=''):
     if isinstance(loss, MetricDict):
         if prefix:
             prefix = f'{prefix}.'
@@ -85,7 +84,7 @@ def log_metric_dict(loss, epoch, it= '', prefix=''):
             log_metric_dict(v, epoch, it, prefix=f'{prefix}{k}')
     elif isinstance(loss, torch.Tensor):
         loss = loss.item()
-        logging.info(f'{epoch} {it} {prefix}: {loss}')
+        logging.info(f'step= {it} {prefix}: {loss}')
 
 def train(cfg):
     random.seed(cfg.random_seed)
@@ -203,7 +202,7 @@ def train(cfg):
 
                 for k, v in running_loss.items():
                     v = v / cfg.gradient_accumulation_it
-                    log_metric_dict(v, epoch, it, prefix=f'Loss/train@{k}')
+                    log_metric_dict(v, it=optim.cur_step, prefix=f'Loss/train@{k}')
 
                 running_loss = MetricDict()
 

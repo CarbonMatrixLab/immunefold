@@ -9,7 +9,7 @@ gpu_list: [0, 1, 2, 3]
 # lora
 lora_r_seq: 16
 lora_r_pair: 8
-lora_scaling: 4.0
+lora_scaling: 1.0
 
 # optimizer
 num_epoch: 1024
@@ -27,15 +27,15 @@ model_align:
 
 # dataset
 batch_size: 2
-gradient_accumulation_it: 2
+gradient_accumulation_it: 1
 max_seq_len: 304
-# train_name_idx: /home/zhanghaicang/neo/data/carbonfold/cluster.idx
-# train_data: /home/zhanghaicang/neo/data/carbonfold/mmCIF_npz
-train_name_idx: ../data_2023/pdb50_v2/clean_bc40_cluster.idx
-train_data: ../data_2023/pdb50_v2/data/
+train_name_idx: ../data/carbonfold/cluster.idx
+train_data: ../data/carbonfold/mmCIF_npz
+# train_name_idx: ../data_2023/pdb50_v2/clean_bc40_cluster.idx
+# train_data: ../data_2023/pdb50_v2/data/
     
 # output
-output_dir: ./studies/train_diffuser_v1
+output_dir: ./studies/train_diffuser_v2
 
 checkpoint_every_step: 1000
 

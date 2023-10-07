@@ -31,12 +31,13 @@ def setup(cfg):
     log_file = os.path.abspath(os.path.join(cfg.output_dir, 'logs', f'rank{world_rank}.log'))
 
     level = logging.DEBUG if cfg.verbose else logging.INFO
-    fmt = '%(asctime)-15s [%(levelname)s] (%(filename)s:%(lineno)d) %(message)s'
+    # fmt = f'%(asctime)-15s [%(levelname)s] (%(filename)s:%(lineno)d) Rank {world_rank} | %(message)s'
+    fmt = f'%(asctime)-15s [%(levelname)s] Rank {world_rank} | %(message)s'
 
     def _handler_apply(h):
         h.setLevel(level)
-        h.setFormatter(logging.Formatter(fmt))
-        h.addFilter(WorkerLogFilter(world_rank),)
+        h.setFormatter(logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S'))
+        #h.addFilter(WorkerLogFilter(world_rank),)
         return h
 
     handlers = [

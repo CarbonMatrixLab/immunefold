@@ -269,9 +269,10 @@ def find_optimal_renaming(
     alt_lddt = torch.sqrt(1e-10 + squared_difference(pred_dists, alt_gt_dists))
 
     # shape (N ,N, 14, 14)
-    mask = torch.logical_and(
-            torch.logical_and(atom14_gt_exists[:, :, None, :, None], atom14_atom_is_ambiguous[:, :, None, :, None]),
-            torch.logical_and(atom14_gt_exists[:, None, :, None, :], torch.logical_not(atom14_atom_is_ambiguous[:, None, :, None, :])))
+    mask = (atom14_gt_exists[:, :, None, :, None] * # rows
+            atom14_atom_is_ambiguous[:, :, None, :, None] * # rows 
+            atom14_gt_exists[:, None, :, None, :] * # cols
+            ~atom14_atom_is_ambiguous[:, None, :, None, :]) # cols
 
     # shape (N)
     per_res_lddt = torch.sum(mask * lddt, dim=[2, 3, 4])
@@ -346,7 +347,8 @@ def frame_aligned_point_error(pred_frames, target_frames, frames_mask, pred_posi
         else:
             error_dist = torch.clip(error_dist, 0, clamp_distance)
 
-    dij_mask = torch.logical_and(frames_mask[:,:,None], positions_mask[:,None])
+    dij_mask = frames_mask[:,:,None] * positions_mask[:,None,:]
+
     if pair_mask is not None:
         dij_mask = torch.logical_and(dij_mask, pair_mask)
 

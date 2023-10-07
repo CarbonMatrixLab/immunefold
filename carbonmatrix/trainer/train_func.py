@@ -43,7 +43,6 @@ def setup_model(model, device):
 
 def setup_dataset(cfg):
     device = utils.get_device(cfg.gpu_list)
-    print('device=', device)
 
     logging.info('CarbonFold.feats: %s', cfg.transforms)
 

@@ -99,13 +99,13 @@ class R3Diffuser:
 
         mean = torch.exp(log_mean_coeff) * x_0
         std = torch.sqrt(1. - torch.exp(2. * log_mean_coeff))
-        
+
         x_t = torch.normal(mean = mean, std = std)
-        
+
         score_t = self.score(x_t, x_0, t)
-        
+
         x_t = self._unscale(x_t)
-        
+
         return x_t, score_t
 
     def score_scaling(self, t):
@@ -166,5 +166,5 @@ class R3Diffuser:
             x_t = self._scale(x_t)
             x_0 = self._scale(x_0)
         t = t[:,None,None]
-        print('shape', t.shape, x_t.shape, x_0.shape)
+
         return -(x_t - torch.exp(-1/2*self.marginal_b_t(t)) * x_0) / self.conditional_var(t)

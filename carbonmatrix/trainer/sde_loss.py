@@ -14,7 +14,6 @@ def score_loss(batch, value, config):
     
     gt_trans, trans_mask = batch['atom14_gt_positions'][...,1,:], batch['atom14_gt_exists'][...,1]
     trans_loss = compute_trans_loss(gt_trans, pred_trans, trans_mask, c.trans_clamp_distance, c.trans_length_scale)
-    print('batch t', batch['t'])
     
     diffuser = SE3Diffuser.get(config) 
     

@@ -4,7 +4,7 @@ defaults:
   - transforms: diffuser.yaml
 
 # device
-gpu_list: [3]
+gpu_list: [0, 1, 2, 3]
 
 # lora
 lora_r_seq: 16
@@ -27,10 +27,12 @@ model_align:
 
 # dataset
 batch_size: 2
-gradient_accumulation_it: 1
-max_seq_len: 128
-train_name_idx: /home/zhanghaicang/neo/data/carbonfold/cluster.idx
-train_data: /home/zhanghaicang/neo/data/carbonfold/mmCIF_npz
+gradient_accumulation_it: 2
+max_seq_len: 304
+# train_name_idx: /home/zhanghaicang/neo/data/carbonfold/cluster.idx
+# train_data: /home/zhanghaicang/neo/data/carbonfold/mmCIF_npz
+train_name_idx: ../data_2023/pdb50_v2/clean_bc40_cluster.idx
+train_data: ../data_2023/pdb50_v2/data/
     
 # output
 output_dir: ./studies/train_diffuser_v1

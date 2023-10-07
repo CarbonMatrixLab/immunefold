@@ -71,8 +71,6 @@ class SO3Diffuser:
         cdf = batched_select(self._cdf.to(device = device), t_idx)
         omega = torch.tile(self.discrete_omega.to(device = device), (bs, 1))
 
-        print('interp shape', x.shape, cdf.shape, omega.shape)
- 
         return interp(x, cdf, omega, batch_dims=1)
 
     def sample(self, t, samples_shape):

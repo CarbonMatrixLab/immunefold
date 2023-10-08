@@ -1,7 +1,7 @@
 from einops import rearrange
 import torch
 
-from carbonmatrix.trainer.loss_factory import registry_loss
+from carbonmatrix.trainer.losses.loss_factory import registry_loss
 from carbonmatrix.sde.se3_diffuser import SE3Diffuser
 from carbonmatrix.model import quat_affine
 

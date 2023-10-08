@@ -140,7 +140,7 @@ def train(cfg):
         saved_model = model.module if isinstance(model, nn.parallel.DistributedDataParallel) else model
 
         torch.save(dict(
-            model_state_dict = saved_model.esm.state_dict(),
+            model_state_dict = saved_model.impl.state_dict(),
             #optim_state_dict = optim.state_dict(),
             model_config = cfg.model,
             cfg = cfg,

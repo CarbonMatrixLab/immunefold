@@ -15,8 +15,10 @@ class ModelLM(E.ESM2):
             attention_heads: int = 20,
             alphabet: Union[esm.data.Alphabet, str] = "ESM-1b",
             token_dropout: bool = True,
+            lora_config = {},
             ):
-
+        
+        self.lora_config = lora_config
         super().__init__(
                 num_layers = num_layers,
                 embed_dim = embed_dim,
@@ -42,6 +44,7 @@ class ModelLM(E.ESM2):
                     add_bias_kv=False,
                     use_esm1b_layer_norm=True,
                     use_rotary_embeddings=True,
+                    lora_config=self.lora_config,
                 )
                 for _ in range(self.num_layers)
             ]
@@ -103,12 +106,6 @@ class ModelLM(E.ESM2):
                     self_attn_padding_mask=padding_mask,
                     need_head_weights=need_head_weights,)
 
-            '''
-            if self.training and layer_idx > 0:
-                x, attn = checkpoint(block_fn, x)
-            else:
-                x, attn = block_fn(x)
-            '''
             x, attn = block_fn(x)
 
             if (layer_idx + 1) in repr_layers:

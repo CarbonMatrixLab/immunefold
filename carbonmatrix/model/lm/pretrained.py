@@ -11,12 +11,12 @@ def _has_regression_weights(model_name):
     Right now that is all models except ESM-1v, ESM-IF, and partially trained ESM2 models"""
     return 'lora' not in model_name and not ("esm1v" in model_name or "esm_if" in model_name or "270K" in model_name or "500K" in model_name)
 
-def load_model_and_alphabet_local(model_location):
+def load_model_and_alphabet_local(model_location, load_regression=False, lora_config={}):
     # load from local checkpoint
     model_location = Path(model_location)
     model_data = torch.load(str(model_location), map_location="cpu")
     model_name = model_location.stem
-    if _has_regression_weights(model_name):
+    if load_regression and _has_regression_weights(model_name):
         regression_location = str(model_location.with_suffix("")) + "-contact-regression.pt"
         regression_data = torch.load(regression_location, map_location="cpu")
     else:
@@ -43,33 +43,23 @@ def load_model_and_alphabet_local(model_location):
         attention_heads=cfg.encoder_attention_heads,
         alphabet=alphabet,
         token_dropout=cfg.token_dropout,
+        lora_config=lora_config,
     )
 
+    # verified the keys
+    # expected_missing = {"contact_head.regression.weight", "contact_head.regression.bias"}
     expected_keys = set(model.state_dict().keys())
     found_keys = set(model_state.keys())
+    expected_missing = set()
 
-    if regression_data is None:
-        expected_missing = {"contact_head.regression.weight", "contact_head.regression.bias"}
-        error_msgs = []
-        missing = (expected_keys - found_keys) - expected_missing
-        if missing:
-            error_msgs.append(f"Missing key(s) in state_dict: {missing}.")
-        unexpected = found_keys - expected_keys
-        if unexpected:
-            error_msgs.append(f"Unexpected key(s) in state_dict: {unexpected}.")
+    missing = (expected_keys - found_keys) - expected_missing
+    if missing:
+        logging.warn(f"Missing key(s) in load esm2 state_dict: {missing}.")
 
-        if error_msgs:
-            raise RuntimeError(
-                "Error(s) in loading state_dict for {}:\n\t{}".format(
-                    model.__class__.__name__, "\n\t".join(error_msgs)
-                )
-            )
-        if expected_missing - found_keys:
-            logging.warn(
-                "Regression weights not found, predicting contacts will not produce correct results."
-            )
+    unexpected = found_keys - expected_keys
+    if unexpected:
+        logging.warn.append(f"Unexpected key(s) in state_dict: {unexpected}.")
 
-    model.load_state_dict(model_state, strict=regression_data is not None)
+    model.load_state_dict(model_state, strict=False)
 
     return model, alphabet
-

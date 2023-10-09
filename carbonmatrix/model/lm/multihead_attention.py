@@ -3,11 +3,13 @@ from typing import Dict, Optional, Tuple
 import torch
 import torch.nn.functional as F
 from torch import Tensor
+
 from einops import repeat
 
 from esm import multihead_attention as E
 
 from carbonmatrix.model.lm.rotary_embedding import RotaryEmbedding
+from carbonmatrix.model.common_modules import Linear
 
 class MultiheadAttention(E.MultiheadAttention):
     """Multi-headed attention.
@@ -28,12 +30,20 @@ class MultiheadAttention(E.MultiheadAttention):
         self_attention: bool = False,
         encoder_decoder_attention: bool = False,
         use_rotary_embeddings: bool = False,
+        lora_config = {},
     ):
         super().__init__(
                 embed_dim, num_heads, kdim, vdim, dropout,
                 bias, add_bias_kv,
                 add_zero_attn, self_attention, encoder_decoder_attention,
                 use_rotary_embeddings)
+
+
+        self.k_proj = Linear(self.kdim, embed_dim, init='attn', bias=bias, **lora_config)
+        self.v_proj = Linear(self.vdim, embed_dim, init='attn', bias=bias, **lora_config)
+        self.q_proj = Linear(embed_dim, embed_dim, init='attn', bias=bias, **lora_config)
+
+        self.out_proj = Linear(embed_dim, embed_dim, init='attn', bias=bias, **lora_config)
 
         if use_rotary_embeddings:
             self.rot_emb = RotaryEmbedding(dim=self.head_dim)

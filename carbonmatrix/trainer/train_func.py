@@ -100,7 +100,8 @@ def train(cfg):
         if cfg.get('restore_esm2_model', None) is not None:
             cfg.model.esm2_model_file = cfg.restore_esm2_model
 
-        model_align.set_lora_config(cfg.model, cfg.lora_r_seq, cfg.lora_r_pair, cfg.lora_scaling)
+        if cfg.get('lora', None) is not None and cfg.lora.enabled:
+            model_align.set_lora_config(cfg.model, cfg.lora.lora_r_seq, cfg.lora.lora_r_pair, cfg.lora.lora_scaling)
         logging.info('final model config')
         logging.info(cfg.model)
 

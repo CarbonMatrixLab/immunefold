@@ -124,7 +124,8 @@ def train(cfg):
     # optimizer
     optim = Optimizer(trainable_variables,
             base_lr=cfg.learning_rate, warmup_steps=cfg.warmup_steps, flat_steps=cfg.flat_steps,
-            decay_steps=cfg.decay_steps, decay_type='linear', min_lr=1e-5)
+            decay_steps=cfg.decay_steps, decay_type='linear', min_lr=1e-5,
+            betas=(0.9, 0.99))
 
     # loss
     loss_object = LossFactory(cfg.loss)
@@ -173,6 +174,8 @@ def train(cfg):
                     loss = loss_results['loss'] / cfg.gradient_accumulation_it
 
                 scaler.scale(loss).backward()
+
+
                 #loss.backward()
 
             logging.info('traing examples ' + ','.join(batch['name']))
@@ -196,6 +199,7 @@ def train(cfg):
                 logging.info(f'optim step= {optim.cur_step} lr= {optim.get_values()}')
 
                 #optim.step()
+                torch.nn.utils.clip_grad_norm_(trainable_variables, 1.0)
                 scaler.step(optim)
                 scaler.update()
                 optim.zero_grad()

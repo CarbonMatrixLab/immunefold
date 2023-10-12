@@ -8,6 +8,7 @@ from omegaconf import DictConfig
 import torch
 
 from carbonmatrix.trainer.train_func import train
+from carbonmatrix.trainer.train_func_bayesmvp import train as train_bayesmvp
 from carbonmatrix.trainer import utils
 
 class WorkerLogFilter(logging.Filter):
@@ -67,8 +68,14 @@ def cleanup(cfg):
 @hydra.main(version_base=None, config_path="config", config_name="train")
 def main(cfg : DictConfig):
     setup(cfg)
-    
-    train(cfg)
+
+    mode = cfg.get('mode', 'carbonfold')
+    if mode == 'carbonfold':
+        train(cfg)
+    elif mode == 'bayesmvp':
+        train_bayesmvp(cfg)
+    else:
+        raise NotImplementedError(f'train mode{mode} not implemented')
     
     cleanup(cfg)
 

@@ -1,0 +1,32 @@
+distogram:
+  enabled: true
+  loss_fn: distogram_loss
+  weight: 0.3
+  config: {}
+folding:
+  enabled: true
+  loss_fn: folding_loss
+  weight: 1.0
+  config:
+    angle_norm_weight: 0.1
+    backbone_fape_weight: 0.5
+    calpha_local_fape_weight: 0.0
+    chi_weight: 0.2
+    fape:
+      clamp_distance: 10.0
+      clamp_type: relu
+      fape_min: 1.0e-06
+      loop_weight:
+        enabled: false
+        weight: 1.0
+      loss_unit_distance: 10.0
+      unclamped_ratio: 0.1
+      weight: 1.0
+    sidechain_fape_weight: 0.5
+    structural_violation_loss_weight: 0.0
+    violation_tolerance_factor: 12
+predicted_lddt:
+  enabled: true
+  loss_fn: predicted_lddt_loss
+  weight: 0.01
+  config: {}

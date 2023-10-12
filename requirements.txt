@@ -1,0 +1,6 @@
+ml-collections==0.1.1
+dm-tree==0.1.7
+biopython==1.79
+einops==0.4.1
+tensorboard==2.8.0
+omegaconf==2.2

@@ -1,0 +1,8 @@
+1. anarci
+a. install hmmer
+wget http://eddylab.org/software/hmmer/hmmer.tar.gz
+b. install anarci
+git clone git@github.com:oxpig/ANARCI.git
+cd ANARCI
+python setup.py intall
+(download germline )

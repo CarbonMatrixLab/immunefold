@@ -81,9 +81,11 @@ class SeqDataset(torch.utils.data.Dataset):
                 )
     
     def __getitem__(self, idx):
-        ret = self._get_item(idx)
-        
-        ret = self._create_seq_data(ret['name'], ret['seq'])
+        item = self._get_item(idx)
+
+        ret = self._create_seq_data(item['name'], item['seq'])
+        if 'meta' in item:
+            ret.update(meta=item['meta'])
         
         for k, v in ret.items():
             ret[k] = torch.from_numpy(v) if isinstance(v, np.ndarray) else v
@@ -98,6 +100,8 @@ def collate_fn_seq(batch):
     str_seq = _gather('str_seq')
     multimer_str_seq = _gather('multimer_str_seq')
 
+    meta = {} if 'meta' not in batch[0].keys() else _gather('meta')
+
     max_len = max(tuple(len(s) for s in str_seq))
         
     return dict(
@@ -107,4 +111,5 @@ def collate_fn_seq(batch):
             seq = pad_for_batch(_gather('seq'), max_len, residue_constants.unk_restype_index),
             mask = pad_for_batch(_gather('mask'), max_len, 0),
             batch_len = max_len, 
+            meta=meta,
             )

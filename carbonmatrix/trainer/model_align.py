@@ -101,6 +101,44 @@ def setup_model_fft(model, config):
             p.requires_grad = False
         else:
             p.requires_grad = True
-        trainable_variables.append(p)
+            trainable_variables.append(p)
+    return trainable_variables
+
+def set_esm_lora_config(cfg, lora_r, lora_scaling):
+    lora_config = dict(
+            lora_r = lora_r,
+            lora_dropout = 0.1,
+            lora_alpha = lora_scaling * lora_r)
+    with open_dict(cfg):
+        cfg.lora_config = lora_config
+    
+    return
+
+def setup_esm_model(model, config):
+    c = config
+
+    model.esm.requires_grad_(False)
+
+    bias = c.get('bias', False)
+
+    trainable_variables_dict = dict(list(model.named_parameters()))
+    trainable_variables = []
+
+    for n, p in trainable_variables_dict.items():
+        if n.endswith('lora_A'):
+            p.requires_grad = True
+            trainable_variables.append(p)
+
+            lora_B_name = n[:-6] + 'lora_B'
+            lora_B_p = trainable_variables_dict[lora_B_name]
+            lora_B_p.requires_grad = True
+            trainable_variables.append(lora_B_p)
+
+            if bias:
+                bias_name = n[:-6] + 'bias'
+                if bias_name in trainable_variables_dict:
+                    bias_p = trainable_variables_dict[bias_name]
+                    bias_p.requires_grad = True
+                    trainable_variables.append(bias_p)
 
     return trainable_variables

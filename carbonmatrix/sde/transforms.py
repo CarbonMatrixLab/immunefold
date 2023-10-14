@@ -21,16 +21,31 @@ def make_t(batch, is_training=True):
 @registry_transform
 def make_gt_score(batch, se3_conf):
     t = batch['t']
-    
-    diffuser = SE3Diffuser.get(se3_conf) 
+
+    diffuser = SE3Diffuser.get(se3_conf)
 
     rigids_bb = r3.rigids_op(batch['rigidgroups_gt_frames'], lambda x: x[:,:,0])
     rot, tran = rigids_bb
-    
+
     quat = matrix_to_quaternion(rot)
-    
+
     batch.update(diffuser.forward_marginal((quat, tran), t))
 
     #batch.update({'gt_rot_so3vec' : gt_rot_so3vec})
+
+    return batch
+
+@registry_transform
+def make_sample_ref(batch, se3_conf):
+    diffuser = SE3Diffuser.get(se3_conf)
+
+    seq = batch['seq']
+    samples_shape = list(batch['seq'].shape)
+
+    t = torch.full(samples_shape[:1], 1.0 - 1e-2, device=seq.device)
+
+    ref = diffuser.sample_ref(t, samples_shape)
+
+    batch.update(t=t, rigids_t=ref)
 
     return batch

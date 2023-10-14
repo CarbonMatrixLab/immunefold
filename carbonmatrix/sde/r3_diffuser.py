@@ -36,8 +36,12 @@ class R3Diffuser:
         """Time-dependent drift coefficient."""
         return -1/2 * self.b_t(t) * x
 
-    def sample_ref(self, n_samples: float=1):
-        return np.random.normal(size=(n_samples, 3))
+    def sample_ref(self, t, samples_shape):
+        device = t.device
+        mean = torch.full(samples_shape + [3], 0.0, device=device)
+        std = torch.full(samples_shape + [3], 1.0, device=device)
+
+        return torch.normal(mean = mean, std = std)
 
     def marginal_b_t(self, t):
         return t*self.min_b + (1/2)*(t**2)*(self.max_b-self.min_b)

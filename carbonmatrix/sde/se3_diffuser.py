@@ -32,7 +32,7 @@ class SE3Diffuser(object):
     def __init__(self, se3_conf):
         if isinstance(se3_conf, dict):
             se3_conf = ConfigDict(se3_conf)
-        
+
         self._log = logging.getLogger(__name__)
         self._se3_conf = se3_conf
 
@@ -45,12 +45,12 @@ class SE3Diffuser(object):
     @staticmethod
     def get(se3_conf):
         global diffuser_obj_dict
-        
+
         name = 'diffuser'
-        
+
         if name not in diffuser_obj_dict:
             diffuser_obj_dict[name] = SE3Diffuser(se3_conf)
-        
+
         return diffuser_obj_dict[name]
 
     def forward_marginal(self, rigids_0, t, diffuse_mask=None):
@@ -77,9 +77,9 @@ class SE3Diffuser(object):
                 rot_score,
                 np.zeros_like(rot_score),
                 diffuse_mask[..., None])
-        
+
         rigids_t = (rot_t, trans_t)
-        
+
         return {
             'rigids_t': rigids_t,
             'trans_score': trans_score,
@@ -189,56 +189,13 @@ class SE3Diffuser(object):
 
         return _assemble_rigid(rot_t_1, trans_t_1)
 
-    def sample_ref(
-            self,
-            n_samples: int,
-            impute=None,
-            diffuse_mask: np.ndarray=None,
-            as_tensor_7: bool=False
-        ):
-        """Samples rigids from reference distribution.
+    def sample_ref(self, t, samples_shape, diffuse_mask=None):
+        rot_ref = self._so3_diffuser.sample_ref(t, samples_shape=samples_shape)
 
-        Args:
-            n_samples: Number of samples.
-            impute: Rigid objects to use as imputation values if either
-                translations or rotations are not diffused.
-        """
-        if impute is not None:
-            assert impute.shape[0] == n_samples
-            trans_impute, rot_impute = _extract_trans_rots(impute)
-            trans_impute = trans_impute.reshape((n_samples, 3))
-            rot_impute = rot_impute.reshape((n_samples, 3))
-            trans_impute = self._r3_diffuser._scale(trans_impute)
+        trans_ref = self._r3_diffuser.sample_ref(t, samples_shape=samples_shape)
 
-        if diffuse_mask is not None and impute is None:
-            raise ValueError('Must provide imputation values.')
-
-        if (not self._diffuse_rot) and impute is None:
-            raise ValueError('Must provide imputation values.')
-
-        if (not self._diffuse_trans) and impute is None:
-            raise ValueError('Must provide imputation values.')
-
-        if self._diffuse_rot:
-            rot_ref = self._so3_diffuser.sample_ref(
-                n_samples=n_samples)
-        else:
-            rot_ref = rot_impute
-
-        if self._diffuse_trans:
-            trans_ref = self._r3_diffuser.sample_ref(
-                n_samples=n_samples
-            )
-        else:
-            trans_ref = trans_impute
-
-        if diffuse_mask is not None:
-            rot_ref = self._apply_mask(
-                rot_ref, rot_impute, diffuse_mask[..., None])
-            trans_ref = self._apply_mask(
-                trans_ref, trans_impute, diffuse_mask[..., None])
         trans_ref = self._r3_diffuser._unscale(trans_ref)
-        rigids_t = _assemble_rigid(rot_ref, trans_ref)
-        if as_tensor_7:
-            rigids_t = rigids_t.to_tensor_7()
-        return {'rigids_t': rigids_t}
+
+        rigids_t = (rot_ref, trans_ref)
+
+        return rigids_t

@@ -82,8 +82,10 @@ class SO3Diffuser:
         omega = self._sample_igso3(t, samples_shape)
         return x * omega[..., None]
 
-    def sample_ref(self, n_samples: float=1):
-        return self.sample(1, n_samples=n_samples)
+    def sample_ref(self, t, samples_shape):
+        sampled_axis_angle = self.sample(t, samples_shape=samples_shape)
+        sampled_quat = quat_affine.axis_angle_to_quaternion(sampled_axis_angle)
+        return sampled_quat
 
     def score(self, axis_angle, t, eps = 1e-10):
         bs, device = t.shape[0], t.device

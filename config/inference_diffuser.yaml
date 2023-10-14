@@ -10,10 +10,13 @@ gpu: 3
 
 batch_size: 1
 
+mode: carbonfold
+T: 10
+
 data_io: npz
 test_name_idx:  ../casp15_data/name.list
 test_data: /home/zhutian/data/CASP15_whole/npz
 
-output_dir: ../studies/carbonfold/casp15/train_diffuser_fft_v2_step_15000/pred4
+output_dir: ../studies/carbonfold/casp15/train_diffuser_fft_v2_step_15000_T10/pred2
 
 verbose: 1

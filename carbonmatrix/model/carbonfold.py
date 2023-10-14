@@ -81,8 +81,9 @@ class CarbonFold(nn.Module):
 
         batch_size, num_residues, device = *seq.shape[:2], seq.device
 
-        esm_embed, _ = self._compute_language_model(batch['esm_seq'], batch['residx'])
-        batch.update(esm_embed = esm_embed)
+        if 'esm_embed' not in batch:
+            esm_embed, _ = self._compute_language_model(batch['esm_seq'], batch['residx'])
+            batch.update(esm_embed = esm_embed)
 
         def get_prev(ret):
             prev_pseudo_beta = pseudo_beta_fn_v2(batch['seq'], ret['heads']['structure_module']['final_atom_positions'])

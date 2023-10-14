@@ -13,12 +13,12 @@ from Bio.PDB.PDBIO import PDBIO
 
 from carbonmatrix.common import residue_constants
 
-def make_chain(aa_types, coords, chain_id):
+def make_chain(aa_types, coords, chain_id, plddt=None):
     chain = Chain(chain_id)
 
     serial_number = 1
 
-    def make_residue(i, aatype, coord):
+    def make_residue(i, aatype, coord, bfactor):
         nonlocal serial_number
         
         resname = residue_constants.restype_1to3.get(aatype, 'UNK')
@@ -29,7 +29,7 @@ def make_chain(aa_types, coords, chain_id):
             
             atom = Atom(name=atom_name, 
                     coord=coord[j],
-                    bfactor=0, occupancy=1, altloc=' ',
+                    bfactor=bfactor, occupancy=1, altloc=' ',
                     fullname=str(f'{atom_name:<4s}'),
                     serial_number=serial_number, element=atom_name[:1])
             residue.add(atom)
@@ -39,7 +39,8 @@ def make_chain(aa_types, coords, chain_id):
         return residue
 
     for i, (aa, coord) in enumerate(zip(aa_types, coords)):
-        chain.add(make_residue(i + 1, aa, coord))
+        bfactor = 0 if plddt is None else plddt[i]
+        chain.add(make_residue(i + 1, aa, coord, bfactor))
 
     return chain
 
@@ -57,7 +58,7 @@ def save_ig_pdb(str_heavy_seq, str_light_seq, coord, pdb_path):
     pdb.set_structure(model)
     pdb.save(pdb_path)
 
-def save_pdb(multimer_str_seq, coord, pdb_path, chain_ids = None):
+def save_pdb(multimer_str_seq, coord, pdb_path, chain_ids = None, plddt=None):
     model = PDBModel(id=0)
     
     if isinstance(multimer_str_seq, str):
@@ -73,7 +74,8 @@ def save_pdb(multimer_str_seq, coord, pdb_path, chain_ids = None):
     start_pos = 0
     for str_seq, chain_id in zip(multimer_str_seq, chain_ids):
         end_pos = start_pos + len(str_seq)
-        chain = make_chain(str_seq, coord[start_pos:end_pos], chain_id)
+        chain_plddt = None if plddt is None else plddt[start_pos:end_pos]
+        chain = make_chain(str_seq, coord[start_pos:end_pos], chain_id, chain_plddt)
         start_pos = end_pos
 
         model.add(chain)

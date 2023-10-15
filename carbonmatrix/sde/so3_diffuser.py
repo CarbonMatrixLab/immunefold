@@ -38,12 +38,13 @@ class SO3Diffuser:
         else:
             raise ValueError(f'Unrecognize schedule {self.schedule}')
 
-    def diffusion_coef(self, t):
+    def diffusion_coef(self, t): #t, tensor(L,)
         """Compute diffusion coefficient (g_t)."""
         if self.schedule == 'logarithmic':
-            g_t = np.sqrt(
-                2 * (np.exp(self.max_sigma) - np.exp(self.min_sigma)) * self.sigma(t) / np.exp(self.sigma(t))
-            )
+            sigma_t = self.sigma(t)
+            g_t = torch.sqrt(
+                2 * (torch.exp(torch.tensor(self.max_sigma)) - torch.exp(torch.tensor(self.min_sigma))) * sigma_t / torch.exp(sigma_t)
+                )
         else:
             raise ValueError(f'Unrecognize schedule {self.schedule}')
         return g_t
@@ -117,40 +118,16 @@ class SO3Diffuser:
 
         return quat_t, score_t
 
-    def reverse(
-            self,
-            rot_t: np.ndarray,
-            score_t: np.ndarray,
-            t: float,
-            dt: float,
-            mask: np.ndarray=None,
-            noise_scale: float=1.0,
-            ):
-        """Simulates the reverse SDE for 1 step using the Geodesic random walk.
-
-        Args:
-            rot_t: [..., 3] current rotations at time t.
-            score_t: [..., 3] rotation score at time t.
-            t: continuous time in [0, 1].
-            dt: continuous step size in [0, 1].
-            add_noise: set False to set diffusion coefficent to 0.
-            mask: True indicates which residues to diffuse.
-
-        Returns:
-            [..., 3] rotation vector at next step.
-        """
-        if not np.isscalar(t): raise ValueError(f'{t} must be a scalar.')
-
+    def reverse(self, quat_t, score_t, mask, t: torch.Tensor, dt: float, noise_scale: float=1.0,):
         g_t = self.diffusion_coef(t)
-        z = noise_scale * np.random.normal(size=score_t.shape)
+        z = noise_scale * torch.normal(mean=0., std=1., size=score_t.shape).to(device=quat_t.device)
         perturb = (g_t ** 2) * score_t * dt + g_t * np.sqrt(dt) * z
 
-        if mask is not None: perturb *= mask[..., None]
-        n_samples = np.cumprod(rot_t.shape[:-1])[-1]
+        if mask is not None:
+            perturb = perturb * mask[..., None]
 
         # Right multiply.
-        rot_t_1 = du.compose_rotvec(
-            rot_t.reshape(n_samples, 3),
-            perturb.reshape(n_samples, 3)
-        ).reshape(rot_t.shape)
-        return rot_t_1
+        perturb_quat = quat_affine.axis_angle_to_quaternion(perturb)
+        quat_t_1 = quat_affine.quat_multiply(quat_t, perturb_quat)
+        
+        return quat_t_1

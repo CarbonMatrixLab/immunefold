@@ -75,7 +75,7 @@ class StructureModule(nn.Module):
         rotations = quat_affine.quat_to_rot(quaternions)
 
         requires_score = False
-        if batch['is_recycling'] == False and self.training and 'rigids_t' in batch:
+        if batch['is_recycling'] == False and 'rigids_t' in batch:
             requires_score = True
             delta_quat, _ = quat_affine.make_identity(out_shape=(b, n), device=seq_act.device)
 

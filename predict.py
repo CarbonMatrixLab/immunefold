@@ -15,7 +15,7 @@ from carbonmatrix.data.base_dataset import TransformedDataLoader as DataLoader
 from carbonmatrix.data.base_dataset import collate_fn_seq
 from carbonmatrix.trainer.base_dataset import collate_fn_seq, collate_fn_struc
 from carbonmatrix.sde.se3_diffuser import SE3Diffuser
-from carbonmatrix.model.quat_affine import matrix_to_quaternion
+from carbonmatrix.model import quat_affine 
 from carbonmatrix.common.confidence import compute_plddt
 
 class WorkerLogFilter(logging.Filter):
@@ -98,12 +98,51 @@ def carbonfold(model, batch, cfg):
     diffuser = SE3Diffuser.get(cfg.transforms.make_sample_ref.se3_conf)
 
     def _update_batch(batch, values, t):
+        mask = batch['mask']
+        
         batch_t = torch.full((bs,), t, device=device)
+        
+        # curret regidts_t
+        rigids_t = batch['rigids_t']
+        (_, trans_t) = rigids_t
 
-        rot, tran = values['heads']['structure_module']['traj'][-1]
-        quat = matrix_to_quaternion(rot)
+        pred_rigids_0 = values['heads']['structure_module']['traj'][-1]
+        (pred_rot_0, pred_trans_0) = pred_rigids_0
+        
+        # pred_rot_score for time t
+        pred_delta_quat = values['heads']['structure_module']['delta_quat']
+        quat_inv0_t = quat_affine.quat_invert(pred_delta_quat)
+        pred_rot_score = diffuser.calc_rot_score(quat_inv0_t, batch_t)
 
-        batch.update(diffuser.forward_marginal((quat, tran), batch_t))
+        # pred_trans_score for time t
+        pred_trans_score = diffuser.calc_trans_score(trans_t, pred_trans_0, batch_t)
+
+        # pred score for time t
+        score_t = (pred_rot_score, pred_trans_score)
+        
+
+        # rigidts_{t_1} which is denoised rigidts_t 
+        rigids_t_1 = diffuser.reverse(rigids_t, score_t, mask, batch_t, dt, cfg.noise_scale)
+        
+        batch.update(t=batch_t, rigids_t=rigids_t_1)
+
+        return batch
+    
+    def _update_batch2(batch, values, t):
+        mask = batch['mask']
+        
+        batch_t = torch.full((bs,), t, device=device)
+        
+        # curret regidts_t
+        rigids_t = batch['rigids_t']
+        (_, trans_t) = rigids_t
+
+        pred_rigids_0 = values['heads']['structure_module']['traj'][-1]
+        (pred_rot_0, pred_trans_0) = pred_rigids_0
+
+        pred_quat_0 = quat_affine.matrix_to_quaternion(pred_rot_0)
+        
+        batch.update(t=batch_t, rigids_t=(pred_quat_0, pred_trans_0))
 
         return batch
 
@@ -126,8 +165,10 @@ def carbonfold(model, batch, cfg):
     ret.update(plddt=plddt)
 
     save_batch_pdb(ret, batch, cfg.output_dir, data_type, step=0)
-
+    
+    dt = 1. / cfg.T
     timesteps = np.linspace(1., 0., cfg.T + 1)[1:-1]
+
     for i, t in enumerate(timesteps):
         logging.info(f'step= {i+1}, time={t}')
 
@@ -139,6 +180,9 @@ def carbonfold(model, batch, cfg):
         ret.update(plddt=plddt)
 
         save_batch_pdb(ret, batch, cfg.output_dir, data_type, step=i+1)
+   
+    # save last step
+    save_batch_pdb(ret, batch, cfg.output_dir, data_type)
 
 def abfold(model, batch, cfg):
     data_type = cfg.get('data_type', 'ig')
@@ -177,7 +221,6 @@ def predict(cfg):
         dataset = SeqDatasetFastaIO(cfg.test_data)
         collate_fn = collate_fn_seq
     elif cfg.data_io == 'npz':
-        print('dataset npz')
         dataset = StructureDatasetNpzIO(cfg.test_data, cfg.test_name_idx, 1024)
         collate_fn = collate_fn_struc
     else:
@@ -208,9 +251,8 @@ def predict(cfg):
 
 
     for batch in test_loader:
-        print(batch['str_seq'], 'str_seq')
-        print(batch['multimer_str_seq'], 'multimer')
-        print(batch['seq'].shape, 'seq')
+        logging.info('names= {}'.format(','.join(batch['name'])))
+        logging.info('str_len= {}'.format(','.join([str(len(x)) for x in batch['str_seq']])))
 
         predict_batch(model, batch, cfg)
 

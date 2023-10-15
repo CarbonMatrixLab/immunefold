@@ -91,9 +91,9 @@ class SE3Diffuser(object):
     def calc_trans_0(self, trans_score, trans_t, t):
         return self._r3_diffuser.calc_trans_0(trans_score, trans_t, t)
 
-    def calc_trans_score(self, trans_t, trans_0, t, use_torch=False, scale=True):
+    def calc_trans_score(self, trans_t, trans_0, t, scale=True):
         return self._r3_diffuser.score(
-            trans_t, trans_0, t, use_torch=use_torch, scale=scale)
+            trans_t, trans_0, t, scale=scale)
 
     def calc_rot_score(self, quat, t):
         axis_angle = quat_affine.quaternion_to_axis_angle(quat)
@@ -107,87 +107,36 @@ class SE3Diffuser(object):
         return self._r3_diffuser.distribution(
             trans_t, score_t, t, dt, mask)
 
-    def score(
-            self,
-            rigid_0,
-            rigid_t,
-            t: float):
-        tran_0, rot_0 = _extract_trans_rots(rigid_0)
-        tran_t, rot_t = _extract_trans_rots(rigid_t)
-
-        if not self._diffuse_rot:
-            rot_score = np.zeros_like(rot_0)
-        else:
-            rot_score = self._so3_diffuser.score(
-                rot_t, t)
-
-        if not self._diffuse_trans:
-            trans_score = np.zeros_like(tran_0)
-        else:
-            trans_score = self._r3_diffuser.score(tran_t, tran_0, t)
-
-        return trans_score, rot_score
-
     def score_scaling(self, t):
         rot_score_scaling = self._so3_diffuser.score_scaling(t)
         trans_score_scaling = self._r3_diffuser.score_scaling(t)
         return rot_score_scaling, trans_score_scaling
 
-    def reverse(
-            self,
-            rigid_t,
-            rot_score: np.ndarray,
-            trans_score: np.ndarray,
-            t: float,
-            dt: float,
-            diffuse_mask: np.ndarray = None,
-            center: bool=True,
-            noise_scale: float=1.0,
-        ):
-        """Reverse sampling function from (t) to (t-1).
+    def reverse(self, rigids_t, score_t, mask, t: torch.Tensor, dt: float, center: bool=True, noise_scale: float=1.0):
+        (quat_t, trans_t) = rigids_t
+        (rot_score, trans_score) = score_t
 
-        Args:
-            rigid_t: [..., N] protein rigid objects at time t.
-            rot_score: [..., N, 3] rotation score.
-            trans_score: [..., N, 3] translation score.
-            t: continuous time in [0, 1].
-            dt: continuous step size in [0, 1].
-            mask: [..., N] which residues to update.
-            center: true to set center of mass to zero after step
-
-        Returns:
-            rigid_t_1: [..., N] protein rigid objects at time t-1.
-        """
-        trans_t, rot_t = _extract_trans_rots(rigid_t)
-        if not self._diffuse_rot:
-            rot_t_1 = rot_t
-        else:
-            rot_t_1 = self._so3_diffuser.reverse(
-                rot_t=rot_t,
+        quat_t_1 = self._so3_diffuser.reverse(
+                quat_t=quat_t,
                 score_t=rot_score,
+                mask=mask,
                 t=t,
                 dt=dt,
                 noise_scale=noise_scale,
                 )
-        if not self._diffuse_trans:
-            trans_t_1 = trans_t
-        else:
-            trans_t_1 = self._r3_diffuser.reverse(
+        
+        trans_t_1 = self._r3_diffuser.reverse(
                 x_t=trans_t,
                 score_t=trans_score,
+                mask=mask,
                 t=t,
                 dt=dt,
                 center=center,
                 noise_scale=noise_scale
                 )
 
-        if diffuse_mask is not None:
-            trans_t_1 = self._apply_mask(
-                trans_t_1, trans_t, diffuse_mask[..., None])
-            rot_t_1 = self._apply_mask(
-                rot_t_1, rot_t, diffuse_mask[..., None])
-
-        return _assemble_rigid(rot_t_1, trans_t_1)
+        rigidts_t_1 = (quat_t_1, trans_t_1)
+        return rigidts_t_1
 
     def sample_ref(self, t, samples_shape, diffuse_mask=None):
         rot_ref = self._so3_diffuser.sample_ref(t, samples_shape=samples_shape)

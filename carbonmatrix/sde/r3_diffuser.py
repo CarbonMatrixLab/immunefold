@@ -23,18 +23,16 @@ class R3Diffuser:
     def _unscale(self, x):
         return x / self._r3_conf.coordinate_scaling
 
-    def b_t(self, t):
-        if np.any(t < 0) or np.any(t > 1):
-            raise ValueError(f'Invalid t={t}')
-        return self.min_b + t*(self.max_b - self.min_b)
+    def b_t(self, t : torch.Tensor): #t: (bs,)
+        return self.min_b + t * (self.max_b - self.min_b)
 
-    def diffusion_coef(self, t):
+    def diffusion_coef(self, t : torch.Tensor):
         """Time-dependent diffusion coefficient."""
-        return np.sqrt(self.b_t(t))
+        return torch.sqrt(self.b_t(t))
 
-    def drift_coef(self, x, t):
+    def drift_coef(self, x, t : torch.Tensor): #t: (bs,)
         """Time-dependent drift coefficient."""
-        return -1/2 * self.b_t(t) * x
+        return -1/2 * self.b_t(t)[:,None,None] * x
 
     def sample_ref(self, t, samples_shape):
         device = t.device
@@ -43,8 +41,8 @@ class R3Diffuser:
 
         return torch.normal(mean = mean, std = std)
 
-    def marginal_b_t(self, t):
-        return t*self.min_b + (1/2)*(t**2)*(self.max_b-self.min_b)
+    def marginal_b_t(self, t:torch.Tensor):
+        return t * self.min_b + (1/2)*(t**2)*(self.max_b-self.min_b)
 
     def calc_trans_0(self, score_t, x_t, t, use_torch=True):
         beta_t = self.marginal_b_t(t)
@@ -115,17 +113,7 @@ class R3Diffuser:
     def score_scaling(self, t):
         return 1 / torch.sqrt(self.conditional_var(t))
 
-    def reverse(
-            self,
-            *,
-            x_t: np.ndarray,
-            score_t: np.ndarray,
-            t: float,
-            dt: float,
-            mask: np.ndarray=None,
-            center: bool=True,
-            noise_scale: float=1.0,
-        ):
+    def reverse(self, x_t, score_t, mask, t: torch.Tensor, dt: float, center: bool=True, noise_scale: float=1.0,):
         """Simulates the reverse SDE for 1 step
 
         Args:
@@ -133,31 +121,23 @@ class R3Diffuser:
             score_t: [..., 3] rotation score at time t.
             t: continuous time in [0, 1].
             dt: continuous step size in [0, 1].
-            mask: True indicates which residues to diffuse.
-
         Returns:
             [..., 3] positions at next step t-1.
         """
-        if not np.isscalar(t):
-            raise ValueError(f'{t} must be a scalar.')
         x_t = self._scale(x_t)
-        g_t = self.diffusion_coef(t)
+        g_t = self.diffusion_coef(t)[:,None,None]
         f_t = self.drift_coef(x_t, t)
-        z = noise_scale * np.random.normal(size=score_t.shape)
+        z = noise_scale * torch.normal(mean=0., std=1., size=score_t.shape).to(device=x_t.device)
         perturb = (f_t - g_t**2 * score_t) * dt + g_t * np.sqrt(dt) * z
 
-        if mask is not None:
-            perturb *= mask[..., None]
-        else:
-            mask = np.ones(x_t.shape[:-1])
         x_t_1 = x_t - perturb
         if center:
-            com = np.sum(x_t_1, axis=-2) / np.sum(mask, axis=-1)[..., None]
-            x_t_1 -= com[..., None, :]
+            com = torch.sum(x_t_1, dim=-2) / torch.sum(mask, dim=-1, keepdims=True)
+            x_t_1 = x_t_1 - com[..., None, :]
         x_t_1 = self._unscale(x_t_1)
         return x_t_1
 
-    def conditional_var(self, t, use_torch=True):
+    def conditional_var(self, t:torch.Tensor):
         """Conditional variance of p(xt|x0).
 
         Var[x_t|x_0] = conditional_var(t)*I
@@ -165,10 +145,11 @@ class R3Diffuser:
         """
         return 1 - torch.exp(-self.marginal_b_t(t))
 
-    def score(self, x_t, x_0, t, scale=False):
+    def score(self, x_t, x_0, t:torch.Tensor, scale=True):
         if scale:
             x_t = self._scale(x_t)
             x_0 = self._scale(x_0)
+
         t = t[:,None,None]
 
         return -(x_t - torch.exp(-1/2*self.marginal_b_t(t)) * x_0) / self.conditional_var(t)

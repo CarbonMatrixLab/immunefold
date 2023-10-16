@@ -18,6 +18,6 @@ data_io: npz
 test_name_idx:  ../casp15_data/name.list
 test_data: /home/zhutian/data/CASP15_whole/npz
 
-output_dir: ../studies/carbonfold/casp15/train_diffuser_fft_v2_step_25000_reverse_T10/pred0
+output_dir: ../studies/carbonfold/casp15/train_diffuser_fft_v2_step_25000_recycle_pos_T10/pred4
 
 verbose: 1

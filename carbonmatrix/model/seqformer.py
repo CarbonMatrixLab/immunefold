@@ -8,7 +8,9 @@ from torch.utils.checkpoint import checkpoint
 from einops import rearrange
 
 from carbonmatrix.common import residue_constants
-from carbonmatrix.model.common_modules import LayerNorm, Linear, apply_dropout
+from carbonmatrix.model.common_modules import (
+        LayerNorm, Linear, apply_dropout,
+        dgram_from_positions)
 from carbonmatrix.model.baseformer import (
         SeqAttentionWithPairBias,
         Transition,
@@ -52,6 +54,10 @@ class EmbeddingAndSeqformer(nn.Module):
         if c.get('timestep_embedder', None) is not None and c.timestep_embedder.enabled:
             self.timestep_embedder = TimestepEmbedder(c.timestep_embedder.embedding_dim, c.pair_channel, c.timestep_embedder.max_positions)
 
+        if c.get('with_rigids_t', None) is not None and c.with_rigids_t.enabled:
+            self.proj_rigids_t = nn.Embedding(c.with_rigids_t.dgram.num_bins, c.pair_channel)
+            torch.nn.init.zeros_(self.proj_rigids_t.weight)
+
         self.config = config
 
     def forward(self, batch):
@@ -83,7 +89,7 @@ class EmbeddingAndSeqformer(nn.Module):
 
         if c.get('timestep_embedder', None) is not None and c.timestep_embedder.enabled:
             x = self.timestep_embedder(batch['t'])
-            pair_act = pair_act + rearrange(x, 'b c -> b () () c') 
+            pair_act = pair_act + rearrange(x, 'b c -> b () () c')
 
         if c.recycle_features:
             if 'prev_seq' in batch:
@@ -93,6 +99,10 @@ class EmbeddingAndSeqformer(nn.Module):
 
         if c.recycle_pos and 'prev_pos' in batch:
             pair_act = pair_act + self.proj_prev_pos(batch['prev_pos'])
+
+        if c.get('with_rigids_t', None) is not None and c.with_rigids_t.enabled:
+            trans_t_bins = dgram_from_positions(batch['rigids_t'][1], **c.with_rigids_t.dgram)
+            pair_act = pair_act + self.proj_rigids_t(trans_t_bins)
 
         seq_act, pair_act = self.seqformer(seq_act, pair_act, mask=mask, is_recycling=batch['is_recycling'])
 

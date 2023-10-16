@@ -10,9 +10,15 @@ embeddings_and_seqformer:
   seq_channel: 1024
   pair_channel: 128
   timestep_embedder:
-   enabled: True
-   embedding_dim: 32
-   max_positions: 10000
+    enabled: True
+    embedding_dim: 32
+    max_positions: 10000
+  with_rigids_t:
+    enabled: False
+    dgram:
+      max_bin: 21.375
+      min_bin: 3.375
+      num_bins: 15
   max_relative_feature: 32
   prev_pos:
     max_bin: 21.375

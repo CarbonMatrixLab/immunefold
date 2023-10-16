@@ -219,3 +219,4 @@ def train(cfg):
                     _save_checkpoint(optim.cur_step)
 
                 logging.info('timestep embedder.weight norm= {}'.format(torch.linalg.norm(model.module.impl.seqformer_module.timestep_embedder.proj_out.weight).detach().cpu().item()))
+                logging.info('trans_t proj norm= {}'.format(torch.linalg.norm(model.module.impl.seqformer_module.proj_rigids_t.weight).detach().cpu().item()))

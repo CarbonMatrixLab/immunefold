@@ -18,7 +18,7 @@ from carbonmatrix.data.base_dataset import collate_fn_seq
 from carbonmatrix.trainer.base_dataset import collate_fn_seq, collate_fn_struc
 from carbonmatrix.sde.se3_diffuser import SE3Diffuser
 from carbonmatrix.model import quat_affine
-from carbonmatrix.common.confidence import compute_plddt
+from carbonmatrix.common.confidence import compute_plddt, compute_tm
 
 class WorkerLogFilter(logging.Filter):
     def __init__(self, rank=-1):
@@ -82,12 +82,38 @@ def save_batch_pdb(values, batch, pdb_dir, data_type='general', step=None):
 
     return
 
+def _compute_plddt(values, mask):
+    logits = values['heads']['predicted_lddt']['logits']
+    plddt = compute_plddt(logits)
+    full_plddt = torch.sum(plddt * mask, dim=1) / torch.sum(mask, dim=1)
+
+    str_plddt = ','.join([str(x.item()) for x in full_plddt.to('cpu')])
+    logging.info(f'plddt= {str_plddt}')
+
+    return plddt, full_plddt
+
+def _compute_ptm(values, mask):
+    logits = values['heads']['predicted_aligned_error_head']['logits']
+    ptm = compute_tm(logits, mask)
+
+    str_ptm = ','.join([str(x.item()) for x in ptm.to('cpu')])
+    logging.info(f'ptm= {str_ptm}')
+
+    return ptm
+
 def esmfold(model, batch, cfg):
     data_type = cfg.get('data_type', 'general')
     assert (data_type == 'general')
 
     with torch.no_grad():
-        ret = model(batch)
+        ret = model(batch, compute_loss=True)
+
+    plddt, full_plddt = _compute_plddt(ret, batch['mask'])
+    ret.update(plddt=plddt)
+
+    ptm = _compute_ptm(ret, batch['mask'])
+    ret.update(ptm=ptm)
+    
     save_batch_pdb(ret, batch, cfg.output_dir, data_type)
 
 def carbonfold(model, batch, cfg):
@@ -169,24 +195,16 @@ def carbonfold(model, batch, cfg):
 
         return batch
 
-
-    def _compute_plddt(values, mask):
-        logits = values['heads']['predicted_lddt']['logits']
-        plddt = compute_plddt(logits)
-        full_plddt = torch.sum(plddt * mask, dim=1) / torch.sum(mask, dim=1)
-
-        str_plddt = ','.join([str(x.item()) for x in full_plddt.to('cpu')])
-        logging.info(f'plddt= {str_plddt}')
-
-        return plddt, full_plddt
-
     # step 0
     logging.info('step= 0, time=1.0')
     with torch.no_grad():
         ret = model(batch, compute_loss=True)
 
-    plddt, full_plddt = _compute_plddt(ret, batch['mask'])
-    ret.update(plddt=plddt)
+    #plddt, full_plddt = _compute_plddt(ret, batch['mask'])
+    #ret.update(plddt=plddt)
+
+    ptm = _compute_ptm(ret, batch['mask'])
+    ret.update(ptm=ptm)
 
     save_batch_pdb(ret, batch, cfg.output_dir, data_type, step=0)
 

@@ -61,9 +61,9 @@ class PredictedLDDTHead(nn.Module):
         self.net = nn.Sequential(
                 LayerNorm(c.structure_module_num_channel),
                 Linear(c.structure_module_num_channel, dim, init='relu', bias=True),
-                nn.ReLU(),
+                # nn.ReLU(),
                 Linear(dim, dim, init='relu', bias=True),
-                nn.ReLU(),
+                # nn.ReLU(),
                 Linear(dim, c.num_bins, init='final', bias=True))
         self.config = config
 
@@ -75,13 +75,13 @@ class PredictedLDDTHead(nn.Module):
         return dict(logits=self.net(act))
 
 # TM-score prediction
-# @registry_head(name='predicted_aligned_error_head')
-class PredictedAlignedErrorHead(hk.Module):
-    def __init__(self, config)
-        super().__init__(name=name)
+@registry_head(name='predicted_aligned_error_head')
+class PredictedAlignedErrorHead(nn.Module):
+    def __init__(self, config):
+        super().__init__()
         c = config
 
-        self.proj = common_modules.Linear(c.pair_channel, c.num_bins, init='final')
+        self.proj = Linear(c.pair_channel, c.num_bins, init='final')
 
 
         self.breaks = torch.linspace(0., c.max_error_bin, steps=c.num_bins - 1)

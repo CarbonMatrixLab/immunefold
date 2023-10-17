@@ -218,12 +218,17 @@ def load(args):
     def _load_heads():
         dist = carbonfold.impl.distogram
         _assign(dist.proj, 'distogram_head')
-
-        plddt = carbonfold.impl.predicted_lddt
-        _assign(plddt.net[0], 'lddt_head.0')
-        _assign(plddt.net[1], 'lddt_head.1')
-        _assign(plddt.net[3], 'lddt_head.2')
-        _assign_lddt(plddt.net[5], 'lddt_head.3')
+        
+        if hasattr(carbonfold.impl, 'predicted_lddt'):
+            plddt = carbonfold.impl.predicted_lddt
+            _assign(plddt.net[0], 'lddt_head.0')
+            _assign(plddt.net[1], 'lddt_head.1')
+            _assign(plddt.net[2], 'lddt_head.2')
+            _assign_lddt(plddt.net[3], 'lddt_head.3')
+        
+        if hasattr(carbonfold.impl, 'predicted_aligned_error_head'):
+            ptm = carbonfold.impl.predicted_aligned_error_head
+            _assign(ptm.proj, 'ptm_head')
 
     # load embedding
     _load_embedding()

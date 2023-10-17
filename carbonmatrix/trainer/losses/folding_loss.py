@@ -463,3 +463,54 @@ def between_residue_bond_loss(
             'c_n_ca_loss': c_n_ca_loss,
             'per_protein_hard_violotion_loss': per_protein_hard_violotion_loss  # shape (N)
            }
+
+# need to fix it
+# just copy it from AlphaFold
+def predicted_tmscore_loss(self, value, batch):
+    # Shape (num_res, 7)
+    predicted_affine = quat_affine.QuatAffine.from_tensor(
+            value['structure_module']['final_affines'])
+    # Shape (num_res, 7)
+    true_affine = quat_affine.QuatAffine.from_tensor(
+        batch['backbone_affine_tensor'])
+    # Shape (num_res)
+    mask = batch['backbone_affine_mask']
+    # Shape (num_res, num_res)
+    square_mask = mask[:, None] * mask[None, :]
+    num_bins = self.config.num_bins
+    # (1, num_bins - 1)
+    breaks = value['predicted_aligned_error']['breaks']
+    # (1, num_bins)
+    logits = value['predicted_aligned_error']['logits']
+
+    # Compute the squared error for each alignment.
+    def _local_frame_points(affine):
+      points = [jnp.expand_dims(x, axis=-2) for x in affine.translation]
+      return affine.invert_point(points, extra_dims=1)
+    error_dist2_xyz = [
+        jnp.square(a - b)
+        for a, b in zip(_local_frame_points(predicted_affine),
+                        _local_frame_points(true_affine))]
+    error_dist2 = sum(error_dist2_xyz)
+    # Shape (num_res, num_res)
+    # First num_res are alignment frames, second num_res are the residues.
+    error_dist2 = jax.lax.stop_gradient(error_dist2)
+
+    sq_breaks = jnp.square(breaks)
+    true_bins = jnp.sum((
+        error_dist2[..., None] > sq_breaks).astype(jnp.int32), axis=-1)
+
+    errors = softmax_cross_entropy(
+        labels=jax.nn.one_hot(true_bins, num_bins, axis=-1), logits=logits)
+
+    loss = (jnp.sum(errors * square_mask, axis=(-2, -1)) /
+            (1e-8 + jnp.sum(square_mask, axis=(-2, -1))))
+
+    if self.config.filter_by_resolution:
+      # NMR & distillation have resolution = 0
+      loss *= ((batch['resolution'] >= self.config.min_resolution)
+               & (batch['resolution'] <= self.config.max_resolution)).astype(
+                   jnp.float32)
+
+    output = {'loss': loss}
+    return output

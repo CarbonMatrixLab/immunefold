@@ -157,7 +157,7 @@ def train(cfg):
     optim.zero_grad()
     batch_start_time = time.time()
 
-    scaler = torch.cuda.amp.GradScaler()
+    # scaler = torch.cuda.amp.GradScaler()
 
     for epoch in range(cfg.num_epoch):
         optim.zero_grad()
@@ -169,15 +169,13 @@ def train(cfg):
 
             ctx = nullcontext if jt == 0 else model.no_sync
             with ctx():
-                with torch.cuda.amp.autocast(enabled=False, dtype=torch.float16):
-                    r = model(batch=batch, compute_loss=True)
-                    loss_results = loss_object(r, batch)
-                    loss = loss_results['loss'] / cfg.gradient_accumulation_it
+                #with torch.cuda.amp.autocast(enabled=False, dtype=torch.float16):
+                r = model(batch=batch, compute_loss=True)
+                loss_results = loss_object(r, batch)
+                loss = loss_results['loss'] / cfg.gradient_accumulation_it
 
-                scaler.scale(loss).backward()
-
-
-                #loss.backward()
+                #scaler.scale(loss).backward()
+                loss.backward()
 
             logging.info('traing examples ' + ','.join(batch['name']))
             running_loss += MetricDict({'all': loss_results['loss']})
@@ -199,10 +197,11 @@ def train(cfg):
             if jt == 0:
                 logging.info(f'optim step= {optim.cur_step} lr= {optim.get_values()}')
 
-                #optim.step()
-                torch.nn.utils.clip_grad_norm_(trainable_variables, 1.0)
-                scaler.step(optim)
-                scaler.update()
+                torch.nn.utils.clip_grad_norm_(trainable_variables, 0.1)
+
+                #scaler.step(optim)
+                #scaler.update()
+                optim.step()
                 optim.zero_grad()
 
                 for k, v in running_loss.items():

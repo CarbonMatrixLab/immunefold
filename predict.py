@@ -18,7 +18,7 @@ from carbonmatrix.data.base_dataset import collate_fn_seq
 from carbonmatrix.trainer.base_dataset import collate_fn_seq, collate_fn_struc
 from carbonmatrix.sde.se3_diffuser import SE3Diffuser
 from carbonmatrix.model import quat_affine
-from carbonmatrix.common.confidence import compute_plddt, compute_tm
+from carbonmatrix.common.confidence import compute_plddt, compute_ptm
 
 class WorkerLogFilter(logging.Filter):
     def __init__(self, rank=-1):
@@ -93,8 +93,9 @@ def _compute_plddt(values, mask):
     return plddt, full_plddt
 
 def _compute_ptm(values, mask):
-    logits = values['heads']['predicted_aligned_error_head']['logits']
-    ptm = compute_tm(logits, mask)
+    logits = values['heads']['predicted_aligned_error']['logits']
+    breaks = values['heads']['predicted_aligned_error']['breaks']
+    ptm = compute_ptm(logits, breaks, mask)
 
     str_ptm = ','.join([str(x.item()) for x in ptm.to('cpu')])
     logging.info(f'ptm= {str_ptm}')

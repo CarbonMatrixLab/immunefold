@@ -75,7 +75,7 @@ class PredictedLDDTHead(nn.Module):
         return dict(logits=self.net(act))
 
 # TM-score prediction
-@registry_head(name='predicted_aligned_error_head')
+@registry_head(name='predicted_aligned_error')
 class PredictedAlignedErrorHead(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -84,6 +84,7 @@ class PredictedAlignedErrorHead(nn.Module):
         self.proj = Linear(c.pair_channel, c.num_bins, init='final')
 
 
+        # Shape (num_bins,)
         self.breaks = torch.linspace(0., c.max_error_bin, steps=c.num_bins - 1)
 
         self.config = config
@@ -93,8 +94,7 @@ class PredictedAlignedErrorHead(nn.Module):
 
         act = representations['pair']
 
-        # Shape (num_res, num_res, num_bins)
+        # Shape (b, num_res, num_res, num_bins)
         logits = self.proj(act)
 
-        # Shape (num_bins,)
-        return dict(logits=logits, breaks=self.breaks)
+        return dict(logits=logits, breaks=self.breaks.to(device=logits.device))

@@ -226,8 +226,8 @@ def load(args):
             _assign(plddt.net[2], 'lddt_head.2')
             _assign_lddt(plddt.net[3], 'lddt_head.3')
         
-        if hasattr(carbonfold.impl, 'predicted_aligned_error_head'):
-            ptm = carbonfold.impl.predicted_aligned_error_head
+        if hasattr(carbonfold.impl, 'predicted_aligned_error'):
+            ptm = carbonfold.impl.predicted_aligned_error
             _assign(ptm.proj, 'ptm_head')
 
     # load embedding

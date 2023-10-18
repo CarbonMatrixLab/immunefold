@@ -92,8 +92,8 @@ heads:
     num_bins: 50
     num_channel: 128
     structure_module_num_channel: 384
-  tmscore:
-    enabled: false
-    num_atom: 5
-  metric:
-    enabled: false
+  predicted_aligned_error:
+    enabled: true
+    pair_channel: 128
+    max_error_bin: 31
+    num_bins: 64

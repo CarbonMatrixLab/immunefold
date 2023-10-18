@@ -11,15 +11,13 @@ def compute_plddt(logits):
 
     return predicted_lddt_ca * 100
 
-def compute_tm(logits: torch.Tensor, mask:torch.Tensor, max_bin: int = 31, no_bins: int = 64, eps: float = 1e-8):
-    boundaries = torch.linspace(0, max_bin, steps=(no_bins - 1), device=logits.device)
+def compute_ptm(logits, breaks, mask):
+    bin_centers = _calculate_bin_centers(breaks) # (bins,)
 
-    bin_centers = _calculate_bin_centers(boundaries) #(bins,)
+    num_res = torch.sum(mask, dim=-1, keepdims=True) #(bs, 1)
+    clipped_num_res = torch.clip(num_res, 19, 100000)
 
-    n = torch.sum(mask, dim=-1, keepdims=True) #(bs, 1)
-    clipped_n = torch.clip(n, 19, 100000)
-
-    d0 = 1.24 * (clipped_n - 15) ** (1.0 / 3) - 1.8
+    d0 = 1.24 * (clipped_num_res - 15) ** (1.0 / 3) - 1.8
 
     probs = F.softmax(logits, dim=-1) #(bs, n, n, d)
 
@@ -30,7 +28,7 @@ def compute_tm(logits: torch.Tensor, mask:torch.Tensor, max_bin: int = 31, no_bi
     pair_mask = rearrange(mask, 'b n -> b n ()' ) * rearrange(mask, 'b n -> b () n')
 
     # (bs, n,) / (bs, 1, ) = (bs, n)
-    per_alignment = torch.sum(predicted_tm_term * pair_mask, dim=-1) / (eps + n)
+    per_alignment = torch.sum(predicted_tm_term * pair_mask, dim=-1) / (1e-8 + num_res)
 
     ptm, _ = torch.max(per_alignment, dim=-1)
 

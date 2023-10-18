@@ -130,6 +130,61 @@ def predicted_lddt_loss(batch, value, config):
 
     return dict(loss=loss, lddt_ca_loss=lddt_ca)
 
+# Adaption from AlphaFold's code
+@registry_loss
+def predicted_tmscore_loss(batch, value, config):
+    c = config
+
+    # frames: rot, (b, n, k, 3, 3); trans, (b, n, k, 3) where k iterate over the frame index
+    true_affine = r3.rigids_op(batch['rigidgroups_gt_frames'], lambda x: x[:,:,0])
+    # (b, n)
+    mask = batch['rigidgroups_gt_exists'][:,:,0]
+
+    predicted_affine = value['heads']['structure_module']['final_affines']
+
+    # (b, n, n)
+    square_mask = rearrange(mask, 'b n -> b n ()') * rearrange('b n -> b () n')
+
+    num_bins = c.num_bins
+    # (b, 1, num_bins - 1)
+    breaks = value['heads']['predicted_aligned_error']['breaks']
+    # (b, 1, num_bins)
+    logits = value['heads']['predicted_aligned_error']['logits']
+
+    # (b, n, 3)
+    pred_points = predicted_affine[1]
+    true_points = true_affine[1]
+
+    # predicted_affine: (b, n, 3, 3), (b, n, 3)
+    # applied
+    # predicted_affine: (b, n, 1, 3, 3), (b, n, 1, 3)
+    # points: (b, 1, n, 3)
+    pred_local_points = r3.rigids_mul_vecs(
+            r3.rigids_op(r3.invert_rigids(predicted_affine), lambda x: x[:,:,None]),
+            pred_points[:,None])
+    true_local_points = r3.rigids_mul_vecs(
+            r3.rigids_op(r3.invert_rigids(true_affine), lambda x: x[:,:,None]),
+            true_points[:,None])
+
+    error_dist2 = torch.sum(torch.square(pred_local_points - true_local_points), dim=-1, keepdims=True)
+
+    sq_breaks = torch.square(breaks)
+    true_bins = torch.sum(error_dist2.detach() > sq_breaks, dim=-1)
+
+    errors = F.cross_entropy(rearrange(logits, 'b i j c -> b c i j'), true_bins, reduction='none')
+
+    loss = torch.sum(errors * square_mask) / (1e-8 + torch.sum(square_mask))
+
+    '''
+    if self.config.filter_by_resolution:
+      # NMR & distillation have resolution = 0
+      loss *= ((batch['resolution'] >= self.config.min_resolution)
+               & (batch['resolution'] <= self.config.max_resolution)).astype(
+                   jnp.float32)
+    '''
+    output = {'loss': loss}
+    return output
+
 def compute_chi_loss(batch, value, config):
     device = batch['seq'].device
     eps = 1e-10
@@ -270,7 +325,7 @@ def find_optimal_renaming(
 
     # shape (N ,N, 14, 14)
     mask = (atom14_gt_exists[:, :, None, :, None] * # rows
-            atom14_atom_is_ambiguous[:, :, None, :, None] * # rows 
+            atom14_atom_is_ambiguous[:, :, None, :, None] * # rows
             atom14_gt_exists[:, None, :, None, :] * # cols
             ~atom14_atom_is_ambiguous[:, None, :, None, :]) # cols
 
@@ -308,7 +363,7 @@ def compute_renamed_ground_truth(batch, atom14_pred_positions):
       'renamed_atom14_gt_exists': renamed_atom14_gt_mask,  # (N, 14)
   }
 
-def frame_aligned_point_error(pred_frames, target_frames, frames_mask, pred_positions, target_positions, positions_mask, 
+def frame_aligned_point_error(pred_frames, target_frames, frames_mask, pred_positions, target_positions, positions_mask,
         pair_mask=None, pos_weight=None, clamp_distance=None, epsilon=1e-8, length_scale=10., unclamped_ratio=0.):
     assert pred_frames[0].shape == target_frames[0].shape
     assert pred_positions.shape == target_positions.shape
@@ -464,53 +519,3 @@ def between_residue_bond_loss(
             'per_protein_hard_violotion_loss': per_protein_hard_violotion_loss  # shape (N)
            }
 
-# need to fix it
-# just copy it from AlphaFold
-def predicted_tmscore_loss(self, value, batch):
-    # Shape (num_res, 7)
-    predicted_affine = quat_affine.QuatAffine.from_tensor(
-            value['structure_module']['final_affines'])
-    # Shape (num_res, 7)
-    true_affine = quat_affine.QuatAffine.from_tensor(
-        batch['backbone_affine_tensor'])
-    # Shape (num_res)
-    mask = batch['backbone_affine_mask']
-    # Shape (num_res, num_res)
-    square_mask = mask[:, None] * mask[None, :]
-    num_bins = self.config.num_bins
-    # (1, num_bins - 1)
-    breaks = value['predicted_aligned_error']['breaks']
-    # (1, num_bins)
-    logits = value['predicted_aligned_error']['logits']
-
-    # Compute the squared error for each alignment.
-    def _local_frame_points(affine):
-      points = [jnp.expand_dims(x, axis=-2) for x in affine.translation]
-      return affine.invert_point(points, extra_dims=1)
-    error_dist2_xyz = [
-        jnp.square(a - b)
-        for a, b in zip(_local_frame_points(predicted_affine),
-                        _local_frame_points(true_affine))]
-    error_dist2 = sum(error_dist2_xyz)
-    # Shape (num_res, num_res)
-    # First num_res are alignment frames, second num_res are the residues.
-    error_dist2 = jax.lax.stop_gradient(error_dist2)
-
-    sq_breaks = jnp.square(breaks)
-    true_bins = jnp.sum((
-        error_dist2[..., None] > sq_breaks).astype(jnp.int32), axis=-1)
-
-    errors = softmax_cross_entropy(
-        labels=jax.nn.one_hot(true_bins, num_bins, axis=-1), logits=logits)
-
-    loss = (jnp.sum(errors * square_mask, axis=(-2, -1)) /
-            (1e-8 + jnp.sum(square_mask, axis=(-2, -1))))
-
-    if self.config.filter_by_resolution:
-      # NMR & distillation have resolution = 0
-      loss *= ((batch['resolution'] >= self.config.min_resolution)
-               & (batch['resolution'] <= self.config.max_resolution)).astype(
-                   jnp.float32)
-
-    output = {'loss': loss}
-    return output

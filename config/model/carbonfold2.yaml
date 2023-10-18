@@ -13,8 +13,8 @@ embeddings_and_seqformer:
     enabled: True
     embedding_dim: 32
     max_positions: 10000
-  with_rigids_t:
-    enabled: False
+  initial_pos:
+    enabled: True
     dgram:
       max_bin: 21.375
       min_bin: 3.375
@@ -102,8 +102,8 @@ heads:
     num_bins: 50
     num_channel: 128
     structure_module_num_channel: 384
-  tmscore:
-    enabled: false
-    num_atom: 5
-  metric:
-    enabled: false
+  predicted_aligned_error:
+    enabled: true
+    pair_channel: 128
+    max_error_bin: 31
+    num_bins: 64

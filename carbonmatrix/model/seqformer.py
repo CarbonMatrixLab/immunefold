@@ -54,9 +54,9 @@ class EmbeddingAndSeqformer(nn.Module):
         if c.get('timestep_embedder', None) is not None and c.timestep_embedder.enabled:
             self.timestep_embedder = TimestepEmbedder(c.timestep_embedder.embedding_dim, c.pair_channel, c.timestep_embedder.max_positions)
 
-        if c.get('with_rigids_t', None) is not None and c.with_rigids_t.enabled:
-            self.proj_rigids_t = nn.Embedding(c.with_rigids_t.dgram.num_bins, c.pair_channel)
-            torch.nn.init.zeros_(self.proj_rigids_t.weight)
+        if c.get('initial_pos', None) is not None and c.initial_pos.enabled:
+            self.proj_initial_pos = nn.Embedding(c.initial_pos.dgram.num_bins, c.pair_channel)
+            torch.nn.init.zeros_(self.proj_initial_pos.weight)
 
         self.config = config
 
@@ -100,9 +100,8 @@ class EmbeddingAndSeqformer(nn.Module):
         if c.recycle_pos and 'prev_pos' in batch:
             pair_act = pair_act + self.proj_prev_pos(batch['prev_pos'])
 
-        if c.get('with_rigids_t', None) is not None and c.with_rigids_t.enabled:
-            trans_t_bins = dgram_from_positions(batch['rigids_t'][1], **c.with_rigids_t.dgram)
-            pair_act = pair_act + self.proj_rigids_t(trans_t_bins)
+        if c.get('initial_pos', None) is not None and c.initial_pos.enabled:
+            pair_act = pair_act + self.proj_initial_pos(batch['initial_pos'])
 
         seq_act, pair_act = self.seqformer(seq_act, pair_act, mask=mask, is_recycling=batch['is_recycling'])
 

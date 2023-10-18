@@ -30,6 +30,12 @@ predicted_lddt:
   loss_fn: predicted_lddt_loss
   weight: 0.01
   config: {}
+predicted_tmscore:
+  enabled: true
+  loss_fn: predicted_tmscore_loss
+  weight: 0.1
+  config:
+    num_bins: 64
 sde:
   enabled: true
   loss_fn: score_loss

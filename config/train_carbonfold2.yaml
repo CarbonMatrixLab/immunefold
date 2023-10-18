@@ -1,10 +1,10 @@
 defaults:
-  - loss: carbonfold_sde
-  - model: carbonfold_diffuser
-  - transforms: diffuser.yaml
+  - loss: carbonfold2
+  - model: carbonfold2
+  - transforms: carbonfold2
 
 # device
-gpu_list: [0,1,2,3]
+gpu_list: [0, 1, 2, 3]
 
 # lora
 lora:
@@ -25,7 +25,7 @@ decay_steps: 2000
 learning_rate: 0.0001
 
 # model
-restore_model_ckpt: ../abdata_2023/esm2/carbonfold_from_esmfold.ckpt
+restore_model_ckpt: ../abdata_2023/esm2/carbonfold2_base_from_esmfold.ckpt
 restore_esm2_model: ../abdata_2023/esm2/esm2_t36_3B_UR50D.pt
 
 # dataset
@@ -38,7 +38,7 @@ train_data: ../data/carbonfold/mmCIF_npz
 # train_data: ../data_2023/pdb50_v2/data/
     
 # output
-output_dir: ./studies/train_diffuser_fft_v2
+output_dir: ./studies/train_carbonfold2_v2
 
 checkpoint_every_step: 1000
 

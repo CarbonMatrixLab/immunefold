@@ -143,7 +143,7 @@ def predicted_tmscore_loss(batch, value, config):
     predicted_affine = value['heads']['structure_module']['final_affines']
 
     # (b, n, n)
-    square_mask = rearrange(mask, 'b n -> b n ()') * rearrange('b n -> b () n')
+    square_mask = rearrange(mask, 'b n -> b n ()') * rearrange(mask, 'b n -> b () n')
 
     num_bins = c.num_bins
     # (b, 1, num_bins - 1)

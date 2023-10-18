@@ -6,7 +6,6 @@ make_gt_frames: {}
 make_torsion_angles: {}
 make_pseudo_beta: {}
 make_t: {}
-
 make_gt_score:
   se3_conf:
     diffuse_rot: true
@@ -22,3 +21,8 @@ make_gt_score:
       max_sigma: 1.5
       schedule: "logarithmic"
       igso3_density_data: "../carbon_data/igso3/igso3_density_data.npz"
+make_initial_pos:
+  dgram_conf:
+    max_bin: 21.375
+    min_bin: 3.375
+    num_bins: 15

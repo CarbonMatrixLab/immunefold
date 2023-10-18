@@ -5,6 +5,7 @@ from carbonmatrix.model import r3
 from carbonmatrix.data.transform_factory import registry_transform
 from carbonmatrix.sde.se3_diffuser import SE3Diffuser
 from carbonmatrix.model.quat_affine import matrix_to_quaternion
+from carbonmatrix.model.common_modules import dgram_from_positions
 
 @registry_transform
 def make_t(batch, is_training=True):
@@ -48,4 +49,9 @@ def make_sample_ref(batch, se3_conf):
 
     batch.update(t=t, rigids_t=ref)
 
+    return batch
+
+@registry_transform
+def make_initial_pos(batch, dgram_conf):
+    batch.update(initial_pos = dgram_from_positions(batch['rigids_t'][1], **dgram_conf))
     return batch

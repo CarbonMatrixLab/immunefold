@@ -38,7 +38,7 @@ torchrun \
     --node_rank=0 \
     --master_addr="${host[1]}" \
     --master_port="29501" \
-    ./train.py --config-name=train_diffuser  >>  train_rank0_${SLURM_JOB_ID}.log 2>&1 &
+    ./train.py --config-name=train_carbonfold2  >>  train_rank0_${SLURM_JOB_ID}.log 2>&1 &
 
 ### 使用srun 运行第二个节点
 for r in `seq 2 ${nnodes}`
@@ -52,7 +52,7 @@ do
 		--node_rank=${rr} \
         --master_addr="${host[1]}" \
         --master_port="29501" \
-        ./train.py --config-name=train_diffuser >>  train_rank${rr}_${SLURM_JOB_ID}.log 2>&1 &
+        ./train.py --config-name=train_carbonfold2 >>  train_rank${rr}_${SLURM_JOB_ID}.log 2>&1 &
 done
 
 wait

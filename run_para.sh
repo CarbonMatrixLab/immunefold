@@ -27,9 +27,6 @@ done
 local_world_size=4
 nnodes=4
 
-output_dir=./studies/carbonfold_v1
-batch_size=3
-
 cd /home/bingxing2/home/scx6023/zhang/carbonmatrix
 
 torchrun \

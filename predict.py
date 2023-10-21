@@ -114,7 +114,7 @@ def esmfold(model, batch, cfg):
 
     ptm = _compute_ptm(ret, batch['mask'])
     ret.update(ptm=ptm)
-    
+
     save_batch_pdb(ret, batch, cfg.output_dir, data_type)
 
 def carbonfold(model, batch, cfg):
@@ -280,7 +280,7 @@ def predict(cfg):
             drop_last=False,
             )
 
-    ckpt = torch.load(cfg.restore_model_ckpt)
+    ckpt = torch.load(cfg.restore_model_ckpt, map_location='cpu')
 
     if cfg.restore_esm2_model is not None:
         cfg.model.esm2_model_file = cfg.restore_esm2_model

@@ -3,7 +3,7 @@ defaults:
   - transforms: esmfold_inference
 
 restore_model_ckpt: ../abdata_2023/esm2/carbonfold2_base_from_esmfold.ckpt
-restore_esm2_model: ../abdata_2023/trained_models/train_ablm_v2_bs256/step_3000_lora_merged.ckpt
+restore_esm2_model: ../abdata_2023/trained_models/train_ablm_v2_bs256/step_15000_lora_merged.ckpt
 #restore_esm2_model: ../abdata_2023/esm2/esm2_t36_3B_UR50D.pt
 
 gpu: 0
@@ -18,6 +18,6 @@ data_io: fasta
 
 test_data: ./test_esmfold.fasta
 
-output_dir: ../studies/abfold_stage1/pred
+output_dir: ../studies/abfold_stage1/pred_step15000
 
 verbose: 1

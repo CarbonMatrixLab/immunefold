@@ -125,7 +125,7 @@ def train(cfg):
     # optimizer
     optim = Optimizer(trainable_variables,
             base_lr=cfg.learning_rate, warmup_steps=cfg.warmup_steps, flat_steps=cfg.flat_steps,
-            decay_steps=cfg.decay_steps, decay_type='linear', min_lr=1e-5,
+            decay_steps=cfg.decay_steps, decay_type='linear', min_lr=cfg.min_lr,
             betas=(0.9, 0.99))
 
     # loss
@@ -143,7 +143,7 @@ def train(cfg):
 
         torch.save(dict(
             model_state_dict = saved_model.impl.state_dict(),
-            #optim_state_dict = optim.state_dict(),
+            optim_state_dict = optim.state_dict(),
             model_config = cfg.model,
             cfg = cfg,
             train_steps = optim.cur_step), ckpt_file)
@@ -217,5 +217,8 @@ def train(cfg):
                 if optim.cur_step % cfg.checkpoint_every_step == 0:
                     _save_checkpoint(optim.cur_step)
 
-                logging.info('timestep embedder.weight norm= {}'.format(torch.linalg.norm(model.module.impl.seqformer_module.timestep_embedder.proj_out.weight).detach().cpu().item()))
-                logging.info('trans_t proj norm= {}'.format(torch.linalg.norm(model.module.impl.seqformer_module.proj_initial_pos.weight).detach().cpu().item()))
+                # watch the new parameters
+                if hasattr(model.module.impl.seqformer_module, 'timestep_embedder'):
+                    logging.info('timestep embedder.weight norm= {}'.format(torch.linalg.norm(model.module.impl.seqformer_module.timestep_embedder.proj_out.weight).detach().cpu().item()))
+                if hasattr(model.module.impl.seqformer_module, 'proj_initial_pos'):
+                    logging.info('trans_t proj norm= {}'.format(torch.linalg.norm(model.module.impl.seqformer_module.proj_initial_pos.weight).detach().cpu().item()))

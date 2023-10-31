@@ -85,6 +85,16 @@ def setup_model_lora(model, config):
     return trainable_variables
 
 def setup_model_fft(model, config):
+    mode = config.get('fft_mode', 'full')
+
+    if mode == 'full':
+        setup_model_fft_full(model, config)
+    elif mode == 'only_evoformer':
+        setup_model_fft_evoformer(model, config)
+    else:
+        raise NotImplementedError(f'align mode {mode} not implemented yet!')
+
+def setup_model_fft_full(model, config):
     c = config
 
     model.impl.requires_grad_(False)
@@ -96,14 +106,28 @@ def setup_model_fft(model, config):
 
     trainable_variables = []
 
-    for n, p in model.impl.named_parameters(): 
+    for n, p in model.impl.named_parameters():
         if 'proj_aa_type' in n or 'proj_rel_pos' in n or 'esm_embed_weights' in n or 'proj_esm_embed' in n:
             p.requires_grad = False
-        elif 'predicted_aligned_error' in n or 'predicted_lddt' in n:
-            p.requires_grad = False
+        #elif 'predicted_aligned_error' in n or 'predicted_lddt' in n:
+        #    p.requires_grad = False
         else:
             p.requires_grad = True
             trainable_variables.append(p)
+    return trainable_variables
+
+def setup_model_fft_evoformer(model, config):
+    c = config
+
+    model.impl.requires_grad_(False)
+    model.esm.requires_grad_(False)
+
+    trainable_variables = []
+    for x in model.impl.seqformer.seqformer.blocks:
+        for n, p in x.named_parameters():
+            p.requires_grad = True
+            trainable_variables.append(p)
+
     return trainable_variables
 
 def set_esm_lora_config(cfg, lora_r, lora_scaling):
@@ -113,7 +137,7 @@ def set_esm_lora_config(cfg, lora_r, lora_scaling):
             lora_alpha = lora_scaling * lora_r)
     with open_dict(cfg):
         cfg.lora_config = lora_config
-    
+
     return
 
 def setup_esm_model(model, config):

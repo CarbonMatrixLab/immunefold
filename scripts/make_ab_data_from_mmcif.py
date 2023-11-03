@@ -65,9 +65,10 @@ def parse_list(path):
     df = df[df['Hchain'] != '']
     logging.info(f'number of H chains: {df.shape[0]}')
 
-    df = df[df['model'] == 0]
+    print(df['model'].value_counts())
 
-    logging.info(f'number of model 0: {df.shape[0]}')
+    # df = df[df['model'] != 0]
+    # logging.info(f'number of model 0: {df.shape[0]}')
 
     def _make_item(x):
         heavy_chain_id, light_chain_id = x['Hchain'], x['Lchain']
@@ -84,13 +85,13 @@ def parse_list(path):
             antigen_types = [a.strip() for a in x['antigen_type'].split('|')],
             )
 
-    for code, g in df.groupby(by='pdb'):
+    for (code, model_id), g in df.groupby(by=['pdb', 'model']):
         complex_items = []
 
         for i, r in g.iterrows():
             complex_items.append(_make_item(r))
 
-        yield (code, complex_items)
+        yield (code, model_id, complex_items)
 
 def make_struc(str_seq, seq2struc, structure):
     n = len(str_seq)
@@ -265,13 +266,13 @@ def make_complex(complex_item: ComplexItem, mmcif_object:MmcifObject, args):
 
     return ret
 
-def process(code, complex_items, args):
+def process(code, model_id, complex_items, args):
     logging.info('mmcif_parse: processing %s', code)
 
     mmcif_file = os.path.join(args.mmcif_dir, f'{code}.cif')
 
     try:
-        parsing_result = mmcif_parse(file_id=code, mmcif_file=mmcif_file)
+        parsing_result = mmcif_parse(file_id=code, mmcif_file=mmcif_file, model_id=model_id)
     except PDBConstructionException as e:
         logging.warning('mmcif_parse: %s {%s}', mmcif_file, str(e))
     except Exception as e:

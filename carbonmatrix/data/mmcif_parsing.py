@@ -151,7 +151,8 @@ def mmcif_loop_to_dict(prefix: str,
 def parse(*,
           file_id: str,
           mmcif_file: str,
-          catch_all_errors: bool = True) -> ParsingResult:
+          catch_all_errors: bool = True,
+          model_id = 0) -> ParsingResult:
   """Entry point, parses an mmcif_string.
 
   Args:
@@ -170,7 +171,10 @@ def parse(*,
     parser = PDB.MMCIFParser(QUIET=True)
     #handle = io.StringIO(mmcif_string)
     full_structure = parser.get_structure('', mmcif_file)
-    first_model_structure = _get_first_model(full_structure)
+    if model_id == 0:
+      first_model_structure = _get_first_model(full_structure)
+    else:
+      first_model_structure = full_structure[model_id]
     # Extract the _mmcif_dict from the parser, which contains useful fields not
     # reflected in the Biopython structure.
     parsed_info = parser._mmcif_dict  # pylint:disable=protected-access

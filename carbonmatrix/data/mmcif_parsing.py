@@ -277,6 +277,9 @@ def get_release_date(parsed_info: MmCIFDict) -> str:
   revision_dates = parsed_info['_pdbx_audit_revision_history.revision_date']
   return min(revision_dates)
 
+def get_deposited_date(parsed_info: MmCIFDict) -> str:
+  revision_dates = parsed_info['_pdbx_database_status.recvd_initial_deposition_date']
+  return min(revision_dates)
 
 def _get_header(parsed_info: MmCIFDict) -> PdbHeader:
   """Returns a basic header containing method, release date and resolution."""
@@ -293,6 +296,13 @@ def _get_header(parsed_info: MmCIFDict) -> PdbHeader:
   else:
     logging.warning('Could not determine release_date: %s',
                     parsed_info['_entry.id'])
+
+  if '_pdbx_database_status.recvd_initial_deposition_date' in parsed_info:
+    header['deposited_date'] = get_deposited_date(parsed_info)
+  else:
+    logging.warning('Could not determine deposited_date: %s',
+                    parsed_info['_entry.id'])
+
 
   header['resolution'] = 0.00
   for res_key in ('_refine.ls_d_res_high', '_em_3d_reconstruction.resolution',

@@ -13,12 +13,13 @@ def make_ab_numbering(str_seq, allow):
         return None
 
     # only return the most significant one
-    numbering, _, _ = numbering[0][0]
+    numbering, query_start, query_end = numbering[0][0]
+    query_end += 1
     numbering = [n for n, aatype in numbering if aatype != '-']
 
     domain_type = alignment_details[0][0]['chain_type']
-    query_start = alignment_details[0][0]['query_start']
-    query_end = alignment_details[0][0]['query_end']
+    # query_start = alignment_details[0][0]['query_start']
+    # query_end = alignment_details[0][0]['query_end']
 
     assert(query_end - query_start == len(numbering))
 

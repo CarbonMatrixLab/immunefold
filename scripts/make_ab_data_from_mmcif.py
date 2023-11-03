@@ -65,8 +65,6 @@ def parse_list(path):
     df = df[df['Hchain'] != '']
     logging.info(f'number of H chains: {df.shape[0]}')
 
-    print(df['model'].value_counts())
-
     # df = df[df['model'] != 0]
     # logging.info(f'number of model 0: {df.shape[0]}')
 
@@ -177,11 +175,22 @@ def save(complex_item : ComplexItem, feature, meta, output_base_dir):
     if 'light_chain' in feature:
         light_seq = feature['light_chain']['seq']
 
-    fasta_file = os.path.join(output_base_dir, 'heavy_first_fasta', name + '.fasta')
-    save_fasta(name, heavy_seq + ':' + light_seq, fasta_file)
+    fasta_file = os.path.join(output_base_dir, 'heavy_fasta', name + '.fasta')
+    save_fasta(name, heavy_seq, fasta_file)
 
+    fasta_file = os.path.join(output_base_dir, 'heavy_first_fasta', name + '.fasta')
+    if light_seq:
+        pair_seq = heavy_seq + ':' + light_seq
+    else:
+        pair_seq = heavy_seq
+    save_fasta(name, pair_seq, fasta_file)
+
+    if light_seq:
+        pair_seq = light_seq + ':' + heavy_seq
+    else:
+        pair_seq = heavy_seq
     fasta_file = os.path.join(output_base_dir, 'light_first_fasta', name + '.fasta')
-    save_fasta(name, light_seq + ':' + heavy_seq, fasta_file)
+    save_fasta(name, pair_seq, fasta_file)
 
     cdrh3_len = np.sum(feature['heavy_chain']['region_index'] == antibody_constants.region_type_order['CDR-H3'])
     meta.update(
@@ -200,10 +209,30 @@ def save(complex_item : ComplexItem, feature, meta, output_base_dir):
 
     return
 
+def _fix_missing_chain_id(mmcif_object: MmcifObject, chain_id: str, allow: list):
+    if chain_id in mmcif_object.chain_to_seqres:
+        return chain_id
+
+    # search
+    new_chain_ids = []
+    for k, v in mmcif_object.chain_to_seqres.items():
+        ab_def = make_ab_numbering(v, allow)
+        if ab_def is not None:
+            new_chain_ids.append(k)
+
+    if len(new_chain_ids) != 1:
+        raise ValueError(f'can not resolve the issue of the missing chain id')
+
+    logging.info(f'the issue of missing chain id resolved. old= {chain_id}, new={new_chain_ids[0]}')
+
+    return new_chain_ids[0]
+
 def make_complex(complex_item: ComplexItem, mmcif_object:MmcifObject, args):
     ret = {}
 
     def _make_chain(chain_id, allow):
+        chain_id = _fix_missing_chain_id(mmcif_object, chain_id, allow)
+
         str_seq = mmcif_object.chain_to_seqres[chain_id]
         struc = make_struc(
             str_seq,
@@ -288,7 +317,7 @@ def process(code, model_id, complex_items, args):
             ret = make_complex(complex_item, parsing_result.mmcif_object, args)
             save(complex_item, ret, parsing_result.mmcif_object.header, args.output_base_dir)
         except Exception:
-            logging.warn(f'code= {complex_item.code}, heavy= {complex_item.heavy_chain_id} light= {complex_item.light_chain_id} error')
+            logging.warning(f'code= {complex_item.code}, heavy= {complex_item.heavy_chain_id} light= {complex_item.light_chain_id} error')
             traceback.print_exc()
 
 def main(args):

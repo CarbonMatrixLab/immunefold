@@ -4,6 +4,13 @@ from anarci import anarci
 
 from carbonmatrix.data.antibody import antibody_constants
 
+def is_in_framework(domain_type, resid):
+    resn, icode = resid
+
+    region_type_idx = antibody_constants.numbering_to_region_type_idx.get((domain_type, resn), None)
+
+    return antibody_constants.region_types[region_type_idx].startswith('FR')
+
 def make_ab_numbering(str_seq, allow):
     # for now, we only support imgt numbering
     results = anarci([('A',str_seq)], scheme='imgt', allow=allow,)

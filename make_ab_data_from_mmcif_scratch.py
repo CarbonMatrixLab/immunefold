@@ -320,6 +320,42 @@ def make_chain_pairs(heavy_chains, light_chains, rmsd_threshold = 5.0, aligned_l
 
     return pairs
 
+def validate_chain_ids_in_pair(pairs):
+    validated = True
+    heavy_chain_id_used = set()
+    for pair in pairs:
+        heavy_chain_id, light_chain_id = pair['heavy_chain']['chain_id'], pair['light_chain']['chain_id']
+        if heavy_chain_id in heavy_chain_id_used:
+            validated = False
+            break
+        heavy_chain_id_used.add(heavy_chain_id)
+
+    return validated
+
+def make_ab_chain(chain_id, str_seq, structure, seqres_to_structure, chain_type):
+    assert (chain_type in ['heavy_chain', 'light_chain'])
+    allow = ['H'] if chain_type == 'heavy_chain' else ['K', 'L']
+
+    ab_def = make_ab_numbering(str_seq, allow=allow)
+
+    if ab_def is None:
+        return None
+
+    struc = make_struc(
+        str_seq,
+        seqres_to_structure,
+        structure,
+        )
+
+    new_struc = {k : v[ab_def['query_start']:ab_def['query_end']] for k, v in struc.items()}
+
+    new_struc.update(
+        chain_id = chain_id,
+        numbering=ab_def['numbering'],
+        region_index=ab_def['region_index'])
+
+    return new_struc
+
 def process(code, args):
     logging.info('mmcif_parse: processing %s', code)
 
@@ -339,41 +375,31 @@ def process(code, args):
 
     mmcif_object = parsing_result.mmcif_object
 
-    def _make_ab_chain(chain_id, ab_def):
-        struc = make_struc(
-            str_seq,
-            mmcif_object.seqres_to_structure[chain_id],
-            mmcif_object.structure[chain_id],
-            )
-
-        new_struc = {k : v[ab_def['query_start']:ab_def['query_end']] for k, v in struc.items()}
-
-        new_struc.update(
-            chain_id = chain_id,
-            numbering=ab_def['numbering'],
-            region_index=ab_def['region_index'])
-
-        return new_struc
-
     # identify heavy and light chains seperately
     heavy_chains, light_chains = [], []
     for chain_id, str_seq in mmcif_object.chain_to_seqres.items():
-        heavy_ab_def = make_ab_numbering(str_seq, allow=['H'])
-        if heavy_ab_def is not None:
-            heavy_chains.append(_make_ab_chain(chain_id, heavy_ab_def))
+        heavy_chain = make_ab_chain(
+            chain_id, str_seq,
+            mmcif_object.structure[chain_id], mmcif_object.seqres_to_structure[chain_id],
+            chain_type='heavy_chain')
 
-        light_ab_def = make_ab_numbering(str_seq, allow=['K', 'L'])
-        if light_ab_def is not None:
-            light_chains.append(_make_ab_chain(chain_id, light_ab_def))
+        if heavy_chain is not None:
+            heavy_chains.append(heavy_chain)
 
+        light_chain = make_ab_chain(
+            chain_id, str_seq,
+            mmcif_object.structure[chain_id], mmcif_object.seqres_to_structure[chain_id],
+            chain_type='light_chain')
+
+        if light_chain is not None:
+            light_chains.append(light_chain)
+
+    pairs = []
     # pair the heavy and light chains
     if len(heavy_chains) == 0:
         logging.warn(f'no heavy chains found in {code}')
-        return
-    if len(light_chains) == 0:
-        pairs = [dict(heavy_chain=h) for h in heavy_chains]
-        logging.warn(f'no light chains found in {code}')
-    else:
+        return pairs
+    elif len(light_chains) > 0:
         pairs = make_chain_pairs(heavy_chains, light_chains)
         # validate the heavy and light chain ids
 
@@ -381,19 +407,17 @@ def process(code, args):
             logging.warn(f'No heavy and light chain pairs found in {code}!')
             pairs = [dict(heavy_chain=h) for h in heavy_chains]
         else:
-            validated = True
-            heavy_chain_id_used = set()
-            for pair in pairs:
-                heavy_chain_id, light_chain_id = pair['heavy_chain']['chain_id'], pair['light_chain']['chain_id']
-                if heavy_chain_id in heavy_chain_id_used:
-                    validated = False
-                    break
-                heavy_chain_id_used.add(heavy_chain_id)
-            if not validated:
+            if not validate_chain_ids_in_pair(pairs):
                 pair_ids = ':'.join([p['heavy_chain']['chain_id'] + ',' + p['light_chain']['chain_id'] for p in pairs])
                 logging.warn(f'two heavy chains share the same light chain in {code}. {pair_ids}')
                 return
             logging.info(f'{len(pairs)} heavy and light chain pairs found in {code}')
+
+    # extract heavy only chains
+    heavy_in_pair_chain_ids = [x['heavy_chain']['chain_id'] for x in pairs]
+    heavy_only_chains = [dict(heavy_chain=x) for x in heavy_chains if x ['chain_id'] not in heavy_in_pair_chain_ids]
+    pairs.extend(heavy_only_chains)
+    logging.info(f'{len(heavy_only_chains)} heavy only chains fond in {code}')
 
     # identify antigens
     antibody_antigen_complexs = make_antibody_antigen_complex(pairs, mmcif_object)
@@ -401,7 +425,7 @@ def process(code, args):
     for antibody_antigen_complex in antibody_antigen_complexs:
         save(code, antibody_antigen_complex, meta=mmcif_object.header, output_base_dir=args.output_base_dir)
 
-    return 0
+    return
 
 def main(args):
     # output dirs

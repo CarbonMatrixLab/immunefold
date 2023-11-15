@@ -20,10 +20,16 @@ from Bio.PDB.Structure import Structure as PDBStructure
 
 from carbonmatrix.common import residue_constants
 from carbonmatrix.data.mmcif_parsing import parse as mmcif_parse, MmcifObject
-from carbonmatrix.data.antibody.seq import make_ab_numbering, calc_epitope
-from carbonmatrix.data.antibody import antibody_constants
 from carbonmatrix.data.pdbio import make_gt_chain
-from carbonmatrix.data.antibody.seq import is_in_framework
+from carbonmatrix.data.antibody.seq import (
+    make_ab_numbering, 
+    calc_epitope,
+    is_in_framework,
+    extract_framework_struc)
+from carbonmatrix.data.antibody import antibody_constants
+from carbonmatrix.data.antibody import get_reference_framework_struc
+
+reference_framework_struc = get_reference_framework_struc()
 
 # parse the sabdab summary file
 def parse_list(path):
@@ -32,41 +38,6 @@ def parse_list(path):
 
     for code in names:
         yield (code,)
-
-def get_framework_struc(heavy_chain, light_chain):
-    N = 130
-
-    def _calc_chain_feat(feat, domain_type):
-        coords = np.zeros((N, 3))
-        coord_mask = np.zeros((N, ), dtype=np.bool_)
-
-        for i, (resn, icode) in enumerate(feat['numbering']):
-            if icode != ' ':
-                continue
-
-            if not is_in_framework(domain_type, (resn, icode)):
-                continue
-
-            coords[resn, :] = feat['coords'][i,1]
-            coord_mask[resn] = feat['coord_mask'][i, 1]
-
-        return coords, coord_mask
-
-    heavy_coords, heavy_coord_mask = _calc_chain_feat(heavy_chain, domain_type='H')
-    light_coords, light_coord_mask = _calc_chain_feat(light_chain, domain_type='L')
-
-    return np.concatenate([heavy_coords, light_coords], axis=0), np.concatenate([heavy_coord_mask, light_coord_mask], axis=0)
-
-def get_reference_antibody_struc():
-    npy_dir = '/home/zhanghaicang/neo/carbon/antibody/sabdab/20231102/npy_prerelease'
-
-    reference_antibody = '1hzh_H_L'
-
-    x = np.load(os.path.join(npy_dir, reference_antibody + '.npy'), allow_pickle=True).item()
-
-    return get_framework_struc(x['heavy_chain'], x['light_chain'])
-
-reference_framework_struc = get_reference_antibody_struc()
 
 def make_struc(str_seq, seq2struc, structure):
     n = len(str_seq)
@@ -298,7 +269,7 @@ def make_chain_pairs(heavy_chains, light_chains, rmsd_threshold = 5.0, aligned_l
         light_chain_candidates = []
 
         for light_chain in light_chains:
-            framework_coords, framework_coord_mask = get_framework_struc(heavy_chain, light_chain)
+            framework_coords, framework_coord_mask = extract_framework_struc(heavy_chain, light_chain)
 
             rmsd, aligned_length = calc_antibody_rmsd(framework_coords, framework_coord_mask, reference_coords, reference_coord_mask)
 
@@ -417,7 +388,7 @@ def process(code, args):
     heavy_in_pair_chain_ids = [x['heavy_chain']['chain_id'] for x in pairs]
     heavy_only_chains = [dict(heavy_chain=x) for x in heavy_chains if x ['chain_id'] not in heavy_in_pair_chain_ids]
     pairs.extend(heavy_only_chains)
-    logging.info(f'{len(heavy_only_chains)} heavy only chains fond in {code}')
+    logging.info(f'{len(heavy_only_chains)} heavy only chains found in {code}')
 
     # identify antigens
     antibody_antigen_complexs = make_antibody_antigen_complex(pairs, mmcif_object)

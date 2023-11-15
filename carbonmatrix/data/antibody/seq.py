@@ -80,3 +80,27 @@ def calc_epitope(ab_coords, ab_coord_mask, antigen_coords, antigen_coord_mask, d
     relax_dis = min_dist[relax_index]
 
     return relax_index, relax_dis
+
+def extract_framework_struc(heavy_chain, light_chain):
+    N = 130
+
+    def _calc_chain_feat(feat, domain_type):
+        coords = np.zeros((N, 3))
+        coord_mask = np.zeros((N, ), dtype=np.bool_)
+
+        for i, (resn, icode) in enumerate(feat['numbering']):
+            if icode != ' ':
+                continue
+
+            if not is_in_framework(domain_type, (resn, icode)):
+                continue
+
+            coords[resn, :] = feat['coords'][i,1]
+            coord_mask[resn] = feat['coord_mask'][i, 1]
+
+        return coords, coord_mask
+
+    heavy_coords, heavy_coord_mask = _calc_chain_feat(heavy_chain, domain_type='H')
+    light_coords, light_coord_mask = _calc_chain_feat(light_chain, domain_type='L')
+
+    return np.concatenate([heavy_coords, light_coords], axis=0), np.concatenate([heavy_coord_mask, light_coord_mask], axis=0)

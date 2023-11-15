@@ -3,12 +3,12 @@ import sys
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, '../carbonmatrix')
-
+from carbonmatrix.data.antibody import antibody_constants
 from carbonmatrix.data.antibody.seq import is_in_framework
 
 def get_framework_struc(feature):
-    N = 128
+    print(antibody_constants.region_type_order)
+    N = 130
     
     def _calc_chain_feat(feat, domain_type):
         coords = np.zeros((N, 3))
@@ -26,8 +26,8 @@ def get_framework_struc(feature):
 
         return coords, coord_mask
 
-    heavy_coords, heavy_coord_mask = _calc_chain_feat(feature['heavy_chain'])
-    light_coords, light_coord_mask = _calc_chain_feat(feature['light_chain'])
+    heavy_coords, heavy_coord_mask = _calc_chain_feat(feature['heavy_chain'], domain_type='H')
+    light_coords, light_coord_mask = _calc_chain_feat(feature['light_chain'], domain_type='L')
 
     return np.concatenate([heavy_coords, light_coords], axis=0), np.concatenate([heavy_coord_mask, light_coord_mask], axis=0)
     
@@ -38,6 +38,7 @@ def main():
     npy_dir = '/home/zhanghaicang/neo/carbon/antibody/sabdab/20231102/npy' 
     
     df = pd.read_csv(meta_file, sep='\t')
+    df = df[df['name'] == '1hzh_H_L']
     print(df.shape[0])
 
     df = df[(df['resolution'] > 0.1) & (df['resolution'] < 3.0)]
@@ -51,7 +52,7 @@ def main():
 
     for n, g in df.groupby(by='code'):
         r = g.iloc[0,:]
-        x = np.load(os.path.join(npy_dir, r['name'] + '.npy'), allow_pickle=True)
+        x = np.load(os.path.join(npy_dir, r['name'] + '.npy'), allow_pickle=True).item()
 
         struc = get_framework_struc(x)
         print(struc)

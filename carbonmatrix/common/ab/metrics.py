@@ -19,8 +19,8 @@ def get_antibody_regions(N, struc2seq, chain_id, schema='imgt'):
                 'fr3' : (57, 94),
                 'cdr3': (95, 102),
                 'fr4' : (103,113),
-            }, 
-            'L': {    
+            },
+            'L': {
                 'fr1' : (1,  23),
                 'cdr1': (24, 34),
                 'fr2' : (35, 49),
@@ -30,7 +30,7 @@ def get_antibody_regions(N, struc2seq, chain_id, schema='imgt'):
                 'fr4' : (98, 109),
                 }
     }
-    
+
     cdr_def_imgt = {
             'H': {
                 'fr1' : (1,  26),
@@ -40,7 +40,7 @@ def get_antibody_regions(N, struc2seq, chain_id, schema='imgt'):
                 'fr3' : (66, 104),
                 'cdr3': (105,117),
                 'fr4' : (118,128),
-            }, 
+            },
             'L': {
                 'fr1' : (1,  26),
                 'cdr1': (27, 38),
@@ -49,10 +49,10 @@ def get_antibody_regions(N, struc2seq, chain_id, schema='imgt'):
                 'fr3' : (66, 104),
                 'cdr3': (105,117),
                 'fr4' : (118,128),
-            }, 
+            },
     }
 
-    cdr_def = cdr_def_imgt if schema == 'imgt' else cdr_def_chothia 
+    cdr_def = cdr_def_imgt if schema == 'imgt' else cdr_def_chothia
 
     range_dict = cdr_def[chain_id]
 
@@ -67,7 +67,7 @@ def get_antibody_regions(N, struc2seq, chain_id, schema='imgt'):
         if r is None:
             return -1
         return 7 * int(chain_id == 'L') + _schema[r]
-    
+
     region_def = np.full((N,),-1)
 
     for (hetflag, resseq, icode), v in struc2seq.items():
@@ -85,7 +85,7 @@ def get_antibody_regions_seq(imgt_numbering, chain_id):
                 'fr3' : (66, 104),
                 'cdr3': (105,117),
                 'fr4' : (118,128),
-            }, 
+            },
             'L': {
                 'fr1' : (1,  26),
                 'cdr1': (27, 38),
@@ -94,7 +94,7 @@ def get_antibody_regions_seq(imgt_numbering, chain_id):
                 'fr3' : (66, 104),
                 'cdr3': (105,117),
                 'fr4' : (118,128),
-            }, 
+            },
     }
 
     cdr_def = cdr_def_imgt
@@ -115,15 +115,15 @@ def get_antibody_regions_seq(imgt_numbering, chain_id):
 
     N = len(imgt_numbering)
     region_def = np.full((N,),-1)
-    
+
     for i, (_, resseq, icode) in enumerate(imgt_numbering):
         region_def[i] = _get_region(resseq)
 
     return region_def
 
-def calc_ab_metrics(gt_coord, pred_coord, coord_mask, cdr_def):
-    mask = coord_mask * (cdr_def != -1)
-    gt_coord, pred_coord, cdr_def = gt_coord[mask,:], pred_coord[mask, :], cdr_def[mask]
+def calc_ab_metrics(gt_coord, pred_coord, coord_mask, cdr_def, remove_middle_residues=False):
+    mask = coord_mask
+    gt_coord, pred_coord = gt_coord[mask,:], pred_coord[mask, :]
     gt_aligned, pred_aligned = Kabsch(
             np.transpose(gt_coord,[1,0]),
             np.transpose(pred_coord, [1, 0]))
@@ -132,21 +132,30 @@ def calc_ab_metrics(gt_coord, pred_coord, coord_mask, cdr_def):
         return np.sqrt(np.mean(np.sum(np.square(A-B), axis=0)))
 
     full_rmsd = _calc_rmsd(gt_aligned, pred_aligned)
-    
+
     ret = OrderedDict()
     ret.update({'full_len' : gt_aligned.shape[1]})
     ret.update({'full_rmsd':full_rmsd})
-    
+
     _schema = {'fr1':0,'cdr1':1,'fr2':2,'cdr2':3,'fr3':4,'cdr3':5,'fr4':6}
     cdr_idx = {v : 'heavy_' + k for k, v in _schema.items()}
     cdr_idx.update({v + 7 : 'light_' + k for k, v in _schema.items()})
 
     for k, v in cdr_idx.items():
         indices = (cdr_def == k)
+        if remove_middle_residues and v in ['heavy_cdr3',]:
+            indices = np.logical_and(indices, np.concatenate([indices, np.zeros(2,)])[2:])
+            indices = np.logical_and(indices, np.concatenate([np.zeros(3,), indices])[:-3])
+
+        seq_len = np.sum(indices)
+        struc_len = np.sum(indices[mask])
+        coverage = struc_len / seq_len
+        indices = indices[mask]
         gt, pred = gt_aligned[:, indices], pred_aligned[:, indices]
         rmsd = _calc_rmsd(gt, pred)
-        ret.update({v + '_len' : gt.shape[1]})
+        ret.update({v + '_len' : seq_len})
         ret.update({v + '_rmsd':rmsd})
+        ret.update({v + '_coverage':coverage})
 
     return ret
 

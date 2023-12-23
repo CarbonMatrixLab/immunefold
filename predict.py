@@ -15,6 +15,7 @@ from carbonmatrix.data.dataset import SeqDatasetDirIO, SeqDatasetFastaIO
 from carbonmatrix.trainer.dataset import StructureDatasetNpzIO
 from carbonmatrix.data.base_dataset import TransformedDataLoader as DataLoader
 from carbonmatrix.data.base_dataset import collate_fn_seq
+from carbonmatrix.data.seq import create_residx
 from carbonmatrix.trainer.base_dataset import collate_fn_seq, collate_fn_struc
 from carbonmatrix.sde.se3_diffuser import SE3Diffuser
 from carbonmatrix.model import quat_affine
@@ -231,9 +232,109 @@ def abfold(model, batch, cfg):
     data_type = cfg.get('data_type', 'ig')
     assert (data_type == 'ig')
 
+    def _change_order(pair_seq_lengths:list, x:torch.Tensor, offset=0):
+        new_x = []
+        for i, (seq_len1, seq_len2) in enumerate(pair_seq_lengths):
+            new_x.append(torch.cat([x[i, :offset],x[i,offset+seq_len1:offset+seq_len1+seq_len2], x[i, offset:offset+seq_len1], x[i, offset+seq_len1+seq_len2:]], dim=0))
+        return torch.stack(new_x, dim=0)
+
+    def _light_first(batch):
+        new_batch = {}
+        new_batch.update(name=batch['name'], batch_len=batch['batch_len'])
+
+        pair_seq_lengths = []
+        new_str_seq, new_multimer_str_seq = [], []
+
+        for multimer_str_seq in batch['multimer_str_seq']:
+            seq_len1, seq_len2 = len(multimer_str_seq[0]), len(multimer_str_seq[1])
+
+            pair_seq_lengths.append((seq_len1, seq_len2))
+
+            new_str_seq.append(':'.join(multimer_str_seq[::-1]))
+            new_multimer_str_seq.append(multimer_str_seq[::-1])
+
+        new_batch.update(str_seq=new_str_seq, multimer_str_seq=new_multimer_str_seq)
+
+        for n in ('seq', 'mask', 'atom14_atom_exists', 'atom14_atom_is_ambiguous', 'residx_atom37_to_atom14', 'atom37_atom_exists'):
+            new_batch[n] = _change_order(pair_seq_lengths, batch[n])
+
+        # esm_seq
+        new_batch['esm_seq'] = _change_order(pair_seq_lengths, batch['esm_seq'], offset=1)
+
+        # residx
+        new_batch['residx'] = torch.from_numpy(
+            create_residx(new_batch['multimer_str_seq'], new_batch['esm_seq'].shape[1], new_batch['esm_seq'].shape[0])).to(new_batch['esm_seq'].device)
+
+        return new_batch
+
+    def _rank_by_confidence(heavy_first_ret, light_first_ret, heavy_first_batch, light_first_batch, condence_type='ptm'):
+        ptm1 = _compute_ptm(heavy_first_ret, batch['mask'])
+        plddt1, full_plddt1 = _compute_plddt(heavy_first_ret, batch['mask'])
+        heavy_first_ret.update(ptm=ptm1, plddt=plddt1)
+
+        ptm2 = _compute_ptm(light_first_ret, batch['mask'])
+        plddt2, full_plddt2 = _compute_plddt(light_first_ret, batch['mask'])
+        light_first_ret.update(ptm=ptm2, plddt=plddt2)
+
+
+        final_str_seq, final_multimer_str_seq = [], []
+        final_pred_atom14_coords, final_plddt = [], []
+
+        batch_size = len(heavy_first_batch['name'])
+        for i in range(batch_size):
+            name = heavy_first_batch['name'][i]
+
+            #heavy_first_is_btter = (ptm1[i].item() > ptm2[i].item())
+            #print(name, 'ptm', ptm1[i], ptm2[i])
+
+            heavy_first_is_btter = (full_plddt1[i].item() > full_plddt2[i].item())
+            print(name, 'plddt', full_plddt1[i], full_plddt2[i])
+
+            final_str_seq.append(heavy_first_batch['str_seq'][i])
+            final_multimer_str_seq.append(heavy_first_batch['multimer_str_seq'][i])
+
+            if heavy_first_is_btter:
+                final_pred_atom14_coords.append(heavy_first_ret['heads']['structure_module']['final_atom14_positions'][i])
+                final_plddt.append(plddt1[i])
+            else:
+                pair_seq_lengths = [(len(light_first_batch['multimer_str_seq'][i][0]), len(light_first_batch['multimer_str_seq'][i][1]))]
+                final_pred_atom14_coords.append(
+                    _change_order(pair_seq_lengths, light_first_ret['heads']['structure_module']['final_atom14_positions'][i:i+1])[0]
+                    )
+                final_plddt.append(
+                    _change_order(pair_seq_lengths, plddt2[i:i+1])[0],
+                    )
+
+        final_pred_atom14_coords = torch.stack(final_pred_atom14_coords, dim=0)
+        final_plddt = torch.stack(final_plddt, dim=0)
+
+        final_batch = dict(
+            name=heavy_first_batch['name'],
+            batch_len=heavy_first_batch['batch_len'],
+            str_seq=final_str_seq,
+            multimer_str_seq=final_multimer_str_seq,
+            )
+        final_ret = dict(
+            heads=dict(
+                structure_module=dict(
+                    final_atom14_positions=final_pred_atom14_coords,
+                )
+            ),
+            plddt=final_plddt,
+        )
+
+        return final_ret, final_batch
+
     with torch.no_grad():
-        ret = model(batch)
-    save_batch_pdb(ret, batch, cfg.output_dir, data_type)
+        heavy_first_ret = model(batch, compute_loss=True)
+
+        new_batch = _light_first(batch)
+
+        light_first_ret = model(new_batch, compute_loss=True)
+
+    final_ret, final_batch = _rank_by_confidence(heavy_first_ret, light_first_ret, batch, new_batch)
+    save_batch_pdb(final_ret, final_batch, cfg.output_dir, data_type)
+    #save_batch_pdb(heavy_first_ret, batch, cfg.output_dir, data_type)
 
 def abdesign(model, batch, cfg):
     raise NotImplementedError('abdesign mode not implemented yet!')

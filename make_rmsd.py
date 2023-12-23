@@ -93,6 +93,15 @@ def main(args):
     df.to_csv(args.output, sep='\t', index=False)
     df = df.dropna()
 
+    def _average_all_framework_regions(x):
+        return np.mean([x['heavy_fr1_rmsd'], x['heavy_fr2_rmsd'], x['heavy_fr3_rmsd'], x['heavy_fr4_rmsd'], x['light_fr1_rmsd'], x['light_fr2_rmsd'], x['light_fr3_rmsd'], x['light_fr4_rmsd']])
+
+    def _average_all_cdr_gegions(x):
+        return np.mean([x['heavy_cdr1_rmsd'], x['heavy_cdr2_rmsd'], x['light_cdr1_rmsd'], x['light_cdr2_rmsd'], x['light_cdr3_rmsd']])
+
+    df['avg_fr_rmsd'] = df.apply(_average_all_framework_regions, axis=1)
+    df['avg_other_cdr_rmsd'] = df.apply(_average_all_cdr_gegions, axis=1)
+
     print('final total', df.shape[0])
     for r in df.columns:
         if r.endswith('rmsd'):

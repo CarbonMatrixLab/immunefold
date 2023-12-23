@@ -25,6 +25,28 @@ def create_esm_seq(str_seq):
 
     return seq
 
+def create_residx(multimer_str_seq, max_len, batch_size):
+    residx = np.tile(np.arange(max_len), (batch_size, 1))
+
+    for i, multimer_str_seq in enumerate(multimer_str_seq):
+        is_multimer = (len(multimer_str_seq) > 1)
+        if not is_multimer:
+            continue
+
+        relative_pos, start_pos = 0, 1 + len(multimer_str_seq[0])
+
+        for str_seq in multimer_str_seq[1:]:
+            end_pos = start_pos + len(str_seq)
+
+            relative_pos += residue_constants.residue_chain_index_offset
+            residx[i, start_pos:end_pos] += relative_pos
+
+            start_pos = end_pos
+
+        residx[i, end_pos:] += residue_constants.residue_chain_index_offset
+
+    return residx
+
 def create_masked_token(str_seq):
     L = len(str_seq)
     seq = np.zeros((L + 2,), dtype=np.int64)

@@ -141,12 +141,7 @@ def calc_ab_metrics(gt_coord, pred_coord, coord_mask, cdr_def, remove_middle_res
     cdr_idx = {v : 'heavy_' + k for k, v in _schema.items()}
     cdr_idx.update({v + 7 : 'light_' + k for k, v in _schema.items()})
 
-    for k, v in cdr_idx.items():
-        indices = (cdr_def == k)
-        if remove_middle_residues and v in ['heavy_cdr3',]:
-            indices = np.logical_and(indices, np.concatenate([indices, np.zeros(2,)])[2:])
-            indices = np.logical_and(indices, np.concatenate([np.zeros(3,), indices])[:-3])
-
+    def _evaluate_region(indices, v):
         seq_len = np.sum(indices)
         struc_len = np.sum(indices[mask])
         coverage = struc_len / seq_len
@@ -156,6 +151,24 @@ def calc_ab_metrics(gt_coord, pred_coord, coord_mask, cdr_def, remove_middle_res
         ret.update({v + '_len' : seq_len})
         ret.update({v + '_rmsd':rmsd})
         ret.update({v + '_coverage':coverage})
+
+        return
+
+    for k, v in cdr_idx.items():
+        indices = (cdr_def == k)
+        if remove_middle_residues and v in ['heavy_cdr3',]:
+            indices = np.logical_and(indices, np.concatenate([indices, np.zeros(2,)])[2:])
+            indices = np.logical_and(indices, np.concatenate([np.zeros(3,), indices])[:-3])
+
+        _evaluate_region(indices, v)
+
+    # all framework regions
+    indices = np.any(np.stack([cdr_def == k for k in [0,2,4,6,7,9,11,13]], axis=0), axis=0)
+    _evaluate_region(indices, 'all_frs')
+
+    # all cdr regions except cdr3
+    indices = np.any(np.stack([cdr_def == k for k in [1,3,8,10,12]], axis=0), axis=0)
+    _evaluate_region(indices, 'other cdrs')
 
     return ret
 

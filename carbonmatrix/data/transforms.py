@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torch.nn import functional as F
 
-from carbonmatrix.data.seq import create_esm_seq, esm_alphabet
+from carbonmatrix.data.seq import create_esm_seq, esm_alphabet, create_residx
 from carbonmatrix.common import residue_constants
 from carbonmatrix.data.transform_factory import registry_transform
 from carbonmatrix.model.utils import batched_select
@@ -37,24 +37,7 @@ def make_esm_seq(batch,):
     max_len = max([x.shape[0] for x in esm_seq])
     padded_esm_seq = pad_for_batch(esm_seq, max_len, esm_alphabet.padding_idx)
 
-    residx = np.tile(np.arange(max_len), (bs, 1))
-
-    for i, multimer_str_seq in enumerate(batch['multimer_str_seq']):
-        is_multimer = (len(multimer_str_seq) > 1)
-        if not is_multimer:
-            continue
-
-        relative_pos, start_pos = 0, 1 + len(multimer_str_seq[0])
-
-        for str_seq in multimer_str_seq[1:]:
-            end_pos = start_pos + len(str_seq)
-
-            relative_pos += residue_constants.residue_chain_index_offset
-            residx[i, start_pos:end_pos] += relative_pos
-
-            start_pos = end_pos
-
-        residx[i, end_pos:] += residue_constants.residue_chain_index_offset
+    residx = create_residx(batch['multimer_str_seq'], max_len, bs)
 
     batch.update(
             esm_seq = padded_esm_seq.to(device=device),

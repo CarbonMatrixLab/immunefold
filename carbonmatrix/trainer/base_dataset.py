@@ -2,7 +2,7 @@ import logging
 
 import torch
 import numpy as np
-
+import random
 from carbonmatrix.common.operator import pad_for_batch
 from carbonmatrix.data.base_dataset import SeqDataset, collate_fn_seq
 

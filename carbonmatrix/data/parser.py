@@ -6,7 +6,7 @@ from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.Chain import Chain as PDBChain
 from Bio.PDB.Residue import Residue
 from Bio.PDB.vectors import Vector as Vector, calc_dihedral
-
+import random
 from carbonmatrix.common import residue_constants
 
 def extract_chain_subset(orig_chain, res_ids):
@@ -102,36 +102,84 @@ def make_feature_from_pdb(pdb_file):
 
     return feat
 
-def make_feature_from_npz(npz_file, is_ab_feature=False, shuffle_multimer_seq=False):
+def make_feature_from_npz(npz_file, is_ig_feature=False, shuffle_multimer_seq=False):
     x = np.load(npz_file)
 
-    if not is_ab_feature:
+    if not is_ig_feature:
         str_seq = str(x['seq']) if 'seq' in x else str(x['str_seq'])
 
         coords = x['coords']
         coord_mask = x['coord_mask']
     else:
-        assert ('heavy_str_seq' in x)
-        str_seq = [str(x['heavy_str_seq'])]
-        coords = x['heavy_coords']
-        coord_mask = x['heavy_coord_mask']
+        if 'heavy_str_seq' in x:
+            str_seq = [str(x['heavy_str_seq'])]
+            coords = x['heavy_coords']
+            coord_mask = x['heavy_coord_mask']
 
-        if 'light_str_seq' in x:
-            coords = [coords,  x['light_coords']]
-            coord_mask = [coord_mask,  x['light_coord_mask']]
-            str_seq.append(str(x['light_str_seq']))
+            if 'light_str_seq' in x:
+                coords = [coords,  x['light_coords']]
+                coord_mask = [coord_mask,  x['light_coord_mask']]
+                str_seq.append(str(x['light_str_seq']))
 
-            if shuffle_multimer_seq and np.random.rand() > 0.5:
-                coords = coords[::-1]
-                coord_mask = coord_mask[::-1]
-                str_seq = str_seq[::-1]
+                if shuffle_multimer_seq and np.random.rand() > 0.5:
+                    coords = coords[::-1]
+                    coord_mask = coord_mask[::-1]
+                    str_seq = str_seq[::-1]
 
+                coords = np.concatenate(coords, axis=0)
+                coord_mask = np.concatenate(coord_mask, axis=0)
+
+            str_seq = ':'.join(str_seq)
+        elif 'beta_str_seq' in x:
+            str_seq = [str(x['beta_str_seq'])]
+            coords = [x['beta_coords']]
+            coord_mask = [x['beta_coord_mask']]
+            chain_id = [x['beta_chain_id']]
+            if 'alpha_str_seq' in x:
+                alpha_str_seq = str(x['alpha_str_seq'])
+                alpha_coords = x['alpha_coords']
+                alpha_coord_mask = x['alpha_coord_mask']
+                alpha_chain_id = x['alpha_chain_id']
+                str_seq = str_seq.append(alpha_str_seq)
+                coords = coords.append(alpha_coords)
+                coord_mask = coord_mask.append(alpha_coord_mask)
+                chain_id = chain_id.append(alpha_chain_id)
+            if 'antigen_str_seq' in x:
+                antigen_str_seq = str(x['antigen_str_seq'])
+                antigen_coords = x['antigen_coords']
+                antigen_coord_mask = x['antigen_coord_mask']
+                antigen_chain_id = x['antigen_chain_id']
+                str_seq = str_seq.append(antigen_str_seq)
+                coords = coords.append(antigen_coords)
+                coord_mask = coord_mask.append(antigen_coord_mask)
+                chain_id = chain_id.append(antigen_chain_id)
+            if 'mhc_str_seq' in x:
+                mhc_str_seq = str(x['mhc_str_seq'])
+                mhc_coords = x['mhc_coords']
+                mhc_coord_mask = x['mhc_coord_mask']
+                mhc_chain_id = x['mhc_chain_id']
+                str_seq = str_seq.append(mhc_str_seq)
+                coords = coords.append(mhc_coords)
+                coord_mask = coord_mask.append(mhc_coord_mask)
+                chain_id = chain_id.append(mhc_chain_id)
+            if shuffle_multimer_seq:
+                chain = np.arange(len(str_seq))
+                rand = random.randint(1, len(str_seq))
+                chain = random.shuffle(chain)
+                chain = chain[:rand]
+                str_seq = [str_seq[i] for i in chain]
+                coords = [coords[i] for i in chain]
+                coord_mask = [coord_mask[i] for i in chain]
+                chain_id = [chain_id[i] for i in chain]
+            str_seq = ':'.join(str_seq)
             coords = np.concatenate(coords, axis=0)
             coord_mask = np.concatenate(coord_mask, axis=0)
+            chain_id = np.concatenate(chain_id, axis=0)
 
-        str_seq = ':'.join(str_seq)
+                
 
     return dict(
             str_seq = str_seq,
-            coords = coords,
-            coord_mask = coord_mask)
+            coords  = coords,
+            coord_mask = coord_mask,
+            chain_id = chain_id)

@@ -99,12 +99,12 @@ def collate_fn_seq(batch):
     name = _gather('name')
     str_seq = _gather('str_seq')
     multimer_str_seq = _gather('multimer_str_seq')
-
+    
     meta = {} if 'meta' not in batch[0].keys() else _gather('meta')
 
     max_len = max(tuple(len(s) for s in str_seq))
         
-    return dict(
+    feature = dict(
             name=name,
             str_seq = str_seq,
             multimer_str_seq = multimer_str_seq,
@@ -113,3 +113,8 @@ def collate_fn_seq(batch):
             batch_len = max_len, 
             meta=meta,
             )
+    if 'chain_id' in batch[0].keys():
+        feature.update(
+            {'chain_id': pad_for_batch(_gather('chain_id'), max_len, 0)}
+        )
+    return feature

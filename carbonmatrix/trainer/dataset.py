@@ -46,7 +46,7 @@ class AbStructureDatasetNpzIO(StructureDataset):
         c = self.name_idx[idx]
         name = c.get_next()
         file_path = os.path.join(self.data_dir, name + '.npz')
-        struc = make_feature_from_npz(file_path, is_ab_feature=True, shuffle_multimer_seq=self.shuffle_multimer_seq)
+        struc = make_feature_from_npz(file_path, is_ig_feature=True, shuffle_multimer_seq=self.shuffle_multimer_seq)
         struc.update(name = name)
 
         return struc

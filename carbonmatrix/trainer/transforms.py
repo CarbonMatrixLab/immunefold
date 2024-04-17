@@ -1,7 +1,7 @@
 import torch
 from torch.nn import functional as F
 from einops import rearrange
-
+import random
 from carbonmatrix.common import residue_constants
 from carbonmatrix.data.transform_factory import registry_transform
 from carbonmatrix.model.r3 import rigids_from_3_points
@@ -69,6 +69,25 @@ def make_torsion_angles(batch, is_training=True):
             geometry.atom37_to_torsion_angles(batch['seq'], batch['atom37_gt_positions'], batch['atom37_gt_exists']))
 
     return batch
+
+@registry_transform
+def make_gt_structure(batch, is_training=True):
+    assert 'chain_id' in batch
+    if is_training:
+        chain_id_unique = torch.unique(batch['chain_id'], dtype=torch.int64).cpu().numpy()
+        random.shuffle(chain_id_unique)
+        chain_id_unique = chain_id_unique[chain_id_unique>2]
+        num_to_gt = random.randint(0, len(chain_id_unique))
+        gt_chain_id = chain_id_unique[:num_to_gt]
+        gt_mask = torch.isin(batch['chain_id'], gt_chain_id)
+        
+    else:
+        gt_mask = torch.ones_like(batch['chain_id'], dtype=torch.bool)
+    batch.update(
+        {"gt_mask": gt_mask,}
+    )
+    return batch
+
 
 def make_atom37_positions(batch):
     device = batch['seq'].device

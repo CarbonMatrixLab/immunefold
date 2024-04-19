@@ -123,7 +123,8 @@ def predicted_lddt_loss(batch, value, config):
     errors = F.cross_entropy(rearrange(logits, 'b l c -> b c l'), bin_index, reduction='none')
 
     mask_ca = all_atom_mask[:,:,1]
-
+    if 'gt_mask' in batch.keys():
+        mask_ca = torch.logical_and(mask_ca, ~batch['gt_mask'])
     loss = torch.sum(errors * mask_ca) / (1e-8 + torch.sum(mask_ca))
 
     lddt_ca = torch.sum(lddt_ca * mask_ca) / (1e-8 + torch.sum(mask_ca))
@@ -144,7 +145,9 @@ def predicted_tmscore_loss(batch, value, config):
 
     # (b, n, n)
     square_mask = rearrange(mask, 'b n -> b n ()') * rearrange(mask, 'b n -> b () n')
-
+    if 'gt_mask' in batch.keys():
+        pair_gt_mask = rearrange(~batch['gt_mask'], 'b n -> b n ()') * rearrange(~batch['gt_mask'], 'b n -> b () n')
+        square_mask = torch.logical_and(pair_gt_mask, square_mask)
     num_bins = c.num_bins
     # (b, 1, num_bins - 1)
     breaks = value['heads']['predicted_aligned_error']['breaks']
@@ -206,6 +209,8 @@ def compute_chi_loss(batch, value, config):
     sq_chi_error = torch.min(sq_chi_error, sq_chi_error_shifted)
 
     chi_mask = batch['torsion_angles_mask'][..., None, 3:]
+    if 'gt_mask' in batch.keys():
+        chi_mask = torch.logical_and(chi_mask, ~batch['gt_mask'][...,None,None])
     sq_chi_loss = torch.sum(chi_mask * sq_chi_error) / (torch.sum(chi_mask) * num_chi_iter + eps)
 
     unnormed_angles = torch.stack([v['unnormalized_angles_sin_cos'] for v in value['sidechains']], dim=-3)[...,3:,:]
@@ -213,6 +218,8 @@ def compute_chi_loss(batch, value, config):
     angle_norm = torch.sqrt(torch.sum(torch.square(unnormed_angles), dim=-1) + eps)
     norm_error = torch.abs(angle_norm - 1.)
     angle_norm_mask = batch['mask'][...,None] * batched_select(torch.tensor(residue_constants.chi_angles_mask, device=device), batch['seq'])
+    if 'gt_mask' in batch.keys():
+        angle_norm_mask = torch.logical_and(angle_norm_mask, ~batch['gt_mask'][...,None])
     angle_norm_mask = angle_norm_mask[...,None,:]
     angle_norm_loss = torch.sum(angle_norm_mask * norm_error) / (torch.sum(angle_norm_mask) * num_chi_iter  + eps)
 
@@ -241,14 +248,16 @@ def compute_sidechain_loss(batch, value, config):
 
     pred_frames = value['sidechains'][-1]['frames']
     pred_positions = value['sidechains'][-1]['atom_pos']
-
+    if 'gt_mask' in batch.keys():
+        frames_mask = torch.logical_and(batch['rigidgroups_gt_exists'], ~batch['gt_mask'][...,None])
+        positions_mask = torch.logical_and(value['renamed_atom14_gt_exists'], ~batch['gt_mask'][...,None])
     fape = frame_aligned_point_error(
         pred_frames=pred_frames,
         target_frames=renamed_gt_frames,
-        frames_mask=batch['rigidgroups_gt_exists'],
+        frames_mask=frames_mask,
         pred_positions=pred_positions,
         target_positions=value['renamed_atom14_gt_positions'],
-        positions_mask=value['renamed_atom14_gt_exists'],
+        positions_mask=positions_mask,
         clamp_distance=config.fape.clamp_distance,
         length_scale=config.fape.loss_unit_distance,
         unclamped_ratio=config.fape.unclamped_ratio)
@@ -262,7 +271,7 @@ def compute_backbone_loss(batch, value, config):
     target_positions, positions_mask = batch['atom14_gt_positions'], batch['atom14_gt_exists']
     target_frames, frames_mask = batch['rigidgroups_gt_frames'], batch['rigidgroups_gt_exists']
 
-    def _yield_backbone_loss(traj, clamp_distance, loss_unit_distance,):
+    def _yield_backbone_loss(traj, clamp_distance, loss_unit_distance, pair_mask =None):
         target_backbone_frames = tuple(map(lambda x : x[:, :, 0], target_frames))
         for pred_frames in traj:
             rots, trans = pred_frames
@@ -271,6 +280,7 @@ def compute_backbone_loss(batch, value, config):
                     target_frames=target_backbone_frames,
                     frames_mask=frames_mask[:,:,0],
                     pred_positions=trans,
+                    pair_mask = pair_mask,
                     target_positions=target_positions[:,:,1],
                     positions_mask=positions_mask[:,:,1],
                     clamp_distance=clamp_distance,
@@ -279,10 +289,25 @@ def compute_backbone_loss(batch, value, config):
             yield r
 
     traj = value['traj']
-
-    fape = sum(_yield_backbone_loss(
-        traj,  clamp_distance=c.fape.clamp_distance,
-        loss_unit_distance=c.fape.loss_unit_distance,)) / len(traj)
+    if 'chain_id' not in batch.keys():
+        fape = sum(_yield_backbone_loss(
+            traj,  clamp_distance=c.fape.clamp_distance,
+            loss_unit_distance=c.fape.loss_unit_distance,)) / len(traj)
+    else:
+        chain_id = batch['chain_id']
+        intra_chain_mask = (chain_id[..., None] == chain_id[..., None, :])
+        pair_gt_mask = torch.logical_and(batch['gt_mask'][...,None], batch['gt_mask'][...,None,:])
+        intra_chain_mask = torch.logical_and(~pair_gt_mask, intra_chain_mask)
+        inter_chain_mask = torch.logical_and(~pair_gt_mask, ~intra_chain_mask)
+        # import pdb
+        # pdb.set_trace()
+        intra_fape = sum(_yield_backbone_loss(
+            traj,  clamp_distance=c.fape.clamp_distance,
+            loss_unit_distance=c.fape.loss_unit_distance, pair_mask = intra_chain_mask)) / len(traj)
+        inter_fape = sum(_yield_backbone_loss(
+            traj,  clamp_distance=c.fape.interface_clamp_distance,
+            loss_unit_distance=c.fape.interface_loss_unit_distance, pair_mask = inter_chain_mask)) / len(traj)
+        fape = intra_fape + c.fape.inter_factor * inter_fape
 
     return fape
 

@@ -1,10 +1,10 @@
 defaults:
-  - loss: abfold
+  - loss: tcrfold
   - model: esmfold
-  - transforms: abfold
+  - transforms: tcrfold
 
 # device
-gpu_list: [0]
+gpu_list: [2]
 
 # lora
 lora:
@@ -27,16 +27,16 @@ learning_rate: 0.0001
 min_lr: 5e-5
 
 # model
-restore_model_ckpt: ~/data/esm_ckpt/carbonfold2_base_from_esmfold.ckpt
-restore_esm2_model: ~/data/esm_ckpt/esm2_t36_3B_UR50D.pt
+restore_model_ckpt: /home/zhutian/data/esm2/carbonfold2_base_from_esmfold.ckpt
+restore_esm2_model: /home/zhutian/data/esm2/esm2_t36_3B_UR50D.pt
 
 is_ig_feature: True
-shuffle_multimer_seq: True
+shuffle_multimer_seq: False
 
 # dataset
-batch_size: 2
+batch_size: 1
 gradient_accumulation_it: 1
-max_seq_len: 288
+max_seq_len: 32
 train_name_idx: /home/zhutian/data/tcr_data/idx/train.idx
 train_data: /home/zhutian/data/tcr_data/npz/
 # train_name_idx: ../data_2023/pdb50_v2/clean_bc40_cluster.idx

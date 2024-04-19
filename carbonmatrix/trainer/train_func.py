@@ -5,7 +5,7 @@ import logging
 import random
 from collections import OrderedDict
 import time
-
+import pdb
 import numpy as np
 import pandas as pd
 from contextlib import nullcontext
@@ -52,8 +52,7 @@ def setup_dataset(cfg):
     reduced_num = len(name_idx) - len(name_idx) % real_batch_size
 
     name_idx = name_idx[:reduced_num]
-
-    if not cfg.get('is_ab_feature', False):
+    if not cfg.get('is_ig_feature', False):
         dataset = StructureDatasetNpzIO(cfg.train_data, cfg.train_name_idx, cfg.max_seq_len)
     else:
         dataset = AbStructureDatasetNpzIO(

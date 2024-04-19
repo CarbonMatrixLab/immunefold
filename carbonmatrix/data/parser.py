@@ -8,6 +8,7 @@ from Bio.PDB.Residue import Residue
 from Bio.PDB.vectors import Vector as Vector, calc_dihedral
 import random
 from carbonmatrix.common import residue_constants
+import pdb
 
 def extract_chain_subset(orig_chain, res_ids):
     chain = PDBChain(orig_chain.id)
@@ -112,6 +113,7 @@ def make_feature_from_npz(npz_file, is_ig_feature=False, shuffle_multimer_seq=Fa
         coord_mask = x['coord_mask']
     else:
         if 'heavy_str_seq' in x:
+            print(f"heavy_str_seq: {x['heavy_str_seq']}")
             str_seq = [str(x['heavy_str_seq'])]
             coords = x['heavy_coords']
             coord_mask = x['heavy_coord_mask']
@@ -140,43 +142,47 @@ def make_feature_from_npz(npz_file, is_ig_feature=False, shuffle_multimer_seq=Fa
                 alpha_coords = x['alpha_coords']
                 alpha_coord_mask = x['alpha_coord_mask']
                 alpha_chain_id = x['alpha_chain_id']
-                str_seq = str_seq.append(alpha_str_seq)
-                coords = coords.append(alpha_coords)
-                coord_mask = coord_mask.append(alpha_coord_mask)
-                chain_id = chain_id.append(alpha_chain_id)
+                str_seq.append(alpha_str_seq)
+                coords.append(alpha_coords)
+                coord_mask.append(alpha_coord_mask)
+                chain_id.append(alpha_chain_id)
             if 'antigen_str_seq' in x:
                 antigen_str_seq = str(x['antigen_str_seq'])
                 antigen_coords = x['antigen_coords']
                 antigen_coord_mask = x['antigen_coord_mask']
                 antigen_chain_id = x['antigen_chain_id']
-                str_seq = str_seq.append(antigen_str_seq)
-                coords = coords.append(antigen_coords)
-                coord_mask = coord_mask.append(antigen_coord_mask)
-                chain_id = chain_id.append(antigen_chain_id)
+                str_seq.append(antigen_str_seq)
+                coords.append(antigen_coords)
+                coord_mask.append(antigen_coord_mask)
+                chain_id.append(antigen_chain_id)
             if 'mhc_str_seq' in x:
                 mhc_str_seq = str(x['mhc_str_seq'])
                 mhc_coords = x['mhc_coords']
                 mhc_coord_mask = x['mhc_coord_mask']
                 mhc_chain_id = x['mhc_chain_id']
-                str_seq = str_seq.append(mhc_str_seq)
-                coords = coords.append(mhc_coords)
-                coord_mask = coord_mask.append(mhc_coord_mask)
-                chain_id = chain_id.append(mhc_chain_id)
+                str_seq.append(mhc_str_seq)
+                coords.append(mhc_coords)
+                coord_mask.append(mhc_coord_mask)
+                chain_id.append(mhc_chain_id)
+
             if shuffle_multimer_seq:
                 chain = np.arange(len(str_seq))
                 rand = random.randint(1, len(str_seq))
-                chain = random.shuffle(chain)
-                chain = chain[:rand]
+                random.shuffle(chain)
+                chain = chain[:rand].tolist()
+                chain.append(0)
+                chain = set(chain)
                 str_seq = [str_seq[i] for i in chain]
                 coords = [coords[i] for i in chain]
                 coord_mask = [coord_mask[i] for i in chain]
                 chain_id = [chain_id[i] for i in chain]
+            # pdb.set_trace()
             str_seq = ':'.join(str_seq)
             coords = np.concatenate(coords, axis=0)
             coord_mask = np.concatenate(coord_mask, axis=0)
             chain_id = np.concatenate(chain_id, axis=0)
 
-                
+         
 
     return dict(
             str_seq = str_seq,

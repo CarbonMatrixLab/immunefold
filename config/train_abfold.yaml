@@ -30,7 +30,7 @@ min_lr: 5e-5
 restore_model_ckpt: ../abdata_2023/esm2/carbonfold2_base_from_esmfold.ckpt
 restore_esm2_model: ../abdata_2023/trained_models/train_ablm_v2_bs256/step_20000_lora_merged.ckpt
 
-is_ab_feature: True
+is_ig_feature: True
 shuffle_multimer_seq: True
 
 # dataset

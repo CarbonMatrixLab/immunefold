@@ -54,7 +54,7 @@ class StructureModule(nn.Module):
         b, n, device = *batch['seq'].shape[:2], batch['seq'].device
 
         seq_act, static_pair_act = representations['seq'], representations['pair']
-
+        
         seq_act = self.proj_init_seq_act(seq_act)
         static_pair_act = self.proj_init_pair_act(static_pair_act)
         seq_act = self.init_seq_layer_norm(seq_act)
@@ -116,8 +116,13 @@ class StructureModule(nn.Module):
         outputs['representations'] = {'structure_module': seq_act}
 
         outputs['final_atom14_positions'] = outputs['sidechains'][-1]['atom_pos']
-
         outputs['final_atom_positions'] = batched_select(outputs['final_atom14_positions'], batch['residx_atom37_to_atom14'], batch_dims=2)
+        
+        if 'gt_mask' in batch.keys() and torch.sum(batch['gt_mask']) > 0:
+            gt_mask = batch['gt_mask']
+            outputs['finale_atom14_positions'] = ~gt_mask[...,None,None] * outputs['final_atom14_positions'] + gt_mask[...,None,None] * batch['atom14_gt_positions']
+            outputs['final_atom_positions'] = ~gt_mask[...,None,None] * outputs['final_atom_positions'] + gt_mask[...,None,None] * batch['atom37_gt_positions']
+        
         outputs['final_affines'] = outputs['traj'][-1]
 
         if requires_score:

@@ -74,11 +74,11 @@ def make_torsion_angles(batch, is_training=True):
 def make_gt_structure(batch, is_training=True):
     assert 'chain_id' in batch
     if is_training:
-        chain_id_unique = torch.unique(batch['chain_id'], dtype=torch.int64).cpu().numpy()
+        chain_id_unique = torch.unique(batch['chain_id']).cpu().numpy()
         random.shuffle(chain_id_unique)
         chain_id_unique = chain_id_unique[chain_id_unique>2]
         num_to_gt = random.randint(0, len(chain_id_unique))
-        gt_chain_id = chain_id_unique[:num_to_gt]
+        gt_chain_id = torch.tensor(chain_id_unique[:num_to_gt]).to(batch['chain_id'].device)
         gt_mask = torch.isin(batch['chain_id'], gt_chain_id)
         
     else:
@@ -86,6 +86,8 @@ def make_gt_structure(batch, is_training=True):
     batch.update(
         {"gt_mask": gt_mask,}
     )
+    import pdb
+    # pdb.set_trace()
     return batch
 
 

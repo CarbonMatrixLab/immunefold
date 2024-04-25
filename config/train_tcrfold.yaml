@@ -36,7 +36,7 @@ shuffle_multimer_seq: False
 # dataset
 batch_size: 1
 gradient_accumulation_it: 1
-max_seq_len: 32
+max_seq_len: 96
 train_name_idx: /home/zhutian/data/tcr_data/idx/train.idx
 train_data: /home/zhutian/data/tcr_data/npz/
 # train_name_idx: ../data_2023/pdb50_v2/clean_bc40_cluster.idx

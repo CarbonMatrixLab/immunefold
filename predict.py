@@ -75,9 +75,11 @@ def save_batch_pdb(values, batch, pdb_dir, data_type='general', step=None):
             pdb_file = os.path.join(pdb_dir, f'{names[i]}.pdb')
         else:
             pdb_file = os.path.join(pdb_dir, f'{names[i]}.step{step}.pdb')
-        multimer_str_seq = multimer_str_seqs[i]
+        chain_ids = names[i].split('_')[1:]
+        chain_ids = list(filter(None, chain_ids))
+        multimer_str_seq = multimer_str_seqs[i] if data_type == 'ig' else None
         str_seq = str_seqs[i]
-        chain_ids = ['H', 'L'] if data_type == 'ig' else None
+        # chain_ids = ['H', 'L'] if data_type == 'ig' else None
         single_plddt = None if plddt is None else plddt[i]
         save_pdb(multimer_str_seq, pred_atom14_coords[i, :len(str_seq)], pdb_file, chain_ids, single_plddt)
 
@@ -93,10 +95,13 @@ def _compute_plddt(values, mask):
 
     return plddt, full_plddt
 
-def _compute_ptm(values, mask):
+def _compute_ptm(values, mask, chain_id=None, interface=True):
     logits = values['heads']['predicted_aligned_error']['logits']
     breaks = values['heads']['predicted_aligned_error']['breaks']
     ptm = compute_ptm(logits, breaks, mask)
+    if interface and chain_id is not None:
+        iptm = compute_ptm(logits, breaks, mask, chain_id, interface)
+        ptm = 0.8 * iptm + 0.2 * ptm
 
     str_ptm = ','.join([str(x.item()) for x in ptm.to('cpu')])
     logging.info(f'ptm= {str_ptm}')
@@ -268,11 +273,11 @@ def abfold(model, batch, cfg):
         return new_batch
 
     def _rank_by_confidence(heavy_first_ret, light_first_ret, heavy_first_batch, light_first_batch, condence_type='ptm'):
-        ptm1 = _compute_ptm(heavy_first_ret, batch['mask'])
+        ptm1 = _compute_ptm(heavy_first_ret, batch['mask'], chain_id=batch['chain_id'], interface=True)
         plddt1, full_plddt1 = _compute_plddt(heavy_first_ret, batch['mask'])
         heavy_first_ret.update(ptm=ptm1, plddt=plddt1)
 
-        ptm2 = _compute_ptm(light_first_ret, batch['mask'])
+        ptm2 = _compute_ptm(light_first_ret, batch['mask'], chain_id=batch['chain_id'], interface=True)
         plddt2, full_plddt2 = _compute_plddt(light_first_ret, batch['mask'])
         light_first_ret.update(ptm=ptm2, plddt=plddt2)
 
@@ -336,6 +341,66 @@ def abfold(model, batch, cfg):
     save_batch_pdb(final_ret, final_batch, cfg.output_dir, data_type)
     #save_batch_pdb(heavy_first_ret, batch, cfg.output_dir, data_type)
 
+def tcrfold(model, batch, cfg):
+    data_type = cfg.get('data_type', 'ig')
+    assert (data_type == 'ig')
+
+    def _rank_by_confidence(ret, batch, condence_type='ptm'):
+        ptm1 = _compute_ptm(ret, batch['mask'], chain_id=batch['chain_id'], interface=True)
+        plddt1, full_plddt1 = _compute_plddt(ret, batch['mask'])
+        ret.update(ptm=ptm1, plddt=plddt1)
+
+        final_str_seq, final_multimer_str_seq = [], []
+        final_pred_atom14_coords, final_plddt = [], []
+
+        batch_size = len(batch['name'])
+        for i in range(batch_size):
+            name = batch['name'][i]
+
+            #heavy_first_is_btter = (ptm1[i].item() > ptm2[i].item())
+            #print(name, 'ptm', ptm1[i], ptm2[i])
+
+            print(name, 'plddt', full_plddt1[i])
+
+            final_str_seq.append(batch['str_seq'][i])
+            final_multimer_str_seq.append(batch['multimer_str_seq'][i])
+
+            final_pred_atom14_coords.append(ret['heads']['structure_module']['final_atom14_positions'][i])
+            final_plddt.append(plddt1[i])
+
+        final_pred_atom14_coords = torch.stack(final_pred_atom14_coords, dim=0)
+        final_plddt = torch.stack(final_plddt, dim=0)
+
+        final_batch = dict(
+            name=batch['name'],
+            batch_len=batch['batch_len'],
+            str_seq=final_str_seq,
+            multimer_str_seq=final_multimer_str_seq,
+            )
+        final_ret = dict(
+            heads=dict(
+                structure_module=dict(
+                    final_atom14_positions=final_pred_atom14_coords,
+                )
+            ),
+            plddt=final_plddt,
+        )
+
+        return final_ret, final_batch
+
+    with torch.no_grad():
+        ret = model(batch, compute_loss=True)
+
+        # new_batch = _light_first(batch)
+
+        # light_first_ret = model(new_batch, compute_loss=True)
+
+    final_ret, final_batch = _rank_by_confidence(ret, batch)
+    save_batch_pdb(final_ret, final_batch, cfg.output_dir, data_type)
+    #save_batch_pdb(heavy_first_ret, batch, cfg.output_dir, data_type)
+
+
+
 def abdesign(model, batch, cfg):
     raise NotImplementedError('abdesign mode not implemented yet!')
 
@@ -354,6 +419,8 @@ def predict_batch(model, batch, cfg):
         abdesign(model, batch, cfg)
     elif mode == 'carbonnovo':
         carbonnovo(model, batch, cfg)
+    elif mode == 'tcrfold':
+        tcrfold(model, batch, cfg)
     else:
         raise NotImplementedError(f'mode {args.mode} not implemented yet!')
 

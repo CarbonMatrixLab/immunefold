@@ -11,7 +11,7 @@ def compute_plddt(logits):
 
     return predicted_lddt_ca * 100
 
-def compute_ptm(logits, breaks, mask):
+def compute_ptm(logits, breaks, mask, chain_id=None, interface=True):
     bin_centers = _calculate_bin_centers(breaks) # (bins,)
 
     num_res = torch.sum(mask, dim=-1, keepdims=True) #(bs, 1)
@@ -26,7 +26,8 @@ def compute_ptm(logits, breaks, mask):
     predicted_tm_term = torch.sum(probs * tm_per_bin, dim=-1) # (bs, n, n)
 
     pair_mask = rearrange(mask, 'b n -> b n ()' ) * rearrange(mask, 'b n -> b () n')
-
+    if interface and (chain_id is not None):
+        pair_mask *= (chain_id[..., None] != chain_id[..., None, :])
     # (bs, n,) / (bs, 1, ) = (bs, n)
     per_alignment = torch.sum(predicted_tm_term * pair_mask, dim=-1) / (1e-8 + num_res)
 

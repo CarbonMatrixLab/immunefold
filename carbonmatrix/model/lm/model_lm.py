@@ -3,7 +3,7 @@ import functools
 
 from torch import nn
 from torch.utils.checkpoint import checkpoint
-
+import torch
 import esm
 from esm.model import esm2 as E
 from carbonmatrix.model.lm.transformer import TransformerLayer

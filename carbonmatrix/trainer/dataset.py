@@ -31,12 +31,11 @@ class StructureDatasetNpzIO(StructureDataset):
         return struc
 
 class AbStructureDatasetNpzIO(StructureDataset):
-    def __init__(self, data_dir, name_idx_file, max_seq_len, shuffle_multimer_seq=False):
+    def __init__(self, data_dir, name_idx_file, max_seq_len, ig_type='ab', shuffle_multimer_seq=False):
         super().__init__(max_seq_len=max_seq_len)
 
         self.data_dir = data_dir
         self.name_idx = parse_cluster(name_idx_file)
-
         self.shuffle_multimer_seq = shuffle_multimer_seq
 
     def __len__(self,):

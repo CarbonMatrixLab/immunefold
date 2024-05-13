@@ -103,7 +103,7 @@ class CarbonFold(nn.Module):
             prev_pos = dgram_from_positions(trans_t, **self.config.embeddings_and_seqformer.prev_pos)
         else:
             prev_pos = torch.zeros([batch_size, num_residues, num_residues], device=device, dtype=torch.int64)
-            if torch.sum(batch['gt_mask']) > 0:
+            if 'gt_mask' in batch.keys() and torch.sum(batch['gt_mask']) > 0:
                 gt_mask = batch['gt_mask']
                 fake_atom37 = torch.zeros_like(batch['atom37_gt_positions'], device=device)
                 fake_atom37 = ~gt_mask[...,None,None] * fake_atom37 + gt_mask[...,None,None] * batch['atom37_gt_positions']

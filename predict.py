@@ -468,7 +468,7 @@ def predict(cfg):
         predict_batch(model, batch, cfg)
 
 
-@hydra.main(version_base=None, config_path="config", config_name="inference")
+@hydra.main(version_base=None, config_path="config", config_name="inference_tcr")
 def main(cfg : DictConfig):
     setup(cfg)
 

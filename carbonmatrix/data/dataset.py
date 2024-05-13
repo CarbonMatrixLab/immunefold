@@ -21,7 +21,7 @@ class SeqDatasetFastaIO(SeqDataset):
                     seq = line.strip()
             if name is not None:
                 data.append((name, seq))
-
+        
         self.data = data
 
     def __len__(self,):

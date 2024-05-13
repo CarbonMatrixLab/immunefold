@@ -109,7 +109,10 @@ def save_pdb(multimer_str_seq, coord, pdb_path, chain_ids = None, plddt=None):
     if chain_ids is None:
         chain_ids = [chr(ord('A') + i) for i in range(len(multimer_str_seq))]
 
-    assert(len(multimer_str_seq) == len(chain_ids))
+    if len(multimer_str_seq) == len(chain_ids):
+        pass
+    else:
+        chain_ids = chain_ids[:2]
 
     start_pos = 0
     for str_seq, chain_id in zip(multimer_str_seq, chain_ids):

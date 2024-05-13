@@ -35,10 +35,10 @@ def set_lora_config(cfg, lora_r_seq, lora_r_pair, lora_scaling):
 
     # heads
     # the head of predicted LDDT is ignored
-    heads = cfg.heads
-    _set_lora_pair(heads.distogram)
-    _set_lora_pair(heads.structure_module)
-    _set_lora_pair(heads.structure_module.torsion)
+    # heads = cfg.heads
+    # _set_lora_pair(heads.distogram)
+    # _set_lora_pair(heads.structure_module)
+    # _set_lora_pair(heads.structure_module.torsion)
 
 def setup_model(model, config):
     if config.get('lora', False):
@@ -78,7 +78,7 @@ def setup_model_lora(model, config):
                     bias_p.requires_grad = True
                     trainable_variables.append(bias_p)
 
-        if 'predicted_lddt' in n or 'proj_prev_pos' in n or 'timestep_embedder' in n:
+        if 'predicted_lddt' in n or 'proj_prev_pos' in n or 'timestep_embedder' in n or 'predicted_aligned_error' in n:
             p.requires_grad = True
             trainable_variables.append(p)
 

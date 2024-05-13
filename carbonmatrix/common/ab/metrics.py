@@ -121,12 +121,23 @@ def get_antibody_regions_seq(imgt_numbering, chain_id):
 
     return region_def
 
-def calc_ab_metrics(gt_coord, pred_coord, coord_mask, cdr_def, remove_middle_residues=False):
+def calc_ab_metrics(gt_coord, pred_coord, gt_ab_coords, pred_ab_coords, coord_mask, ab_coord_mask, cdr_def, remove_middle_residues=False):
     mask = coord_mask
-    gt_coord, pred_coord = gt_coord[mask,:], pred_coord[mask, :]
+    # import pdb
+    # pdb.set_trace()
+    ab_mask = ab_coord_mask
+    # try:
+    gt_ab_coords, pred_ab_coords = gt_ab_coords[ab_mask,:], pred_ab_coords[ab_mask, :]
+    # gt_coord, pred_coord = gt_coord[mask,:], pred_coord[mask, :]
+    # except:
+        # import pdb
+        # pdb.set_trace()
+    # gt_aligned, pred_aligned = Kabsch(
+    #         np.transpose(gt_coord,[1,0]),
+    #         np.transpose(pred_coord, [1, 0]))
     gt_aligned, pred_aligned = Kabsch(
-            np.transpose(gt_coord,[1,0]),
-            np.transpose(pred_coord, [1, 0]))
+            np.transpose(gt_ab_coords,[1,0]),
+            np.transpose(pred_ab_coords, [1, 0]))
 
     def _calc_rmsd(A, B):
         return np.sqrt(np.mean(np.sum(np.square(A-B), axis=0)))
@@ -143,9 +154,9 @@ def calc_ab_metrics(gt_coord, pred_coord, coord_mask, cdr_def, remove_middle_res
 
     def _evaluate_region(indices, v):
         seq_len = np.sum(indices)
-        struc_len = np.sum(indices[mask])
+        struc_len = np.sum(indices[ab_mask])
         coverage = struc_len / seq_len
-        indices = indices[mask]
+        indices = indices[ab_mask]
         gt, pred = gt_aligned[:, indices], pred_aligned[:, indices]
         rmsd = _calc_rmsd(gt, pred)
         ret.update({v + '_len' : seq_len})

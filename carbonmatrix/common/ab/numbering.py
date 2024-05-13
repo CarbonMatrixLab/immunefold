@@ -88,6 +88,54 @@ def get_ab_regions(domain_numbering, chain_id):
 
     return region_def
 
+
+def get_tcr_regions(domain_numbering, chain_id):
+    cdr_def_imgt = {
+            'B': {
+                'fr1' : (1,  26),
+                'cdr1': (27, 38),
+                'fr2' : (39, 55),
+                'cdr2': (56, 65),
+                'fr3' : (66, 104),
+                'cdr3': (105,117),
+                'fr4' : (118,128),
+            }, 
+            'A': {
+                'fr1' : (1,  26),
+                'cdr1': (27, 38),
+                'fr2' : (39, 55),
+                'cdr2': (56, 65),
+                'fr3' : (66, 104),
+                'cdr3': (105,117),
+                'fr4' : (118,128),
+            }, 
+    }
+
+    cdr_def = cdr_def_imgt
+
+    range_dict = cdr_def[chain_id]
+
+    _schema = {'fr1':0,'cdr1':1,'fr2':2,'cdr2':3,'fr3':4,'cdr3':5,'fr4':6}
+
+    def _get_region(i):
+        r = None
+        for k, v in range_dict.items():
+            if i >= v[0] and i <= v[1]:
+                r = k
+                break
+        if r is None:
+            return -1
+        return 7 * int(chain_id == 'A') + _schema[r]
+
+    N = len(domain_numbering)
+    region_def = np.full((N,),-1)
+    
+    for i, (resseq, icode) in enumerate(domain_numbering):
+        region_def[i] = _get_region(resseq)
+
+    return region_def
+
+
 def renumber_ab_seq(str_seq, allow, scheme='imgt'):
     results = anarci([('A',str_seq)], scheme=scheme, allow=allow,)
 

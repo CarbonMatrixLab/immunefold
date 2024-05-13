@@ -21,7 +21,10 @@ folding:
         weight: 1.0
       loss_unit_distance: 10.0
       unclamped_ratio: 0.1
-      weight: 1.0
+      weight: 0.5
+      interface_clamp_distance: 30.0
+      interface_loss_unit_distance: 20.0
+      inter_factor: 1
     sidechain_fape_weight: 0.5
     structural_violation_loss_weight: 0.0
     violation_tolerance_factor: 12

@@ -55,10 +55,12 @@ def setup_dataset(cfg):
     if not cfg.get('is_ig_feature', False):
         dataset = StructureDatasetNpzIO(cfg.train_data, cfg.train_name_idx, cfg.max_seq_len)
     else:
+        
         dataset = AbStructureDatasetNpzIO(
                 cfg.train_data,
                 cfg.train_name_idx,
                 cfg.max_seq_len,
+                ig_type=cfg.get('ig_type', 'ab'),
                 shuffle_multimer_seq=cfg.get('shuffle_multimer_seq', False))
 
     sampler = DistributedSampler(dataset, shuffle=True, drop_last=True)
@@ -113,7 +115,7 @@ def train(cfg):
             if p.requires_grad:
                 logging.info(f'trainable variable {n}')
     else:
-        model = CarbonFold(config = config.model)
+        model = CarbonFold(config = cfg.model)
         trainable_variables = model.parameters()
 
     logging.info('CarbonFold.config: %s', cfg)

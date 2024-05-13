@@ -4,3 +4,4 @@ make_atom14_alt_gt_positions: {}
 make_gt_frames: {}
 make_torsion_angles: {}
 make_pseudo_beta: {}
+make_gt_structure: {}

@@ -68,7 +68,12 @@ class SeqDataset(torch.utils.data.Dataset):
 
     def _create_seq_data(self, name, str_seq):
         multimer_str_seq = str_seq.split(':')
-
+        chain_num = len(multimer_str_seq)
+        chain_ids = []
+        for i in range(chain_num):
+            chain_id = np.ones((len(multimer_str_seq[i]),), dtype=np.int32) * i
+            chain_ids.append(chain_id)
+        chain_ids = np.concatenate(chain_ids, axis=0)
         str_seq = ''.join(multimer_str_seq)
 
         N = len(str_seq)
@@ -78,6 +83,7 @@ class SeqDataset(torch.utils.data.Dataset):
                 seq = str_seq_to_index(str_seq),
                 mask = np.ones((N,), dtype=np.bool_),
                 multimer_str_seq = multimer_str_seq,
+                chain_id = chain_ids,
                 )
     
     def __getitem__(self, idx):

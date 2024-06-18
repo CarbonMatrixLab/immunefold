@@ -121,10 +121,7 @@ def get_antibody_regions_seq(imgt_numbering, chain_id):
 
     return region_def
 
-def calc_ab_metrics(gt_coord, pred_coord, gt_ab_coords, pred_ab_coords, coord_mask, ab_coord_mask, cdr_def, remove_middle_residues=False):
-    mask = coord_mask
-    # import pdb
-    # pdb.set_trace()
+def calc_ab_metrics(gt_ab_coords, pred_ab_coords, ab_coord_mask, cdr_def, remove_middle_residues=False, mode='unbound'):
     ab_mask = ab_coord_mask
     # try:
     gt_ab_coords, pred_ab_coords = gt_ab_coords[ab_mask,:], pred_ab_coords[ab_mask, :]
@@ -138,7 +135,8 @@ def calc_ab_metrics(gt_coord, pred_coord, gt_ab_coords, pred_ab_coords, coord_ma
     gt_aligned, pred_aligned = Kabsch(
             np.transpose(gt_ab_coords,[1,0]),
             np.transpose(pred_ab_coords, [1, 0]))
-
+    # import pdb
+    # pdb.set_trace()
     def _calc_rmsd(A, B):
         return np.sqrt(np.mean(np.sum(np.square(A-B), axis=0)))
 
@@ -151,7 +149,10 @@ def calc_ab_metrics(gt_coord, pred_coord, gt_ab_coords, pred_ab_coords, coord_ma
     _schema = {'fr1':0,'cdr1':1,'fr2':2,'cdr2':3,'fr3':4,'cdr3':5,'fr4':6}
     cdr_idx = {v : 'heavy_' + k for k, v in _schema.items()}
     cdr_idx.update({v + 7 : 'light_' + k for k, v in _schema.items()})
-
+    if mode == 'bound':
+        cdr_idx.update(
+            {20: 'antigen'}
+        )
     def _evaluate_region(indices, v):
         seq_len = np.sum(indices)
         struc_len = np.sum(indices[ab_mask])

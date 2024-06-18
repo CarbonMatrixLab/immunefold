@@ -22,7 +22,6 @@ from carbonmatrix.data.pdbio import make_gt_chain
 from carbonmatrix.common.ab.numbering import renumber_ab_seq, get_ab_regions, get_tcr_regions
 
 
-
 def parse_list(path):
     with open(path) as f:
         names = [n.strip() for n in f]
@@ -45,6 +44,8 @@ def parse_list(path):
 
     contains_peptide = df['antigen_type'].str.contains('protein|peptide', na=False)
     df['antigen_type'] = df['antigen_type'].fillna('NaN')
+    df['antigen_type'] = df['antigen_type'].apply(lambda x: x if x in ['protein', 'peptide'] else 'NaN')
+    
     df = df[contains_peptide | (df['antigen_type'] == 'NaN')]
 
     logger.info(f'number of antigen: {df.shape[0]}')
@@ -71,15 +72,18 @@ def continuous_flag_to_range(flag):
     last = (np.arange(0, flag.shape[0])[flag]).max().item()
     return first, last
 
-def Patch_idx(a, b, mask_a, mask_b):
+def Patch_idx(a, b, mask_a, mask_b, k=10):
     assert len(a.shape) == 3 and len(b.shape) == 3
     diff = a[:, np.newaxis, :, np.newaxis, :] - b[np.newaxis, :, np.newaxis, :, :]
     mask = mask_a[:, np.newaxis, :, np.newaxis] * mask_b[np.newaxis, :, np.newaxis, :]
     distance = np.where(mask, np.linalg.norm(diff, axis=-1), 1e+10)
     distance = np.min(distance.reshape(a.shape[0], b.shape[0], -1), axis=(-1,-2))
-    patch_idx = np.argwhere(distance < 16).reshape(-1)
-    expanded_patch_idx = [i for j in patch_idx for i in range(j-48, j+48)]
-    expanded_patch_idx = sorted(list(set(expanded_patch_idx)))
+    # import pdb
+    # pdb.set_trace()
+    # patch_idx = np.argwhere(distance < 16).reshape(-1)
+    patch_idx = np.argpartition(distance,k)[:k]
+    # expanded_patch_idx = [i for j in patch_idx for i in range(j-48, j+48)]
+    expanded_patch_idx = sorted(list(set(patch_idx)))
     logger.info(f"Antigen idx length@ {len(expanded_patch_idx)}")
     return expanded_patch_idx
 
@@ -131,8 +135,6 @@ def make_antigen(features):
             antigen_chain_id=chain_ids,
             antigen_res_nb=res_nb)
     return features
-
-# def center(data, origin):
     
 
 def PatchAroundAnchor(data, antigen_feature):
@@ -189,26 +191,34 @@ def PatchAroundAnchor(data, antigen_feature):
         mask = antigen_feature['antigen_coord_mask'][...,residue_constants.atom_order['CA']]
         mask_idx = np.argwhere(mask).reshape(-1).tolist()
         antigen_idx = sorted(list(set(idx).intersection(set(mask_idx))))
-        antigen_coords = antigen_feature['antigen_coords'][antigen_idx]
-        antigen_coords_mask = antigen_feature['antigen_coord_mask'][antigen_idx]
-        antigen_chain_ids = antigen_feature['antigen_chain_id'][antigen_idx]
-        antigen_str_seq = [antigen_feature['antigen_str_seq'][idx] for idx in antigen_idx]
-        antigen_str_seq = ''.join(antigen_str_seq) 
-        try:       
-            assert len(antigen_idx) > 0
-        except:
-            return None, None, None, None
+        # antigen_coords = antigen_feature['antigen_coords'][antigen_idx]
+        # antigen_coords_mask = antigen_feature['antigen_coord_mask'][antigen_idx]
+        # antigen_chain_ids = antigen_feature['antigen_chain_id'][antigen_idx]
+        # antigen_str_seq = [antigen_feature['antigen_str_seq'][idx] for idx in antigen_idx]
+        # antigen_residx = antigen_feature['antigen_res_nb'][antigen_idx]
+        # antigen_str_seq = ''.join(antigen_str_seq) 
+        # try:       
+        #     assert len(antigen_idx) > 0
+        # except:
+        #     return None, None, None, None, None
 
-        return antigen_coords, antigen_coords_mask, antigen_str_seq, antigen_chain_ids
+        return antigen_idx
     
-    antigen_anchor_coords, antigen_anchor_coords_mask, antigen_anchor_str_seq, antigen_anchor_chain_ids = anchor_flag_generate(data, antigen_feature)
-    if antigen_anchor_coords is not None:
-        data.update(dict(
-                        antigen_coords = antigen_anchor_coords,
-                        antigen_coord_mask = antigen_anchor_coords_mask,
-                        antigen_str_seq = antigen_anchor_str_seq,
-                        antigen_chain_id = antigen_anchor_chain_ids
-                        ))
+    # antigen_anchor_coords, antigen_anchor_coords_mask, antigen_anchor_str_seq, antigen_anchor_chain_ids, antigen_residx = anchor_flag_generate(data, antigen_feature)
+    antigen_idx = anchor_flag_generate(data, antigen_feature)
+    antigen_contact_idx = antigen_feature['antigen_res_nb'][antigen_idx]
+
+    # if antigen_anchor_coords is not None:
+    # data.update(dict(
+    #                 antigen_coords = antigen_anchor_coords,
+    #                 antigen_coord_mask = antigen_anchor_coords_mask,
+    #                 antigen_str_seq = antigen_anchor_str_seq,
+    #                 antigen_chain_id = antigen_anchor_chain_ids,
+    #                 antigen_residx = antigen_residx
+    #                 ))
+    data.update(antigen_feature)
+    data.update(dict(antigen_contact_idx = antigen_contact_idx))
+    
 
     
 
@@ -363,22 +373,22 @@ def process(code, chain_ids, args):
                 )
         else:
             antigen_data = None
-
-        feature = make_npz(heavy_data, light_data, antigen_data)
-        save_feature(feature, code, orig_heavy_chain_id, orig_light_chain_id, antigen_chain_ids, args.output_dir)
-        logger.info(f'succeed: {mmcif_file} {orig_heavy_chain_id} {orig_light_chain_id}')
-        # except Exception as e:
-        #     traceback.print_exc()
-        #     logger.error(f'make structure: {mmcif_file} {orig_heavy_chain_id} {orig_light_chain_id} {str(e)}')
+        try:
+            feature = make_npz(heavy_data, light_data, antigen_data)
+            save_feature(feature, code, orig_heavy_chain_id, orig_light_chain_id, antigen_chain_ids, args.output_dir)
+            logger.info(f'succeed: {mmcif_file} {orig_heavy_chain_id} {orig_light_chain_id}')
+        except Exception as e:
+            # traceback.print_exc()
+            logger.error(f'make structure: {mmcif_file} {orig_heavy_chain_id} {orig_light_chain_id} {str(e)}')
 
 def main(args):
-    func = functools.partial(process, args=args)
+    # func = functools.partial(process, args=args)
     
-    with mp.Pool(args.cpus) as p:
-        p.starmap(func, parse_list(args.summary_file))
+    # with mp.Pool(args.cpus) as p:
+    #     p.starmap(func, parse_list(args.summary_file))
 
-    # for code, chain_ids in parse_list(args.summary_file):
-    #     process(code, chain_ids, args)
+    for code, chain_ids in parse_list(args.summary_file):
+        process(code, chain_ids, args)
 
 
 
@@ -395,7 +405,7 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
     logger = logging.getLogger(__name__)
-    log_file = os.path.join(args.output_dir,'make_energy_data.log')
+    log_file = os.path.join(args.output_dir,'make_abfold_data.log')
     logger.info(f"log_file: {log_file}")
     handler_test = logging.FileHandler(log_file) # stdout to file
     handler_control = logging.StreamHandler()    # stdout to console

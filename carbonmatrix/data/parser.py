@@ -205,10 +205,14 @@ def make_feature_from_npz(npz_file, is_ig_feature=False, shuffle_multimer_seq=Fa
             coord_mask = np.concatenate(coord_mask, axis=0)
             chain_id = np.concatenate(chain_id, axis=0)
 
-         
-
-    return dict(
+    results = dict(
             str_seq = str_seq,
-            coords  = coords,
+            coords = coords,
             coord_mask = coord_mask,
             chain_id = chain_id)
+    if 'antigen_contact_idx' in x:
+        results.update(
+            {'antigen_contact_idx': x['antigen_contact_idx']}
+        )
+
+    return results

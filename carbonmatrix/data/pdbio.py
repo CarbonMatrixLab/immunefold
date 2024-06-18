@@ -100,7 +100,7 @@ def save_ig_pdb(str_heavy_seq, str_light_seq, coord, pdb_path):
 
 def save_pdb(multimer_str_seq, coord, pdb_path, chain_ids = None, plddt=None):
     model = PDBModel(id=0)
-
+    # chain_ids = None
     if isinstance(multimer_str_seq, str):
         multimer_str_seq = [multimer_str_seq]
 
@@ -112,7 +112,7 @@ def save_pdb(multimer_str_seq, coord, pdb_path, chain_ids = None, plddt=None):
     if len(multimer_str_seq) == len(chain_ids):
         pass
     else:
-        chain_ids = chain_ids[:2]
+        chain_ids = chain_ids[:len(multimer_str_seq)]
 
     start_pos = 0
     for str_seq, chain_id in zip(multimer_str_seq, chain_ids):
@@ -122,7 +122,8 @@ def save_pdb(multimer_str_seq, coord, pdb_path, chain_ids = None, plddt=None):
         start_pos = end_pos
 
         model.add(chain)
-
+    # import pdb as pp
+    # pp.set_trace()
     pdb = PDBIO()
     pdb.set_structure(model)
     pdb.save(pdb_path)

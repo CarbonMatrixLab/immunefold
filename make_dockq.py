@@ -28,20 +28,28 @@ def make_one(name, gt_pdb_file, pred_file, alg_type, ig='tcr', mode='unbound'):
     else:
         code, heavy_chain, light_chain, antigen_chain, mhc_chain = name.split('_')
         chains = [heavy_chain, light_chain, antigen_chain, mhc_chain]
-    if alg_type in ['alphafold', 'esmfold']: 
+    if alg_type in ['esmfold']: 
         target_chain_ids = ['A', 'B', 'C', 'D']
     elif alg_type in ['imb']:
         target_chain_ids = ['B', 'A']
+    elif alg_type in ['alphafold']:
+        target_chain_ids = ['B', 'C', 'D', 'E']
+    elif alg_type in ['tcrmodel']:
+        target_chain_ids = ['E', 'D', 'C', 'A']
     else:
         target_chain_ids = chains
 
     if mode == 'unbound':
         native_chain_ids = chains[:2]
         target_chain_ids = target_chain_ids[:2]
-        
+    else:
+        native_chain_ids = chains[:3]
+        target_chain_ids = target_chain_ids[:3]
+    # print(f"Process: {pred_file} Native: {gt_pdb_file}")
+
     if alg_type == 'tcrfold':
         chain_map = {target_chain_ids[i]: target_chain_ids[i] for i in range(len(target_chain_ids))}
-    elif alg_type in ['alphafold', 'esmfold', 'imb']:
+    elif alg_type in ['alphafold', 'esmfold', 'imb', 'tcrmodel']:
         chain_map = {native_chain_ids[i]: target_chain_ids[i] for i in range(len(target_chain_ids))}
     else:
         raise ValueError('Unknown algorithm type {}'.format(alg_type))
@@ -49,8 +57,7 @@ def make_one(name, gt_pdb_file, pred_file, alg_type, ig='tcr', mode='unbound'):
     gt_dock_pdb.id = gt_pdb_file
     pred_dock_pdb = load_PDB(pred_file, chains=target_chain_ids)
     pred_dock_pdb.id = pred_file
-    print(f"Process: {pred_file} Native: {gt_pdb_file} chain_map: {chain_map}")
-    
+    # print(f"chain map: {chain_map}")
     dock_metrics = make_DockQ(gt_dock_pdb, pred_dock_pdb, chain_map, mode, ig, alg_type)
     return dock_metrics
 
@@ -166,14 +173,22 @@ def make_DockQ(native_structure, model_structure, chain_map, mode, ig, alg_type)
     # results = best_result[tuple(native_chains)]
 
 
-
+    # pdb.set_trace()
     native_chain_ids = tuple(chain_map.keys())
     # import pdb
     # pdb.set_trace()
-    results = dockq[0][native_chain_ids]
-    DockQ, Irms, Lrms, Fnat = results['DockQ'], results['irms'], results['Lrms'], results['fnat']
+    res = {'DockQ_F1': 0, 'DockQ': 0, 'F1': 0, 'irms': 0, 'Lrms': 0, 'fnat': 0, 'nat_correct': 0, 'nat_total': 0, 'fnonnat': 0, 'nonnat_count': 0, 'model_total': 0, 'clashes': 0}
+    
+    # results = dockq[0][native_chain_ids]
+    for k,v in dockq[0].items():
+        for key, value in res.items():
+            res[key] = value + v[key]
+    for k, v in res.items():
+        res[k] = res[k] / len(dockq[0].keys())
+    # DockQ, Irms, Lrms, Fnat = results['DockQ'], results['irms'], results['Lrms'], results['fnat']
     # print(f"Finsihed")
-
+    DockQ, Irms, Lrms, Fnat = res['DockQ'], res['irms'], res['Lrms'], res['fnat']
+    # pdb.set_trace()
     return {'DockQ':DockQ, 'Irms':Irms, 'Lrms':Lrms, 'Fnat':Fnat}
 
 
@@ -187,16 +202,20 @@ def main(args):
             gt_file = os.path.join(args.gt_dir, n + '_ab.pdb')
         else:
             gt_file = os.path.join(args.gt_dir, n + '.pdb')
-        pred_file = os.path.join(args.pred_dir, n + '.pdb')
+        if args.alg_type != 'alphafold':
+            pred_file = os.path.join(args.pred_dir, n + '.pdb')
+        else:
+            pred_file = os.path.join(args.pred_dir, n + '.cif')
+        # print(f"pred_file: {pred_file}")
         if os.path.exists(gt_file) and os.path.exists(pred_file):
             one_metric = OrderedDict({'name' : n})
 
             dockq_metric = make_one(n, gt_file, pred_file, args.alg_type, args.ig, args.mode)
-            try:
-                one_metric.update(dockq_metric)
-                metrics.append(one_metric)
-            except:
-                continue
+            # try:
+            one_metric.update(dockq_metric)
+            metrics.append(one_metric)
+            # except:
+            #     continue
 
     columns = metrics[0].keys()
     metrics = zip(*map(lambda x:x.values(), metrics))
@@ -206,7 +225,7 @@ def main(args):
     df = df.dropna()
 
     print(f"+++"*20)
-    print(f"Algorithm: {args.alg_type}")
+    # print(f"Algorithm: {args.alg_type}")
     print('final total', df.shape[0])
     for r in df.columns:
         if r == 'name':

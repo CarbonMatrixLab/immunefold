@@ -20,7 +20,7 @@ def compute_ptm(logits, breaks, mask, chain_id=None, interface=True):
     d0 = 1.24 * (clipped_num_res - 15) ** (1.0 / 3) - 1.8
 
     probs = F.softmax(logits, dim=-1) #(bs, n, n, d)
-
+    
     tm_per_bin = 1.0 / (1 + (bin_centers ** 2) / (d0 ** 2)) # (bs, bins)
     tm_per_bin = rearrange(tm_per_bin, 'b d -> b () () d') # (bs, 1, 1, bins)
     predicted_tm_term = torch.sum(probs * tm_per_bin, dim=-1) # (bs, n, n)

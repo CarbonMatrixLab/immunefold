@@ -75,8 +75,12 @@ def save_batch_pdb(values, batch, pdb_dir, data_type='general', step=None):
             pdb_file = os.path.join(pdb_dir, f'{names[i]}.pdb')
         else:
             pdb_file = os.path.join(pdb_dir, f'{names[i]}.step{step}.pdb')
+
         chain_ids = names[i].split('_')[1:]
-        chain_ids = list(filter(None, chain_ids))
+        if len(chain_ids) < 2:
+            chain_ids = None
+        else:
+            chain_ids = list(filter(None, chain_ids))
         multimer_str_seq = multimer_str_seqs[i] if data_type == 'ig' else None
         str_seq = str_seqs[i]
         # chain_ids = ['H', 'L'] if data_type == 'ig' else None
@@ -95,14 +99,21 @@ def _compute_plddt(values, mask):
 
     return plddt, full_plddt
 
-def _compute_ptm(values, mask, chain_id=None, interface=True):
+def _compute_ptm(values, mask, chain_id=None, interface=True, batch=None):
     logits = values['heads']['predicted_aligned_error']['logits']
     breaks = values['heads']['predicted_aligned_error']['breaks']
+    # import pdb
+    # pdb.set_trace()
+    # if batch:
+    #     for i, name in enumerate(batch['name']):
+    #         pae = logits[i].cpu().detach().numpy()
+    #         output_path = os.path.join('/home/zhutian/Git_repo/carbonmatrix/pred/tcrfold_ddG_new', name+'_pae.npz')
+    #         np.savez(output_path,array=pae)
     ptm = compute_ptm(logits, breaks, mask)
     if interface and chain_id is not None:
         iptm = compute_ptm(logits, breaks, mask, chain_id, interface)
         ptm = 0.8 * iptm + 0.2 * ptm
-
+    
     str_ptm = ','.join([str(x.item()) for x in ptm.to('cpu')])
     logging.info(f'ptm= {str_ptm}')
 
@@ -344,9 +355,13 @@ def abfold(model, batch, cfg):
 def tcrfold(model, batch, cfg):
     data_type = cfg.get('data_type', 'ig')
     assert (data_type == 'ig')
-
+    # import pdb
+    # pdb.set_trace()
+    # print(f"start")
     def _rank_by_confidence(ret, batch, condence_type='ptm'):
-        ptm1 = _compute_ptm(ret, batch['mask'], chain_id=batch['chain_id'], interface=True)
+        # import pdb
+        # pdb.set_trace()
+        ptm1 = _compute_ptm(ret, batch['mask'], chain_id=batch['chain_id'], interface=True, batch=batch)
         plddt1, full_plddt1 = _compute_plddt(ret, batch['mask'])
         ret.update(ptm=ptm1, plddt=plddt1)
 
@@ -456,7 +471,7 @@ def predict(cfg):
     logging.info(f'esm2-model-{cfg.model.esm2_model_file}')
 
     model = CarbonFold(config = cfg.model)
-    model.impl.load_state_dict(ckpt['model_state_dict'], strict=False)
+    model.impl.load_state_dict(ckpt['model_state_dict'], strict=True)
     model.to(device)
     model.eval()
 

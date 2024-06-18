@@ -26,7 +26,6 @@ class StructureDataset(SeqDataset):
         str_len = len(item['str_seq'])
         receptor_flag = 0
         if 'chain_id' in item and 4 in item['chain_id']:
-
             receptor_flag = 1
             chain_id = item['chain_id']
             receptor_chain = chain_id[chain_id == 4]
@@ -49,36 +48,40 @@ class StructureDataset(SeqDataset):
 
             if self.max_seq_len is not None and str_len > self.max_seq_len:
                 name = item['name']
-                start = np.random.randint(0, str_len - self.max_seq_len)
-                end = start + self.max_seq_len
+                if 'antigen_contact_idx' not in item:
+                    start = np.random.randint(0, str_len - self.max_seq_len)
+                    end = start + self.max_seq_len
+                else:
+                    antigen_contact_idx = item['antigen_contact_idx']
+                    select_idx = random.randint(0, len(antigen_contact_idx)-1)
+                    contact_idx = antigen_contact_idx[select_idx]
+                    start = max(contact_idx - self.max_seq_len // 2, 0)
+                    end = min(start + self.max_seq_len, str_len)
 
                 logger.warn(f'{name} with len= {str_len} to be sliced at postion= {start}')
                 chain_start.append(receptor_start+start)
                 chain_end.append(receptor_start+end)
                 chain_start.sort()
                 chain_end.sort()
-                for k, v in item.items():
-                    if receptor_flag:
-                        if k in ['name', 'multimer_str_seq']:
-                            continue
-                        # if k in ['multimer_str_seq']:
-                        #     v[receptor_id] = v[receptor_id][start:end]
-                        if type(v) is str:
-                            item[k] = v[:receptor_start] + v[receptor_start+start: receptor_start+end]+v[receptor_end+1:]
-                            multimer_str_seq = ''
-                            for i in range(len(chain_start)):
-                                multimer_str_seq += v[chain_start[i]:chain_end[i]+1] + ':'
-                            if multimer_str_seq[-1] == ':':
-                                multimer_str_seq = multimer_str_seq[:-1]
-                            item['multimer_str_seq'] = multimer_str_seq.split(':')
-                        else:
-                            item[k] = np.concatenate([v[:receptor_start], v[receptor_start+start: receptor_start+end], v[receptor_end+1:]])
-                        # pdb.set_trace()
+        for k, v in item.items():
+            if receptor_flag:
+                if k in ['name', 'multimer_str_seq']:
+                    continue
+                if type(v) is str:
+                    item[k] = v[:receptor_start] + v[receptor_start+start: receptor_start+end]+v[receptor_end+1:]
+                    multimer_str_seq = ''
+                    for i in range(len(chain_start)):
+                        multimer_str_seq += v[chain_start[i]:chain_end[i]+1] + ':'
+                    if multimer_str_seq[-1] == ':':
+                        multimer_str_seq = multimer_str_seq[:-1]
+                    item['multimer_str_seq'] = multimer_str_seq.split(':')
+                else:
+                    item[k] = np.concatenate([v[:receptor_start], v[receptor_start+start: receptor_start+end], v[receptor_end+1:]])
 
-                    else:
-                        if k in ['name']:
-                            continue
-                        item[k] = v[start:end]
+            else:
+                if k in ['name']:
+                    continue
+                item[k] = v[start:end]
         return item
 
     def __getitem__(self, idx):
@@ -89,9 +92,6 @@ class StructureDataset(SeqDataset):
         item = self._slice_sample(item)
 
         for k, v in item.items():
-            # if k in ['multimer_str_seq']:
-            #     continue
-
             item[k] = torch.from_numpy(v) if isinstance(v, np.ndarray) else v
         
         return item

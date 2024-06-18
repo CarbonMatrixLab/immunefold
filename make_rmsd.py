@@ -20,20 +20,26 @@ def read_fasta(fasta_file):
         lines = f.readlines()
     return lines[1].strip(), lines[3].strip()
 
-def make_pred_coords(pdb_file, alg_type, heavy_len=0, light_len=0):
+def make_pred_coords(pdb_file, alg_type, heavy_len=0, light_len=0, mode='unbound'):
     sep_pad_num = 48
     parser = PDBParser(QUIET=1)
     model = parser.get_structure('pdb', pdb_file)[0]
 
-    
-    if alg_type in ['imb']:
-        residues = list(model['B'].get_residues()) + list(model['A'].get_residues())
-    elif alg_type in ['esmfold', 'alphafold']:
-        residues = list(model['A'].get_residues()) + list(model['B'].get_residues())
-    elif alg_type in ['omegafold']:
-        residues = list(model.get_residues())
-        residues = residues[:heavy_len] + residues[heavy_len+sep_pad_num:heavy_len+sep_pad_num+light_len]
-
+    if mode == 'unbound':    
+        if alg_type in ['imb']:
+            residues = list(model['B'].get_residues()) + list(model['A'].get_residues())
+        elif alg_type in ['esmfold', 'alphafold']:
+            residues = list(model['A'].get_residues()) + list(model['B'].get_residues())
+        elif alg_type in ['tcrmodel']:
+            residues = list(model['E'].get_residues()) + list(model['D'].get_residues())
+        elif alg_type in ['omegafold']:
+            residues = list(model.get_residues())
+            residues = residues[:heavy_len] + residues[heavy_len+sep_pad_num:heavy_len+sep_pad_num+light_len]
+    elif mode == 'bound':
+        if alg_type in ['esmfold', 'alphafold']:
+            residues = list(model['A'].get_residues()) + list(model['B'].get_residues()) + list(model['C'].get_residues())
+        elif alg_type in ['tcrmodel']:
+            residues = list(model['E'].get_residues()) + list(model['D'].get_residues()) + list(model['C'].get_residues())
     coords = np.zeros((len(residues), 3))
     # pdb.set_trace()
     # for i, r in enumerate(residues):
@@ -62,7 +68,8 @@ def make_coords(pdb_file, mode):
     if mode == 'unbound':
         chain_ids = chain_ids[:2]
     else:
-        chain_ids = chain_ids
+        chain_ids = chain_ids[:3]
+    
     residues = []
     single_codes = []
     for chain_id in chain_ids:
@@ -76,6 +83,7 @@ def make_coords(pdb_file, mode):
     str_seq_list = [''.join(sc) for sc in single_codes]
     coords_list = []
     coord_mask_list = []
+    # pdb.set_trace()
     for r in residues:
         if r:
             
@@ -106,7 +114,6 @@ def make_coords(pdb_file, mode):
 
 def make_one(name, gt_npz_file, pred_file, alg_type, pdb_dir, ig='tcr', mode='unbound'):
     gt_fea = np.load(gt_npz_file, allow_pickle=True)
-    
     coord_mask = []
     coords = []
     gt_ab_coords = []
@@ -160,11 +167,11 @@ def make_one(name, gt_npz_file, pred_file, alg_type, pdb_dir, ig='tcr', mode='un
             mhc_str_seq, mhc_chain_id, mhc_coords, mhc_coord_mask = gt_fea.get('mhc_str_seq'), gt_fea.get('mhc_chain_id'), gt_fea.get('mhc_coords'), gt_fea.get('mhc_coord_mask')
             coords.append(mhc_coords)
             coord_mask.append(mhc_coord_mask)
-
+    # pdb.set_trace()
     if alg_type == 'tcrfold':
-        pred_coords_list, pred_coord_mask_list, pred_str_seq_list = make_coords(pred_file, args.mode)
-    elif alg_type in ['imb', 'esmfold', 'alphafold']:
-        pred_coords_list, pred_coord_mask_list = make_pred_coords(pred_file, alg_type)
+        pred_coords_list, pred_coord_mask_list, pred_str_seq_list = make_coords(pred_file, mode=args.mode)
+    elif alg_type in ['imb', 'esmfold', 'alphafold', 'tcrmodel']:
+        pred_coords_list, pred_coord_mask_list = make_pred_coords(pred_file, alg_type=args.alg_type, mode=args.mode)
     elif alg_type in ['omegafold']:
         heavy_len, light_len = len(str(heavy_str_seq)), len(str(light_str_seq))
         pred_coords_list, pred_coord_mask_list = make_pred_coords(pred_file, alg_type, heavy_len, light_len)
@@ -172,32 +179,49 @@ def make_one(name, gt_npz_file, pred_file, alg_type, pdb_dir, ig='tcr', mode='un
     if alg_type == 'tcrfold':
         pred_coords = np.concatenate(pred_coords_list, axis=0)
         pred_coord_mask = np.concatenate(pred_coord_mask_list, axis=0)
-        if light_chain != None:
-            pred_ab_coords = np.concatenate(pred_coords_list[:2], axis=0)
+        if mode == 'unbound':
+            if light_chain != None:
+                pred_ab_coords = np.concatenate(pred_coords_list[:2], axis=0)
+            else:
+                pred_ab_coords = pred_coords_list[0]
         else:
-            pred_ab_coords = pred_coords_list[0]
-    elif alg_type in ['imb', 'esmfold', 'omegafold', 'alphafold']:
+            pred_ab_coords = np.concatenate(pred_coords_list[:3], axis=0)
+    elif alg_type in ['imb', 'esmfold', 'omegafold', 'alphafold', 'tcrmodel']:
         pred_coords = pred_coords_list
         pred_coord_mask = pred_coord_mask_list
         pred_ab_coords = pred_coords
     
     gt_coords = np.concatenate(coords, axis=0)
     gt_coord_mask = np.concatenate(coord_mask, axis=0)
-    cdr_def = np.concatenate(cdr_def, axis=0)
-
-    gt_ab_coords = np.concatenate(gt_ab_coords, axis=0)
-    gt_ab_coord_mask = np.concatenate(gt_ab_coord_mask, axis=0)
-
-    ca_mask = gt_coord_mask[:, 1]
-    gt_ca = gt_coords[:,1]
-    gt_ab_ca = gt_ab_coords[:,1]
-    ab_ca_mask = gt_ab_coord_mask[:,1]
-    pred_ab_ca = pred_ab_coords[:,1]
-
-    N = len(str(heavy_str_seq)) + len(str(light_str_seq))
-    assert(N==gt_ab_ca.shape[0] and N==ab_ca_mask.shape[0] and N==cdr_def.shape[0])
-    assert (N == pred_ab_ca.shape[0])
-    ab_metrics = calc_ab_metrics(gt_coords, pred_coords, gt_ab_ca, pred_ab_ca, ca_mask, ab_ca_mask, cdr_def, remove_middle_residues=True)
+    # cdr_def = np.concatenate(cdr_def, axis=0)
+    # cdr_def = np.tile(cdr_def[:,None], (1, 4)).reshape(-1)
+    if mode == 'unbound':
+        gt_ab_coords = np.concatenate(gt_ab_coords, axis=0)
+        gt_ab_coord_mask = np.concatenate(gt_ab_coord_mask, axis=0)
+        cdr_def = np.concatenate(cdr_def, axis=0)
+        cdr_def = np.tile(cdr_def[:,None], (1, 4)).reshape(-1)
+    else:
+        gt_ab_coords = np.concatenate(coords[:3], axis=0)
+        gt_ab_coord_mask = np.concatenate(coord_mask[:3], axis=0)
+        cdr_def = np.concatenate(cdr_def, axis=0)
+        pad_len =  gt_ab_coords.shape[0] - cdr_def.shape[0]
+        cdr_def_pad = np.full((pad_len), fill_value=20)
+        cdr_def = np.concatenate([cdr_def, cdr_def_pad], axis=0)
+        cdr_def = np.tile(cdr_def[:,None], (1, 4)).reshape(-1)
+    # ca_mask = gt_coord_mask[:, 1]
+    # gt_ca = gt_coords[:,]
+    gt_ab_ca = gt_ab_coords[:,:4].reshape(-1,3)
+    ab_ca_mask = gt_ab_coord_mask[:,:4].reshape(-1)
+    pred_ab_ca = pred_ab_coords[:,:4].reshape(-1,3)
+    # cdr_def = np.repeat(cdr_def, 4)
+    # pdb.set_trace()
+    if args.mode == 'unbound':
+        N = len(str(heavy_str_seq)) + len(str(light_str_seq))
+    else:
+        N = len(str(heavy_str_seq)) + len(str(light_str_seq)) + len(str(antigen_str_seq))
+    assert(N*4==gt_ab_ca.shape[0] and N*4==ab_ca_mask.shape[0] and N*4==cdr_def.shape[0])
+    assert (N*4 == pred_ab_ca.shape[0])
+    ab_metrics = calc_ab_metrics(gt_ab_ca, pred_ab_ca, ab_ca_mask, cdr_def, remove_middle_residues=False, mode=args.mode)
     return ab_metrics
 
 def main(args):
@@ -205,6 +229,8 @@ def main(args):
 
     metrics = []
     for i, n in enumerate(names):
+        # if n != '8es9_B_A__':
+        #     continue
         gt_file = os.path.join(args.gt_dir, n + '.npz')
         pred_file = os.path.join(args.pred_dir, n + '.pdb')
         # import pdb
@@ -223,6 +249,7 @@ def main(args):
     # print(df['heavy_cdr3_coverage'].describe())
     # print(f"df: {df}")
     len_thres=3
+    
     df = df[df['heavy_cdr3_len'] >=len_thres]
     # print('length >= ', len_thres, df.shape)
     
@@ -241,7 +268,7 @@ def main(args):
     df['avg_fr_rmsd'] = df.apply(_average_all_framework_regions, axis=1)
     df['avg_other_cdr_rmsd'] = df.apply(_average_all_cdr_gegions, axis=1)
     print(f"+++"*20)
-    print(f"Algorithm: {args.alg_type}")
+    # print(f"Algorithm: {args.alg_type}")
     print('final total', df.shape[0])
     for r in df.columns:
         if r.endswith('rmsd'):
@@ -259,7 +286,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-c', '--name_idx', type=str, required=True)
-    parser.add_argument('-t', '--alg_type', type=str, choices=['imb', 'tcrmodel', 'tcrfold', 'omegafold', 'esmfold', 'alphafold'], required=True)
+    parser.add_argument('-t', '--alg_type', type=str, choices=['imb', 'tcrmodel', 'tcrfold', 'omegafold', 'esmfold', 'alphafold', 'tcrmodel'], required=True)
     parser.add_argument('-g', '--gt_dir', type=str, required=True)
     parser.add_argument('-p', '--pred_dir', type=str, required=True)
     parser.add_argument('-o', '--output', type=str, required=True)

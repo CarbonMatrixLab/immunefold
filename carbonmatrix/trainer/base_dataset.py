@@ -63,26 +63,34 @@ class StructureDataset(SeqDataset):
                 chain_end.append(receptor_start+end)
                 chain_start.sort()
                 chain_end.sort()
-        for k, v in item.items():
-            if receptor_flag:
-                if k in ['name', 'multimer_str_seq']:
-                    continue
-                if type(v) is str:
-                    item[k] = v[:receptor_start] + v[receptor_start+start: receptor_start+end]+v[receptor_end+1:]
-                    multimer_str_seq = ''
-                    for i in range(len(chain_start)):
-                        multimer_str_seq += v[chain_start[i]:chain_end[i]+1] + ':'
-                    if multimer_str_seq[-1] == ':':
-                        multimer_str_seq = multimer_str_seq[:-1]
-                    item['multimer_str_seq'] = multimer_str_seq.split(':')
-                else:
-                    item[k] = np.concatenate([v[:receptor_start], v[receptor_start+start: receptor_start+end], v[receptor_end+1:]])
+            
+                for k, v in item.items():
+                    if receptor_flag:
+                        if k in ['name', 'multimer_str_seq']:
+                            continue
+                        if type(v) is str:
+                            item[k] = v[:receptor_start] + v[receptor_start+start: receptor_start+end]+v[receptor_end+1:]
+                            multimer_str_seq = ''
+                            for i in range(len(chain_start)):
+                                multimer_str_seq += v[chain_start[i]:chain_end[i]+1] + ':'
+                            if multimer_str_seq[-1] == ':':
+                                multimer_str_seq = multimer_str_seq[:-1]
+                            item['multimer_str_seq'] = multimer_str_seq.split(':')
+                        else:
+                            item[k] = np.concatenate([v[:receptor_start], v[receptor_start+start: receptor_start+end], v[receptor_end+1:]])
+            return item
+        elif 'chain_id' in item and 4 not in item['chain_id']:
+            return item
+        elif 'chain_id' not in item:
+            if self.max_seq_len is not None and str_len > self.max_seq_len:
+                start = np.random.randint(0, str_len - self.max_seq_len)
+                end = start + self.max_seq_len
+                for k, v in item.items():
+                    if k in ['name']:
+                        continue
+                    item[k] = v[start:end]
 
-            else:
-                if k in ['name']:
-                    continue
-                item[k] = v[start:end]
-        return item
+            return item
 
     def __getitem__(self, idx):
         item = self._get_item(idx)

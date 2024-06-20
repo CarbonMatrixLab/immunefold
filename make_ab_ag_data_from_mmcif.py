@@ -299,6 +299,7 @@ def save_header(header, file_path):
         json.dump(header, fw)
 
 def process(code, chain_ids, args):
+    
     logger.info(f'processing {code}, {",".join(["_".join(x) for x in chain_ids])}')
     mmcif_file = os.path.join(args.mmcif_dir, f'{code}.cif')
     try:
@@ -325,7 +326,10 @@ def process(code, chain_ids, args):
 
 
     for orig_heavy_chain_id, orig_light_chain_id, orig_antigen_chain_id in chain_ids:
-        
+        # print(f"code: {code}, chain_ids: {chain_ids}")
+        if os.path.exists(os.path.join(args.output_dir, f'{code}_{orig_heavy_chain_id}_{orig_light_chain_id}_{orig_antigen_chain_id}.npz')):
+            logger.info(f'{code}_{orig_heavy_chain_id}_{orig_light_chain_id}_{orig_antigen_chain_id} already exists.')
+            return
         heavy_chain_id, light_chain_id = _parse_chain_id(orig_heavy_chain_id, orig_light_chain_id)
 
         if ((heavy_chain_id and heavy_chain_id not in parsing_result.mmcif_object.chain_to_seqres) or
@@ -373,6 +377,7 @@ def process(code, chain_ids, args):
                 )
         else:
             antigen_data = None
+
         try:
             feature = make_npz(heavy_data, light_data, antigen_data)
             save_feature(feature, code, orig_heavy_chain_id, orig_light_chain_id, antigen_chain_ids, args.output_dir)
@@ -382,13 +387,13 @@ def process(code, chain_ids, args):
             logger.error(f'make structure: {mmcif_file} {orig_heavy_chain_id} {orig_light_chain_id} {str(e)}')
 
 def main(args):
-    # func = functools.partial(process, args=args)
+    func = functools.partial(process, args=args)
     
-    # with mp.Pool(args.cpus) as p:
-    #     p.starmap(func, parse_list(args.summary_file))
+    with mp.Pool(args.cpus) as p:
+        p.starmap(func, parse_list(args.summary_file))
 
-    for code, chain_ids in parse_list(args.summary_file):
-        process(code, chain_ids, args)
+    # for code, chain_ids in parse_list(args.summary_file):
+    #     process(code, chain_ids, args)
 
 
 

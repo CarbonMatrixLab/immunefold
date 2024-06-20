@@ -76,13 +76,13 @@ def make_gt_structure(batch, is_training=True):
     if is_training:
         chain_id_unique = torch.unique(batch['chain_id']).cpu().numpy()
         random.shuffle(chain_id_unique)
-        chain_id_unique = chain_id_unique[chain_id_unique>1]
+        chain_id_unique = chain_id_unique[chain_id_unique>2]
         num_to_gt = random.randint(0, len(chain_id_unique))
         gt_chain_id = torch.tensor(chain_id_unique[:num_to_gt]).to(batch['chain_id'].device)
         gt_mask = torch.isin(batch['chain_id'], gt_chain_id)
         
     else:
-        gt_mask = torch.ones_like(batch['chain_id'], dtype=torch.bool)
+        gt_mask = torch.zeros_like(batch['chain_id'], dtype=torch.bool)
     batch.update(
         {"gt_mask": gt_mask,}
     )

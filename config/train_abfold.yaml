@@ -4,7 +4,7 @@ defaults:
   - transforms: abfold
 
 # device
-gpu_list: [0,1,2,3]
+gpu_list: [1]
 
 # lora
 lora:
@@ -19,7 +19,7 @@ model_align:
   fft_mode: 'only_evoformer'
 
 # optimizer
-num_epoch: 1024
+num_epoch: 100000000000000000
 warmup_steps: 0
 flat_steps: 1000000000000000
 decay_steps: 1000000000000000
@@ -28,7 +28,7 @@ min_lr: 5e-5
 
 # model
 restore_model_ckpt:  /home/zhutian/data/abdata_2023/esm2/carbonfold2_base_from_esmfold.ckpt
-restore_esm2_model:  /home/zhutian/data/abdata_2023/esm2/step_20000_lora_merged.ckpt
+restore_esm2_model:  /home/zhutian/data/abdata_2023/esm2/esm2_t36_3B_UR50D.pt
 
 is_ig_feature: True
 shuffle_multimer_seq: True
@@ -37,15 +37,15 @@ shuffle_multimer_seq: True
 batch_size: 2
 gradient_accumulation_it: 1
 max_seq_len: 128
-train_name_idx: /home/zhutian/data/antibody/ab_data/train_ab_cluster.idx
-train_data: /home/zhutian/data/antibody/ab_npz/
+train_name_idx: /home/zhutian/data/antibody/train_immunefold.idx
+train_data: /home/zhutian/data/antibody/ab_new_npz/
 # train_name_idx: ../data_2023/pdb50_v2/clean_bc40_cluster.idx
 # train_data: ../data_2023/pdb50_v2/data/
     
 # output
-output_dir: ./studies/abfold/2024-05-11
+output_dir: ./studies/abfold/2024-06-19
 
-checkpoint_every_step: 1000
+checkpoint_every_step: 500
 
 verbose: 1
 random_seed: 2023

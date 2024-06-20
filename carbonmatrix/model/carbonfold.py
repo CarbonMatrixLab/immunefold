@@ -34,7 +34,8 @@ class CarbonFoldIteration(nn.Module):
         c = self.config
 
         seq_act, pair_act = self.seqformer_module(batch)
-
+        import pdb
+        pdb.set_trace()
         representations = {'pair': pair_act, 'seq': seq_act}
 
         ret = {}

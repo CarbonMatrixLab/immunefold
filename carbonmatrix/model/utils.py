@@ -27,8 +27,8 @@ def batch_kabsch(other_points, ref_points, mask, needs_to_be_centered=True):
     assert(ref_points.ndim == other_points.ndim)
     assert(ref_points.ndim == mask.ndim + 1)
 
-    ref_points_mean = torch.mean(ref_points, dim=1)
-    other_points_mean = torch.mean(other_points, dim=1)
+    ref_points_mean = torch.mean(ref_points * mask[...,None], dim=1)
+    other_points_mean = torch.mean(other_points * mask[...,None], dim=1)
     
 
     if needs_to_be_centered:

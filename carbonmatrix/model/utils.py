@@ -27,8 +27,8 @@ def batch_kabsch(other_points, ref_points, mask, needs_to_be_centered=True):
     assert(ref_points.ndim == other_points.ndim)
     assert(ref_points.ndim == mask.ndim + 1)
 
-    ref_points_mean = torch.mean(ref_points * mask[...,None], dim=1)
-    other_points_mean = torch.mean(other_points * mask[...,None], dim=1)
+    ref_points_mean = to_centroid(ref_points, keepdim=False, mask=mask)
+    other_points_mean = to_centroid(other_points, keepdim=False, mask=mask)
     
 
     if needs_to_be_centered:
@@ -52,6 +52,8 @@ def batch_kabsch(other_points, ref_points, mask, needs_to_be_centered=True):
 
     # (b, 3, 3)
     rot = torch.matmul(U, Vt)
+    # import pdb
+    # pdb.set_trace()
     trans = ref_points_mean - torch.einsum('a b, a b n -> a n', other_points_mean, rot)
     # trans = ref_points_mean - torch.matmul(other_points_mean, rot)
     # import pdb

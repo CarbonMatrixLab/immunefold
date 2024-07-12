@@ -214,5 +214,4 @@ def make_feature_from_npz(npz_file, is_ig_feature=False, shuffle_multimer_seq=Fa
         results.update(
             {'antigen_contact_idx': x['antigen_contact_idx']}
         )
-
     return results

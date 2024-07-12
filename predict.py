@@ -12,7 +12,7 @@ from einops import rearrange
 from carbonmatrix.data.pdbio import save_pdb
 from carbonmatrix.model.carbonfold import CarbonFold
 from carbonmatrix.data.dataset import SeqDatasetDirIO, SeqDatasetFastaIO
-from carbonmatrix.trainer.dataset import StructureDatasetNpzIO
+from carbonmatrix.trainer.dataset import StructureDatasetNpzIO, AbStructureDatasetNpzIO
 from carbonmatrix.data.base_dataset import TransformedDataLoader as DataLoader
 from carbonmatrix.data.base_dataset import collate_fn_seq
 from carbonmatrix.data.seq import create_residx
@@ -62,7 +62,7 @@ def setup(cfg):
 def to_numpy(x):
     return x.detach().cpu().numpy()
 
-def save_batch_pdb(values, batch, pdb_dir, data_type='general', step=None):
+def save_batch_pdb(values, batch, pdb_dir, data_type='general', step=None, mode=None):
     N = len(batch['str_seq'])
     pred_atom14_coords = to_numpy(values['heads']['structure_module']['final_atom14_positions'])
     names = batch['name']
@@ -81,9 +81,11 @@ def save_batch_pdb(values, batch, pdb_dir, data_type='general', step=None):
             chain_ids = None
         else:
             chain_ids = list(filter(None, chain_ids))
+        if mode == 'abfold':
+            chain_ids = ['H', 'L'] if data_type == 'ig' else None
+
         multimer_str_seq = multimer_str_seqs[i] if data_type == 'ig' else None
         str_seq = str_seqs[i]
-        # chain_ids = ['H', 'L'] if data_type == 'ig' else None
         single_plddt = None if plddt is None else plddt[i]
         save_pdb(multimer_str_seq, pred_atom14_coords[i, :len(str_seq)], pdb_file, chain_ids, single_plddt)
 
@@ -349,7 +351,7 @@ def abfold(model, batch, cfg):
         light_first_ret = model(new_batch, compute_loss=True)
 
     final_ret, final_batch = _rank_by_confidence(heavy_first_ret, light_first_ret, batch, new_batch)
-    save_batch_pdb(final_ret, final_batch, cfg.output_dir, data_type)
+    save_batch_pdb(final_ret, final_batch, cfg.output_dir, data_type, mode = cfg.mode)
     #save_batch_pdb(heavy_first_ret, batch, cfg.output_dir, data_type)
 
 def tcrfold(model, batch, cfg):
@@ -447,7 +449,10 @@ def predict(cfg):
         dataset = SeqDatasetFastaIO(cfg.test_data)
         collate_fn = collate_fn_seq
     elif cfg.data_io == 'npz':
-        dataset = StructureDatasetNpzIO(cfg.test_data, cfg.test_name_idx, 1024)
+        dataset = StructureDatasetNpzIO(cfg.test_data, cfg.test_name_idx, 128)
+        collate_fn = collate_fn_struc
+    elif cfg.data_io == 'abnpz':
+        dataset = AbStructureDatasetNpzIO(cfg.test_data, cfg.test_name_idx, 128, shuffle_multimer_seq=False)
         collate_fn = collate_fn_struc
     else:
         raise NotImplementedError(f'data io {cfg.data_io} not implemented')

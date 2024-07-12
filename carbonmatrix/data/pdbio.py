@@ -103,7 +103,8 @@ def save_pdb(multimer_str_seq, coord, pdb_path, chain_ids = None, plddt=None):
     # chain_ids = None
     if isinstance(multimer_str_seq, str):
         multimer_str_seq = [multimer_str_seq]
-
+    # import pdb as pp
+    # pp.set_trace()
     assert(len(''.join(multimer_str_seq)) == coord.shape[0])
 
     if chain_ids is None:

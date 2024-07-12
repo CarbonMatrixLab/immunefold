@@ -13,7 +13,7 @@ from carbonmatrix.model.common_modules import(
         LayerNorm)
 from carbonmatrix.model.common_modules import get_lora_config
 from carbonmatrix.model.sidechain import MultiRigidSidechain
-
+from carbonmatrix.model.utils import batch_kabsch
 class StructureModule(nn.Module):
     def __init__(self, config, num_in_seq_channel, num_in_pair_channel):
         super().__init__()
@@ -119,10 +119,16 @@ class StructureModule(nn.Module):
         outputs['final_atom_positions'] = batched_select(outputs['final_atom14_positions'], batch['residx_atom37_to_atom14'], batch_dims=2)
         
         if 'gt_mask' in batch.keys() and torch.sum(batch['gt_mask']) > 0:
-            gt_mask = batch['gt_mask']
-            outputs['finale_atom14_positions'] = ~gt_mask[...,None,None] * outputs['final_atom14_positions'] + gt_mask[...,None,None] * batch['atom14_gt_positions']
-            outputs['final_atom_positions'] = ~gt_mask[...,None,None] * outputs['final_atom_positions'] + gt_mask[...,None,None] * batch['atom37_gt_positions']
-        
+            gt_mask,ca_mask = batch['gt_mask'], batch['atom14_gt_exists'][:,:,1]
+            ca_gt_mask = gt_mask * ca_mask
+            pred_ca, gt_ca = outputs['final_atom14_positions'][:,:,1], batch['atom14_gt_positions'][:,:,1]
+            rot, trans = batch_kabsch(gt_ca, pred_ca, ca_gt_mask)
+            gt_atom14 = torch.einsum('a b c n, a n l -> a b c l', batch['atom14_gt_positions'], rot)+ trans[:,None,None,:]
+            gt_atom37 = torch.einsum('a b c n, a n l -> a b c l', batch['atom37_gt_positions'], rot)+ trans[:,None,None,:]
+            gt_atom14 *= batch['atom14_gt_exists'][...,None]
+            gt_atom37 *= batch['atom37_gt_exists'][...,None]
+            outputs['final_atom14_positions'] = ~gt_mask[...,None,None] * outputs['final_atom14_positions'] + gt_mask[...,None,None] * gt_atom14
+            outputs['final_atom_positions'] = ~gt_mask[...,None,None] * outputs['final_atom_positions'] + gt_mask[...,None,None] * gt_atom37
         outputs['final_affines'] = outputs['traj'][-1]
 
         if requires_score:

@@ -20,6 +20,8 @@ class StructureDataset(SeqDataset):
                 )
         if 'chain_id' in item:
             ret.update(chain_id=item['chain_id'])
+        if 'antigen_contact_idx' in item:
+            ret.update(antigen_contact_idx=item['antigen_contact_idx'])
         return ret
 
     def _slice_sample(self, item):
@@ -56,28 +58,34 @@ class StructureDataset(SeqDataset):
                     select_idx = random.randint(0, len(antigen_contact_idx)-1)
                     contact_idx = antigen_contact_idx[select_idx]
                     start = max(contact_idx - self.max_seq_len // 2, 0)
-                    end = min(start + self.max_seq_len, str_len)
+                    end = min(start + self.max_seq_len, str_len-1)
 
                 logger.warn(f'{name} with len= {str_len} to be sliced at postion= {start}')
                 chain_start.append(receptor_start+start)
                 chain_end.append(receptor_start+end)
                 chain_start.sort()
                 chain_end.sort()
+                # import pdb
+                # pdb.set_trace()
             
                 for k, v in item.items():
                     if receptor_flag:
                         if k in ['name', 'multimer_str_seq']:
                             continue
                         if type(v) is str:
-                            item[k] = v[:receptor_start] + v[receptor_start+start: receptor_start+end]+v[receptor_end+1:]
+                            item[k] = v[:receptor_start] + v[receptor_start+start: receptor_start+end+1]+v[receptor_end+1:]
                             multimer_str_seq = ''
                             for i in range(len(chain_start)):
                                 multimer_str_seq += v[chain_start[i]:chain_end[i]+1] + ':'
                             if multimer_str_seq[-1] == ':':
                                 multimer_str_seq = multimer_str_seq[:-1]
                             item['multimer_str_seq'] = multimer_str_seq.split(':')
+                            # import pdb
+                            # pdb.set_trace()
                         else:
-                            item[k] = np.concatenate([v[:receptor_start], v[receptor_start+start: receptor_start+end], v[receptor_end+1:]])
+                            item[k] = np.concatenate([v[:receptor_start], v[receptor_start+start: receptor_start+end+1], v[receptor_end+1:]])
+            # import pdb 
+            # pdb.set_trace()
             return item
         elif 'chain_id' in item and 4 not in item['chain_id']:
             return item

@@ -36,7 +36,7 @@ def make_esm_seq(batch,):
 
     max_len = max([x.shape[0] for x in esm_seq])
     padded_esm_seq = pad_for_batch(esm_seq, max_len, esm_alphabet.padding_idx)
-
+    
     residx = create_residx(batch['multimer_str_seq'], max_len, bs)
 
     batch.update(

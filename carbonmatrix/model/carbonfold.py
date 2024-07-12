@@ -34,8 +34,6 @@ class CarbonFoldIteration(nn.Module):
         c = self.config
 
         seq_act, pair_act = self.seqformer_module(batch)
-        import pdb
-        pdb.set_trace()
         representations = {'pair': pair_act, 'seq': seq_act}
 
         ret = {}
@@ -79,9 +77,10 @@ class CarbonFold(nn.Module):
         c = self.config
 
         seq = batch['seq']
-
+        
         batch_size, num_residues, device = *seq.shape[:2], seq.device
-
+        # import pdb
+        # pdb.set_trace()
         if 'esm_embed' not in batch:
             esm_embed, _ = self._compute_language_model(batch['esm_seq'], batch['residx'])
             batch.update(esm_embed = esm_embed)
@@ -99,6 +98,7 @@ class CarbonFold(nn.Module):
 
         # Just to adapt to ESMFOLD
         emb_config = c.embeddings_and_seqformer
+        # print(f"gt_mask: {batch['gt_mask']}")
         if 'prev_pos' in batch:
             trans_t = batch['prev_pos']
             prev_pos = dgram_from_positions(trans_t, **self.config.embeddings_and_seqformer.prev_pos)

@@ -109,7 +109,8 @@ def collate_fn_seq(batch):
     meta = {} if 'meta' not in batch[0].keys() else _gather('meta')
 
     max_len = max(tuple(len(s) for s in str_seq))
-        
+    # import pdb
+    # pdb.set_trace()    
     feature = dict(
             name=name,
             str_seq = str_seq,

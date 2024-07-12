@@ -121,10 +121,14 @@ def get_antibody_regions_seq(imgt_numbering, chain_id):
 
     return region_def
 
-def calc_ab_metrics(gt_ab_coords, pred_ab_coords, ab_coord_mask, cdr_def, remove_middle_residues=False, mode='unbound'):
+def calc_ab_metrics(gt_ab_coords, pred_ab_coords, ab_coord_mask, cdr_def, remove_middle_residues=False, mode='unbound', nano=False):
     ab_mask = ab_coord_mask
     # try:
     gt_ab_coords, pred_ab_coords = gt_ab_coords[ab_mask,:], pred_ab_coords[ab_mask, :]
+    if nano:
+        framework_indices = np.any(np.stack([cdr_def == k for k in [0,2,4,6]], axis=0), axis=0)
+    else:
+        framework_indices = np.any(np.stack([cdr_def == k for k in [0,2,4,6,7,9,11,13]], axis=0), axis=0)
     # gt_coord, pred_coord = gt_coord[mask,:], pred_coord[mask, :]
     # except:
         # import pdb

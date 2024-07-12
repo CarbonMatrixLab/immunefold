@@ -110,15 +110,22 @@ def train(cfg):
         model.impl.load_state_dict(ckpt['model_state_dict'], strict=False)
 
         trainable_variables = model_align.setup_model(model, cfg.model_align)
-
+        trainable_variables_sum = []
         for n, p in model.named_parameters():
             if p.requires_grad:
+                trainable_variables_sum.append(p)
                 logging.info(f'trainable variable {n}')
     else:
         model = CarbonFold(config = cfg.model)
         trainable_variables = model.parameters()
+        for n, p in model.named_parameters():
+            if p.requires_grad:
+                trainable_variables_sum.append(p)
+                logging.info(f'trainable variable {n}')
+    sum_para = sum(p.numel() for p in trainable_variables_sum)
+    logging.info(f"Total trainable parameters: {sum_para}")
 
-    logging.info('CarbonFold.config: %s', cfg)
+    # logging.info('CarbonFold.config: %s', cfg)
 
     device = utils.get_device(cfg.gpu_list)
     model = setup_model(model, device)

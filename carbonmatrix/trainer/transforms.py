@@ -71,7 +71,7 @@ def make_torsion_angles(batch, is_training=True):
     return batch
 
 @registry_transform
-def make_gt_structure(batch, is_training=True):
+def make_gt_structure(batch, is_training=True, gt_ag=True):
     assert 'chain_id' in batch
     if is_training:
         chain_id_unique = torch.unique(batch['chain_id']).cpu().numpy()
@@ -80,9 +80,14 @@ def make_gt_structure(batch, is_training=True):
         num_to_gt = random.randint(0, len(chain_id_unique))
         gt_chain_id = torch.tensor(chain_id_unique[:num_to_gt]).to(batch['chain_id'].device)
         gt_mask = torch.isin(batch['chain_id'], gt_chain_id)
+    elif 'gt_ab':
+        gt_chain_id = 4
+        gt_mask = torch.isin(batch['chain_id'], gt_chain_id)
         
     else:
         gt_mask = torch.zeros_like(batch['chain_id'], dtype=torch.bool)
+    # import pdb
+    # pdb.set_trace()
     batch.update(
         {"gt_mask": gt_mask,}
     )

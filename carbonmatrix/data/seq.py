@@ -42,7 +42,7 @@ def create_residx(multimer_str_seq, max_len, batch_size):
             residx[i, start_pos:end_pos] += relative_pos
 
             start_pos = end_pos
-
+        
         residx[i, end_pos:] += residue_constants.residue_chain_index_offset
 
     return residx

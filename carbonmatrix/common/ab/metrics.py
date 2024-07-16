@@ -152,7 +152,10 @@ def calc_ab_metrics(gt_ab_coords, pred_ab_coords, ab_coord_mask, cdr_def, remove
 
     _schema = {'fr1':0,'cdr1':1,'fr2':2,'cdr2':3,'fr3':4,'cdr3':5,'fr4':6}
     cdr_idx = {v : 'heavy_' + k for k, v in _schema.items()}
-    cdr_idx.update({v + 7 : 'light_' + k for k, v in _schema.items()})
+    if nano: 
+        pass
+    else: 
+        cdr_idx.update({v + 7 : 'light_' + k for k, v in _schema.items()})
     if mode == 'bound':
         cdr_idx.update(
             {20: 'antigen'}

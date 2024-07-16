@@ -84,7 +84,8 @@ def save_batch_pdb(values, batch, pdb_dir, data_type='general', step=None, mode=
         if mode == 'abfold':
             chain_ids = ['H', 'L'] if data_type == 'ig' else None
 
-        multimer_str_seq = multimer_str_seqs[i] if data_type == 'ig' else None
+        # multimer_str_seq = multimer_str_seqs[i] if data_type == 'ig' else None
+        multimer_str_seq = multimer_str_seqs[i]
         str_seq = str_seqs[i]
         single_plddt = None if plddt is None else plddt[i]
         save_pdb(multimer_str_seq, pred_atom14_coords[i, :len(str_seq)], pdb_file, chain_ids, single_plddt)

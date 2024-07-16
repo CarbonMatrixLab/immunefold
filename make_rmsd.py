@@ -129,7 +129,7 @@ def make_one(name, gt_npz_file, pred_file, alg_type, pdb_dir, ig='tcr', mode='un
         coord_mask.append(heavy_coord_mask)
         cdr_def.append(heavy_cdr_def)
         chains = [heavy_chain, light_chain, antigen_chain]
-        if 'light_str_seq' in gt_fea.files():
+        if 'light_str_seq' in gt_fea.files:
             light_str_seq, light_chain_id, light_coords, light_coord_mask, light_cdr_def = gt_fea.get('light_str_seq'), gt_fea.get('light_chain_id'), gt_fea.get('light_coords'), gt_fea.get('light_coord_mask'), gt_fea.get('light_cdr_def')
             gt_ab_coords.append(light_coords)
             gt_ab_coord_mask.append(light_coord_mask)
@@ -137,7 +137,7 @@ def make_one(name, gt_npz_file, pred_file, alg_type, pdb_dir, ig='tcr', mode='un
             coord_mask.append(light_coord_mask)
             cdr_def.append(light_cdr_def)
 
-        if 'antigen_str_seq' in gt_fea.files():
+        if 'antigen_str_seq' in gt_fea.files:
             antigen_str_seq, antigen_chain_id, antigen_coords, antigen_coord_mask = gt_fea.get('antigen_str_seq'), gt_fea.get('antigen_chain_id'), gt_fea.get('antigen_coords'), gt_fea.get('antigen_coord_mask')
             coords.append(antigen_coords)
             coord_mask.append(antigen_coord_mask)
@@ -231,6 +231,7 @@ def main(args):
     for i, n in enumerate(names):
         # if n != '8es9_B_A__':
         #     continue
+
         gt_file = os.path.join(args.gt_dir, n + '.npz')
         pred_file = os.path.join(args.pred_dir, n + '.pdb')
         # import pdb
@@ -243,7 +244,7 @@ def main(args):
 
     columns = metrics[0].keys()
     metrics = zip(*map(lambda x:x.values(), metrics))
-
+    
     df = pd.DataFrame(dict(zip(columns,metrics)))
     # print('all', df.shape)
     # print(df['heavy_cdr3_coverage'].describe())
@@ -255,7 +256,11 @@ def main(args):
     
     df = df[df['heavy_cdr3_coverage'] >= 1.0]
     # print('coverage=1.0', df.shape)
-    
+    name = df['name'].to_list()
+    name = [n[:-2] for n in name]
+    with open('/home/zhutian/Git_repo/carbonmatrix/pred/pair_gt.idx', 'w') as f:
+        for n in name:
+            f.write(n+'\n')
     df.to_csv(args.output, sep='\t', index=False)
     df = df.dropna()
 

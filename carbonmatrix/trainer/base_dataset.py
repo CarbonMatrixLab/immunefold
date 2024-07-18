@@ -58,7 +58,7 @@ class StructureDataset(SeqDataset):
                     select_idx = random.randint(0, len(antigen_contact_idx)-1)
                     contact_idx = antigen_contact_idx[select_idx]
                     start = max(contact_idx - self.max_seq_len // 2, 0)
-                    end = min(start + self.max_seq_len, str_len-1)
+                    end = min(start + self.max_seq_len//2, str_len-1)
 
                 logger.warn(f'{name} with len= {str_len} to be sliced at postion= {start}')
                 chain_start.append(receptor_start+start)

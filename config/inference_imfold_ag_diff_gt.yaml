@@ -1,0 +1,25 @@
+defaults:
+  - model: esmfold
+  - transforms: abfold_inference
+
+restore_model_ckpt: /home/zhutian/Git_repo/carbonmatrix/studies/abfold/2024-07-27/checkpoints/ab_20000_lora_merged.ckpt
+# restore_esm2_model: ../abdata_2023/esm2/esm2_t36_3B_UR50D.pt
+restore_esm2_model: /home/zhutian/data/esm_ckpt/esm2_t36_3B_UR50D.pt
+
+gpu: 0
+
+batch_size: 10
+
+mode: tcrfold
+
+data_type: 'ig'
+
+data_io: abnpz
+
+test_data: /home/zhutian/data/antibody/ab_new_npz
+
+test_name_idx: /home/zhutian/data/antibody/antigen_fasta/test_bound.idx
+
+output_dir: /home/zhutian/Git_repo/carbonmatrix/pred/ag_diff_gt
+
+verbose: 1

@@ -4,13 +4,13 @@ defaults:
 
 # restore_model_ckpt: /home/zhutian/data/abdata_2023/esm2/carbonfold2_base_from_esmfold.ckpt
 restore_esm2_model: /home/zhutian/data/esm_ckpt/esm2_t36_3B_UR50D.pt
-restore_model_ckpt: /home/zhutian/Git_repo/carbonmatrix/studies/tcrfold/ablation/tcr_abla_25000.ckpt
+restore_model_ckpt: /home/zhutian/Git_repo/carbonmatrix/studies/tcrfold/step_20000_lora_merged.ckpt
 # restore_model_ckpt: ../abdata_2023/esm2/carbonfold2_base_from_esmfold.ckpt
 # restore_esm2_model: ../abdata_2023/esm2/esm2_t36_3B_UR50D.pt
 
 gpu: 0
 
-batch_size: 8
+batch_size: 6 
 
 mode: tcrfold
 
@@ -18,10 +18,10 @@ data_type: 'ig'
 
 data_io: fasta
 
-test_data: /home/zhutian/data/tcr_data/test_ab.fasta
+test_data: /home/zhutian/Git_repo/carbonmatrix/pred/tcr_binding_specificity_woMHC.fasta
 
 # test_data: /home/zhutian/data/tcr_data/test_peptide.fasta
 
-output_dir: /home/zhutian/Git_repo/carbonmatrix/pred/tcr/abla_25000
+output_dir: /home/zhutian/Git_repo/carbonmatrix/pred/tcr_binding_woMHC
 
 verbose: 1

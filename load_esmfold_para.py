@@ -7,7 +7,7 @@ from collections import OrderedDict
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
-from carbonmatrix.model.carbonfold import CarbonFold
+from immunefold.model.immunefold import CarbonFold
 
 def load(args):
     config = OmegaConf.load(args.model_config)

@@ -1,5 +1,5 @@
 source /home/zhutian/anaconda3/etc/profile.d/conda.sh
-conda activate esm_flash_attn
+conda activate esmfold
 torchrun \
     --nnodes=1 \
     --nproc_per_node=1 \

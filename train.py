@@ -7,9 +7,9 @@ from omegaconf import DictConfig
 
 import torch
 
-from carbonmatrix.trainer.train_func import train
-from carbonmatrix.trainer.train_func_bayesmvp import train as train_bayesmvp
-from carbonmatrix.trainer import utils
+from immunefold.trainer.train_func import train
+from immunefold.trainer.train_func_bayesmvp import train as train_bayesmvp
+from immunefold.trainer import utils
 
 class WorkerLogFilter(logging.Filter):
     def __init__(self, rank=-1):

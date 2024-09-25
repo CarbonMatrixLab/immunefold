@@ -14,12 +14,12 @@ from Bio.PDB.PDBExceptions import PDBConstructionException
 import sys
 sys.path.append('..')
 
-from carbonmatrix.common import residue_constants
-from carbonmatrix.data.mmcif_parsing import parse as mmcif_parse, MmcifObject
-from carbonmatrix.data.antibody.seq import make_ab_numbering, calc_epitope
-from carbonmatrix.data.antibody import antibody_constants
-from carbonmatrix.data.pdbio import make_gt_chain
-from carbonmatrix.common.ab.numbering import renumber_ab_seq, get_ab_regions, get_tcr_regions
+from immunefold.common import residue_constants
+from immunefold.data.mmcif_parsing import parse as mmcif_parse, MmcifObject
+from immunefold.data.antibody.seq import make_ab_numbering, calc_epitope
+from immunefold.data.antibody import antibody_constants
+from immunefold.data.pdbio import make_gt_chain
+from immunefold.common.ab.numbering import renumber_ab_seq, get_ab_regions, get_tcr_regions
 
 
 def parse_list(path):

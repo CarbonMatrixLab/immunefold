@@ -13,9 +13,18 @@ esmfold=/home/zhutian/Git_repo/esm/ESMFold_tcr
 omegafold=/home/zhutian/Git_repo/OmegaFold/OmegaFold_model1_tcr
 alphafold=/home/zhutian/Git_repo/carbonmatrix/pred/afm
 alphafold3=/home/zhutian/Git_repo/carbonmatrix/pred/af3
-
+imfold_ab=/home/zhutian/Git_repo/carbonmatrix/pred/pair/imfold_0718_20000_gt_ag_test
+imfold_gt=/home/zhutian/Git_repo/carbonmatrix/pred/pair/imfold_gt_ag_GT
+# imfold_name_idx=/home/zhutian/data/antibody/pair_gt.idx
+imfold_name_idx=/home/zhutian/Git_repo/carbonmatrix/pred/intersect.idx
+afm_gt=/home/zhutian/Git_repo/carbonmatrix/pred/afm/imfold_gt_ag_GT
+afm=/home/zhutian/Git_repo/carbonmatrix/pred/afm/pair_512
 output_dir=/home/zhutian/Git_repo/carbonmatrix/pred
 
+imfold_nano_idx=/home/zhutian/data/antibody/nano_512.idx
+imfold_nano_gt=/home/zhutian/Git_repo/carbonmatrix/pred/nano/imfold_gt
+imfold_nano=/home/zhutian/Git_repo/carbonmatrix/pred/nano/imfold_20000_gt_ag_test
+afm_nano=/home/zhutian/Git_repo/carbonmatrix/pred/afm/nano_512
 mkdir -p ${output_dir}
 
 evaluate_abfold() {
@@ -27,6 +36,28 @@ evaluate_abfold() {
         --output ${output_dir}/tcrfold_3000_dockq.csv \
         --ig tcr \
         --mode unbound
+}
+
+evaluate_imfold() {
+    python ./make_dockq.py  \
+        --name_idx ${imfold_name_idx} \
+        --alg_type tcrfold \
+        --gt_dir  ${imfold_gt} \
+        --pred_dir  ${imfold_ab} \
+        --output ${imfold_ab}/dockq.csv \
+        --ig ab \
+        --mode bound
+}
+
+evaluate_afm() {
+    python ./make_dockq.py  \
+        --name_idx ${imfold_name_idx} \
+        --alg_type alphafold \
+        --gt_dir  ${afm_gt} \
+        --pred_dir  ${afm} \
+        --output ${afm}/dockq.csv \
+        --ig ab \
+        --mode bound
 }
 
 evaluate_alphafold3() {
@@ -59,8 +90,8 @@ evaluate_esmfold() {
         --gt_dir  ${gt_dir} \
         --pred_dir  ${esmfold} \
         --output ${output_dir}/esmfold_dockq.csv \
-        --ig tcr \
-        --mode unbound
+        --ig ab \
+        --mode bound
 }
 
 evaluate_omegafold() {
@@ -95,6 +126,31 @@ evaluate_alphafold() {
         --mode unbound
 }
 
+evaluate_imfold_nano() {
+    echo '*******************************************************************'
+    echo 'Imfold Nano'
+    python ./make_dockq.py  \
+        --name_idx ${imfold_nano_idx} \
+        --alg_type tcrfold \
+        --gt_dir  ${imfold_nano_gt} \
+        --pred_dir  ${imfold_nano} \
+        --output ${imfold_nano}/dockq.csv \
+        --ig ab \
+        --mode bound
+}
+
+evaluate_afm_nano() {
+    echo '*******************************************************************'
+    echo 'AFM Nano'
+    python ./make_dockq.py  \
+        --name_idx ${imfold_nano_idx} \
+        --alg_type alphafold \
+        --gt_dir  ${imfold_nano_gt} \
+        --pred_dir  ${afm_nano} \
+        --output ${afm_nano}/dockq.csv \
+        --ig ab \
+        --mode bound
+}
 
 # evaluate_abfold
 # evaluate_alphafold3
@@ -102,5 +158,10 @@ evaluate_alphafold() {
 # evaluate_imb
 # evaluate_esmfold
 # evaluate_omegafold
-evaluate_alphafold
+# evaluate_alphafold
 # evaluate_igfold
+# evaluate_imfold
+# evaluate_afm
+
+evaluate_imfold_nano
+evaluate_afm_nano

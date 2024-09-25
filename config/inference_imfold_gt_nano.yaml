@@ -1,0 +1,25 @@
+defaults:
+  - model: esmfold
+  - transforms: abfold_inference
+
+restore_model_ckpt: /home/zhutian/Git_repo/carbonmatrix/studies/abfold/ab_20000_lora_merged.ckpt
+# restore_esm2_model: ../abdata_2023/esm2/esm2_t36_3B_UR50D.pt
+restore_esm2_model: /home/zhutian/data/esm_ckpt/esm2_t36_3B_UR50D.pt
+
+gpu: 0
+
+batch_size: 24
+
+mode: tcrfold
+
+data_type: 'ig'
+
+data_io: abnpz
+
+test_data: /home/zhutian/data/antibody/nano_ag_test_gt
+
+test_name_idx: /home/zhutian/data/antibody/nano_gt_test.idx
+
+output_dir: /home/zhutian/Git_repo/carbonmatrix/pred/nano/imfold_20000_gt_ag_test
+
+verbose: 1

@@ -1,0 +1,23 @@
+defaults:
+  - model: esmfold
+  - transforms: esmfold_inference
+
+restore_model_ckpt: ./params/immunefold-ab.ckpt
+# restore_esm2_model: ../abdata_2023/esm2/esm2_t36_3B_UR50D.pt
+restore_esm2_model: ./params/esm2_t36_3B_UR50D.pt
+
+gpu: 0
+
+batch_size: 4
+
+mode: abfold
+
+data_type: 'ig'
+
+data_io: fasta
+
+test_data: /home/zhutian/data/imfold/test2024/pair/pair_test_combined_sep.fasta
+
+output_dir: /home/zhutian/Git_repo/carbonmatrix/pred/pair/imfold_0718_20000_plddt
+
+verbose: 1

@@ -37,7 +37,6 @@ class EmbeddingAndSeqformer(nn.Module):
                 Linear(c.esm.embed_channel, c.seq_channel, init='linear', bias=True),
                 nn.ReLU(),
                 Linear(c.seq_channel, c.seq_channel, init='linear', bias=True),
-                #nn.Dropout(p=c.esm.dropout_rate),
                 )
 
         self.proj_rel_pos = torch.nn.Embedding(c.max_relative_feature * 2 + 2, c.pair_channel)
@@ -63,10 +62,7 @@ class EmbeddingAndSeqformer(nn.Module):
 
         seq_act = self.proj_aa_type(seq)
 
-        #if 'residx' in batch:
         seq_pos = batch['residx'][:,1:-1] - 1
-        #else:
-        #    seq_pos = torch.tile(torch.arange(num_residue, device=seq.device), [batch_size, 1])
 
         offset = rearrange(seq_pos, 'b l -> b () l') - rearrange(seq_pos, 'b l -> b l ()')
         rel_pos = torch.clip(offset + c.max_relative_feature, min=0, max=2*c.max_relative_feature) + 1
@@ -80,10 +76,6 @@ class EmbeddingAndSeqformer(nn.Module):
 
             esm_embed = self.proj_esm_embed(esm_embed)
             seq_act = seq_act + esm_embed
-
-        # if c.get('timestep_embedder', None) is not None and c.timestep_embedder.enabled:
-        #     x = self.timestep_embedder(batch['t'])
-        #     pair_act = pair_act + rearrange(x, 'b c -> b () () c')
 
         if c.recycle_features:
             if 'prev_seq' in batch:

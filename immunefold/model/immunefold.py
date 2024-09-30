@@ -96,9 +96,7 @@ class ImmuneFold(nn.Module):
                     }
             return new_prev
 
-        # Just to adapt to ESMFOLD
         emb_config = c.embeddings_and_seqformer
-        # print(f"gt_mask: {batch['gt_mask']}")
         if 'prev_pos' in batch:
             trans_t = batch['prev_pos']
             prev_pos = dgram_from_positions(trans_t, **self.config.embeddings_and_seqformer.prev_pos)
@@ -113,8 +111,6 @@ class ImmuneFold(nn.Module):
                 prev_pos = prev_disto_bins.detach()
 
 
-                
-        #prev_pos = torch.zeros([batch_size, num_residues, num_residues], device=device, dtype=torch.int64)
 
         prev = {
                 'prev_pos': prev_pos,
@@ -128,7 +124,6 @@ class ImmuneFold(nn.Module):
         else:
             num_recycle = c.num_recycle
 
-        # with torch.cuda.amp.autocast(enabled=False, dtype=torch.float16):
         with torch.no_grad():
             batch.update(is_recycling=True)
             for i in range(num_recycle):

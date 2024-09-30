@@ -70,10 +70,6 @@ class StructureModule(nn.Module):
         # inital quat and rot is consistent
         rotations = quat_affine.quat_to_rot(quaternions)
 
-        # requires_score = False
-        # if batch['is_recycling'] == False and 'rigids_t' in batch:
-        #     requires_score = True
-        #     delta_quat, _ = quat_affine.make_identity(out_shape=(b, n), device=seq_act.device)
 
         for fold_it in range(c.num_layer):
             is_last_it = (fold_it == (c.num_layer - 1))
@@ -88,14 +84,11 @@ class StructureModule(nn.Module):
                 seq_act = F.dropout(seq_act, p = c.dropout, training=self.training)
             seq_act = self.transition_layer_norm(seq_act)
 
-            # pre-compose
             quaternion_update, translation_update = self.affine_update(seq_act).chunk(2, dim = -1)
             quaternions = quat_affine.quat_precompose_vec(quaternions, quaternion_update)
             translations = r3.rigids_mul_vecs((rotations, translations), translation_update)
             rotations = quat_affine.quat_to_rot(quaternions)
 
-            # if requires_score:
-            #     delta_quat = quat_affine.quat_precompose_vec(delta_quat, quaternion_update)
 
             outputs['traj'].append((rotations, translations * c.position_scale))
 

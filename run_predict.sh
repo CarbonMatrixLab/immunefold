@@ -1,2 +1,0 @@
-
-python predict.py

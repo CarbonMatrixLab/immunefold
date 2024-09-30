@@ -9,28 +9,23 @@ To install ImmuneFold, the recommended method is to create a conda environment a
 ```bash
 git clone git@github.com:CarbonMatrixLab/immunefold.git 
 conda env create -f environment.yml
+pip install fair-esm
 ```
 
 Additionally, to compute the mutation effects on TCR-pMHC interactions, please install the [PyRosetta package](https://www.pyrosetta.org/downloads).
 
 ## Model Weights
-1. Download the **ImmuneFold-TCR** and **ImmuneFold-Ab** [model weights](https://carbondesign.s3.amazonaws.com/params.tar) and place them in the `./params` directory.
+1. Download the [**ImmuneFold-TCR**](https://immunefold.s3.amazonaws.com/immunefold-tcr.ckpt) and [**ImmuneFold-Ab**](https://immunefold.s3.amazonaws.com/immunefold-ab.ckpt) here and place them in the `./params` directory.
 2. Download the **ESM2 model** weights from [this link](https://dl.fbaipublicfiles.com/fair-esm/models/esm2_t33_650M_UR50D.pt) and the **contact regressor** weights from [here](https://dl.fbaipublicfiles.com/fair-esm/regression/esm2_t33_650M_UR50D-contact-regression.pt). Save these files in the `./params` directory.
 
 ## Usage
 
 ### TCR-pMHC Structure Prediction
-To predict the structure of TCR-pMHC complexes, provide the TCR, peptide, and MHC sequences in a FASTA file, `TCR.fasta`. The format is as follows:
+To predict the structure of TCR-pMHC complexes, provide the TCR, peptide, and MHC sequences in a FASTA file, `TCR_B_A_P_M.fasta`, where B, A, P and M denote the beta, alpha, peptide, MHC chain ids, respectively. The format is as follows `Beta_seq:Alpha_seq:Peptide_seq:MHC_seq`:
 
 ```
->TCR_alpha
-VSQHPSWVICKSGTSVKIECRSLDFQATTMFWYRQFPKQSLMLMATSNEGSKATYEQGVEKDKFLINHASLTLSTLTVTSAHPEDSSFYICSVSRDRNTGELFFGEGSRLTVL
->TCR_beta
-VEQDPGPFNVPEGATVAFNCTYSNSASQSFFWYRQDCRKEPKLLMSVYSSGNEDGRFTAQLNRASQYISLLIRDSKLSDSATYLCVVNEEDALIFGKGTTLSVSS
->peptide
-YLQPRTFLL
->MHC
-GSHSMRYFFTSVSRPGRGEPRFIAVGYVDDTQFVRFDSDAASQRMEPRAPWIEQEGPEYWDGETRKVKAHSQTHRVDLGTLRGYYNQSEAGSHTVQRMYGCDVGSDWRFLRGYHQYAYDGKDYIALKEDLRSWTAADMAAQTTKHKWEAAHVAEQLRAYLEGTCVEWLRRYLENGKETLQ
+>TCR_B_A_P_M
+VSQHPSWVICKSGTSVKIECRSLDFQATTMFWYRQFPKQSLMLMATSNEGSKATYEQGVEKDKFLINHASLTLSTLTVTSAHPEDSSFYICSVSRDRNTGELFFGEGSRLTVL:VEQDPGPFNVPEGATVAFNCTYSNSASQSFFWYRQDCRKEPKLLMSVYSSGNEDGRFTAQLNRASQYISLLIRDSKLSDSATYLCVVNEEDALIFGKGTTLSVSS:YLQPRTFLL:GSHSMRYFFTSVSRPGRGEPRFIAVGYVDDTQFVRFDSDAASQRMEPRAPWIEQEGPEYWDGETRKVKAHSQTHRVDLGTLRGYYNQSEAGSHTVQRMYGCDVGSDWRFLRGYHQYAYDGKDYIALKEDLRSWTAADMAAQTTKHKWEAAHVAEQLRAYLEGTCVEWLRRYLENGKETLQ
 ```
 
 To run the ImmuneFold-TCR structure prediction model, use the following command:
@@ -40,26 +35,24 @@ python predict.py --config-name=TCR_structure_prediction
 ```
 
 ### Zero-Shot Binding Affinity Prediction for TCR-pMHC
-To predict binding affinity using zero-shot learning, provide the TCR-pMHC sequences in a FASTA file, following the same format as described for structure prediction:
+To predict binding affinity using zero-shot learning, provide the whole TCR-pMHC sequences in a FASTA file, following the same format as described for structure prediction:
 
 ```bash
-python predict.py --config-name=TCR_affinity_prediction
+python predict_energy.py 
 ```
 
 ### Unbound Antibody or Nanobody Structure Prediction
-For antibody or nanobody structure prediction, provide the sequences in FASTA files, `antibody.fasta` or `nanobody.fasta`. The formats are as follows:
+For antibody or nanobody structure prediction, provide the sequences in FASTA files, `antibody_H_L.fasta` or `nanobody_H.fasta`, where H and L represent the heavy and light chain ids, respectively. The formats are as follows:
 
 **Antibody:**
 ```
->antibody_heavy
-VSQHPSWVICKSGTSVKIECRSLDFQATTMFWYRQFPKQSLMLMATSNEGSKATYEQGVEKDKFLINHASLTLSTLTVTSAHPEDSSFYICSVSRDRNTGELFFGEGSRLTVL
->antibody_light
-VEQDPGPFNVPEGATVAFNCTYSNSASQSFFWYRQDCRKEPKLLMSVYSSGNEDGRFTAQLNRASQYISLLIRDSKLSDSATYLCVVNEEDALIFGKGTTLSVSS
+>antibody_H_L
+VSQHPSWVICKSGTSVKIECRSLDFQATTMFWYRQFPKQSLMLMATSNEGSKATYEQGVEKDKFLINHASLTLSTLTVTSAHPEDSSFYICSVSRDRNTGELFFGEGSRLTVL:VEQDPGPFNVPEGATVAFNCTYSNSASQSFFWYRQDCRKEPKLLMSVYSSGNEDGRFTAQLNRASQYISLLIRDSKLSDSATYLCVVNEEDALIFGKGTTLSVSS
 ```
 
 **Nanobody:**
 ```
->nanobody
+>nanobody_H
 VSQHPSWVICKSGTSVKIECRSLDFQATTMFWYRQFPKQSLMLMATSNEGSKATYEQGVEKDKFLINHASLTLSTLTVTSAHPEDSSFYICSVSRDRNTGELFFGEGSRLTVL
 ```
 
@@ -82,10 +75,4 @@ For predicting antibody or nanobody structures bound to a target antigen, provid
 python predict.py --config-name=antibody_antigen_structure_prediction
 ```
 
-## Citation
-If you use ImmuneFold in your research, please cite the following paper:
-
-```
-[Add your citation here]
-```
 

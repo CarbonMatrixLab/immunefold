@@ -1,6 +1,0 @@
-defaults:
-  - transforms: diffuser
-
-max_seq_len: 256
-train_name_idx: /home/zhanghaicang/neo/data/carbonfold/clean_bc40_cluster.idx
-train_data: /home/zhanghaicang/neo/data/carbonfold/mmCIF_npz

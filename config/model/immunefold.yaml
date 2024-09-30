@@ -1,4 +1,4 @@
-esm2_model_file: '../abdata_2023/esm2/esm2_t36_3B_UR50D.pt'
+esm2_model_file: './params/esm2_t36_3B_UR50D.pt'
 num_recycle: 3
 embeddings_and_seqformer:
   esm:

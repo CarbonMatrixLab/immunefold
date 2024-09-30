@@ -1,0 +1,18 @@
+defaults:
+  - model: immunefold
+  - transforms: immunefold_inference
+
+restore_model_ckpt: ./params/immunefold-tcr.ckpt
+restore_esm2_model: ./params/esm2_t36_3B_UR50D.pt
+
+gpu: 0
+
+batch_size: 1
+
+data_io: fasta
+
+test_data: ./data/TCR_B_A_P_M.fasta
+
+output_dir: ./pred/TCR
+
+verbose: 1

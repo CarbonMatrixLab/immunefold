@@ -31,7 +31,7 @@ VSQHPSWVICKSGTSVKIECRSLDFQATTMFWYRQFPKQSLMLMATSNEGSKATYEQGVEKDKFLINHASLTLSTLTVTS
 To run the ImmuneFold-TCR structure prediction model, use the following command:
 
 ```bash
-python predict.py --config-name=TCR_structure_prediction
+python inference.py --config-name=TCR_structure_prediction
 ```
 
 ### Zero-Shot Binding Affinity Prediction for TCR-pMHC
@@ -59,20 +59,20 @@ VSQHPSWVICKSGTSVKIECRSLDFQATTMFWYRQFPKQSLMLMATSNEGSKATYEQGVEKDKFLINHASLTLSTLTVTS
 To run the model:
 
 ```bash
-python predict.py --config-name=antibody_structure_prediction
+python inference.py --config-name=antibody_structure_prediction
 ```
 
 or for nanobodies:
 
 ```bash
-python predict.py --config-name=nanobody_structure_prediction
+python inference.py --config-name=nanobody_structure_prediction
 ```
 
 ### Bound Antibody or Nanobody Structure Prediction with Target Antigen
 For predicting antibody or nanobody structures bound to a target antigen, provide the antigen structure as a PDB file `antigen.pdb` along with the antibody or nanobody sequences, and run the following command:
 
 ```bash
-python predict.py --config-name=antibody_antigen_structure_prediction
+python inference.py --config-name=antibody_antigen_structure_prediction
 ```
 
 

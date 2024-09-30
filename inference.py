@@ -9,12 +9,12 @@ from omegaconf import DictConfig
 
 from einops import rearrange
 
-from immunefold.data.pdbio import save_pdb
-from immunefold.model.immunefold import ImmuneFold
-from immunefold.data.dataset import SeqDatasetDirIO, SeqDatasetFastaIO, AbStructureDataNpzIO
-from immunefold.data.base_dataset import TransformedDataLoader as DataLoader
-from immunefold.data.base_dataset import collate_fn_seq, collate_fn_struc
-from immunefold.common.confidence import compute_plddt, compute_ptm
+from carbonmatrix.data.pdbio import save_pdb
+from carbonmatrix.model.immunefold import ImmuneFold
+from carbonmatrix.data.dataset import SeqDatasetDirIO, SeqDatasetFastaIO, AbStructureDataNpzIO
+from carbonmatrix.data.base_dataset import TransformedDataLoader as DataLoader
+from carbonmatrix.data.base_dataset import collate_fn_seq, collate_fn_struc
+from carbonmatrix.common.confidence import compute_plddt, compute_ptm
 
 class WorkerLogFilter(logging.Filter):
     def __init__(self, rank=-1):

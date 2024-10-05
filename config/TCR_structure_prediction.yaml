@@ -9,6 +9,8 @@ gpu: 0
 
 batch_size: 1
 
+type: tcr
+
 data_io: fasta
 
 test_data: ./data/TCR_B_A_P_M.fasta

@@ -9,6 +9,8 @@ gpu: 0
 
 batch_size: 1
 
+type: nb 
+
 data_io: fasta
 
 test_data: ./data/nanobody_H.fasta

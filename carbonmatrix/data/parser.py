@@ -10,7 +10,7 @@ import random
 from carbonmatrix.common import residue_constants
 import pdb
 from Bio.SeqUtils import seq1
-
+from carbonmatrix.common.ab.numbering import renumber_ab_seq, get_ab_regions, get_tcr_regions
 
 def extract_chain_subset(orig_chain, res_ids):
     chain = PDBChain(orig_chain.id)
@@ -115,3 +115,51 @@ def make_ab_feature(seq):
             coord_mask=coord_mask,
             chain_id=chain_id,
             gt_mask = gt_mask)
+
+
+def make_domain(str_seq, chain_id, type='ab'):
+    if type == 'ab':
+        allow = ['H'] if chain_id == 'H' else ['K', 'L']
+    elif type == 'nb':
+        allow = ['H']
+    elif type == 'tcr':
+        allow = ['B'] if chain_id == 'B' else ['A']
+
+    anarci_res = renumber_ab_seq(str_seq, allow=allow, scheme='imgt')
+    domain_numbering, domain_start, domain_end = map(anarci_res.get, ['domain_numbering', 'start', 'end'])
+    # print(f"anarci_res: {anarci_res}")
+    assert domain_numbering is not None
+    str_seq = str_seq[domain_start: domain_end]
+    # cdr_def = get_ab_regions(domain_numbering, chain_id=chain_id)
+    
+    # updated_feature = {k : v[domain_start:domain_end] for k, v in feature.items()}
+    # domain_numbering = ','.join([''.join([str(xx) for xx in x]).strip() for x in domain_numbering])
+
+    # updated_feature.update(dict(cdr_def=cdr_def, numbering=domain_numbering))
+    
+    # prefix = 'heavy' if chain_id == 'H' else 'light'
+
+    return str_seq
+
+def _make_domain(feature, chain_id):
+    allow = ['B'] if chain_id == 'B' else ['A']
+    prefix = 'beta' if chain_id == 'B' else 'alpha'
+    anarci_res = renumber_ab_seq(feature[f'{prefix}_str_seq'], allow=allow, scheme='imgt')
+    domain_numbering, domain_start, domain_end = map(anarci_res.get, ['domain_numbering', 'start', 'end'])
+
+    assert domain_numbering is not None
+    
+    cdr_def = get_tcr_regions(domain_numbering, chain_id=chain_id)
+    
+    updated_feature = {k : v[domain_start:domain_end] for k, v in feature.items()}
+    domain_numbering = ','.join([''.join([str(xx) for xx in x]).strip() for x in domain_numbering])
+    prefix = 'alpha' if chain_id == 'A' else 'beta'
+
+    cdr_dict = dict(
+            cdr_def=cdr_def, 
+            numbering=domain_numbering
+            )
+    cdr_dict = {f'{prefix}_{k}' : v for k, v in cdr_dict.items()}
+    updated_feature.update(cdr_dict)
+    
+    return updated_feature

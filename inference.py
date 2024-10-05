@@ -121,13 +121,13 @@ def immunefold(model, batch, cfg):
 
 def predict(cfg):
     if cfg.data_io == 'dir':
-        dataset = SeqDatasetDirIO(cfg.test_data, cfg.test_name_idx)
+        dataset = SeqDatasetDirIO(cfg.test_data, cfg.type, cfg.test_name_idx)
         collate_fn = collate_fn_seq
     elif cfg.data_io == 'fasta':
-        dataset = SeqDatasetFastaIO(cfg.test_data)
+        dataset = SeqDatasetFastaIO(cfg.test_data, cfg.type)
         collate_fn = collate_fn_seq
     elif cfg.data_io == 'abag':
-        dataset = AbStructureDataNpzIO(cfg.fasta, cfg.ag, cfg.get('contact_idx', None))
+        dataset = AbStructureDataNpzIO(cfg.fasta, cfg.ag, cfg.get('contact_idx', None), cfg.type)
         collate_fn = collate_fn_struc
     else:
         raise NotImplementedError(f'data io {cfg.data_io} not implemented')

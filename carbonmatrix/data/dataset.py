@@ -9,8 +9,8 @@ from carbonmatrix.data.parser import make_feature_from_pdb
 import pdb
 
 class SeqDatasetFastaIO(SeqDataset):
-    def __init__(self, fasta_file, max_seq_len=None):
-        super().__init__(max_seq_len=max_seq_len)
+    def __init__(self, fasta_file, type='ab', max_seq_len=None):
+        super().__init__(type, max_seq_len=max_seq_len)
 
         data = []
         with open(fasta_file, 'r') as fr:
@@ -36,8 +36,8 @@ class SeqDatasetFastaIO(SeqDataset):
         return dict(name=name, seq=seq)
 
 class SeqDatasetDirIO(SeqDataset):
-    def __init__(self, fasta_dir, name_idx_file, max_seq_len=None):
-        super().__init__(max_seq_len=max_seq_len)
+    def __init__(self, fasta_dir, name_idx_file, type='ab', max_seq_len=None):
+        super().__init__(type, max_seq_len=max_seq_len)
         self.fasta_dir = fasta_dir
         self.name_idx = parse_cluster(name_idx_file)
 
@@ -84,8 +84,8 @@ class WeightedSeqDatasetFastaIO(SeqDataset):
         return dict(name=name, seq=seq, meta={'weight': float(weight)})
 
 class AbStructureDataNpzIO(StructureDataset):
-    def __init__(self, fasta_file, ag_pdb, contact_idx, ig_type='ab', shuffle_multimer_seq=False):
-        super().__init__(max_seq_len=128)
+    def __init__(self, fasta_file, ag_pdb, contact_idx, type='ab', shuffle_multimer_seq=False):
+        super().__init__(type, max_seq_len=128)
 
         self.fasta = fasta_file
         data = []
@@ -109,7 +109,5 @@ class AbStructureDataNpzIO(StructureDataset):
         return 1
 
     def _get_item(self, idx):
-        
-        
         return self.data[idx]
 

@@ -14,7 +14,7 @@ from carbonmatrix.common import residue_constants
 from carbonmatrix.common.operator import pad_for_batch
 from carbonmatrix.data.seq import str_seq_to_index
 from carbonmatrix.data.transform_factory import TransformFactory
-
+from carbonmatrix.data.parser import make_domain
 import pdb
 
 logger = logging.getLogger()
@@ -64,9 +64,9 @@ class TransformedDataLoader(torch.utils.data.DataLoader):
             yield self.transform_factory(batch)
 
 class SeqDataset(torch.utils.data.Dataset):
-    def __init__(self, max_seq_len=None):
+    def __init__(self, type='ab', max_seq_len=None):
         super().__init__()
-
+        self.type = type
         self.max_seq_len = max_seq_len
 
     def __get_item(self, idx):
@@ -75,6 +75,19 @@ class SeqDataset(torch.utils.data.Dataset):
     def _create_seq_data(self, name, str_seq):
         multimer_str_seq = str_seq.split(':')
         chain_num = len(multimer_str_seq)
+        # pdb.set_trace()
+        if self.type == 'ab':
+            assert chain_num >= 2
+            multimer_str_seq[0] = make_domain(multimer_str_seq[0],'H', self.type)
+            multimer_str_seq[1] = make_domain(multimer_str_seq[1],'L', self.type)
+        elif self.type == 'tcr':
+            assert chain_num >= 2
+            multimer_str_seq[0] = make_domain(multimer_str_seq[0],'B', self.type)
+            multimer_str_seq[1] = make_domain(multimer_str_seq[1],'A', self.type)
+        elif self.type == 'nb':
+            assert chain_num >= 1
+            multimer_str_seq[0] = make_domain(multimer_str_seq[0],'H', self.type)
+        
         chain_ids = []
         for i in range(chain_num):
             chain_id = np.ones((len(multimer_str_seq[i]),), dtype=np.int32) * i
@@ -135,8 +148,8 @@ def collate_fn_seq(batch):
 
 
 class StructureDataset(SeqDataset):
-    def __init__(self, max_seq_len=None):
-        super().__init__(max_seq_len=max_seq_len)
+    def __init__(self, type='ab', max_seq_len=None):
+        super().__init__(type ,max_seq_len=max_seq_len)
 
     def _create_struc_data(self, item):
         # pdb.set_trace()

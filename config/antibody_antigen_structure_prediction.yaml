@@ -9,14 +9,16 @@ gpu: 0
 
 batch_size: 4
 
+type: ab
+
 data_io: abag
 
-fasta: /home/zhutian/Git_repo/ImmuneFold/data/6icc_H_L_A.fasta
+fasta: ./data/6icc_H_L_A.fasta
 
-ag: /home/zhutian/Git_repo/ImmuneFold/data/6icc_A_ag.pdb
+ag: ./data/6icc_A_ag.pdb
 
 contact_idx: 15
 
-output_dir: /home/zhutian/Git_repo/ImmuneFold/pred/new_pred
+output_dir: ./pred/abag
 
 verbose: 1

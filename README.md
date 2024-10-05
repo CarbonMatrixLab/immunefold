@@ -38,7 +38,8 @@ python inference.py --config-name=TCR_structure_prediction
 To predict binding affinity using zero-shot learning, provide the whole TCR-pMHC sequences in a FASTA file, following the same format as described for structure prediction:
 
 ```bash
-python predict_energy.py 
+python inference.py --config-name=TCR_structure_prediction
+python predict_energy.py --pdb_dir /path/to/pdb/dir --name_idx /path/to/name_idx.idx --output_file /path/to/energy.csv --mode interface
 ```
 
 ### Unbound Antibody or Nanobody Structure Prediction

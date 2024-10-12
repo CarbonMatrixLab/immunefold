@@ -76,4 +76,7 @@ For predicting antibody or nanobody structures bound to a target antigen, provid
 python inference.py --config-name=antibody_antigen_structure_prediction
 ```
 
+## Synthetic TCR Dataset in VDJdb
+
+To showcase the capabilities of ImmuneFold in large-scale TCR structure prediction, we applied the model to the VDJdb dataset, comprising 32,703 non-redundant TCR sequences. The predicted structures are available for download at [link](https://immunefold.s3.amazonaws.com/VDJdb.tar.gz).
 

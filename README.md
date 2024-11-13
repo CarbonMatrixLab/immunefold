@@ -80,3 +80,13 @@ python inference.py --config-name=antibody_antigen_structure_prediction
 
 To showcase the capabilities of ImmuneFold in large-scale TCR structure prediction, we applied the model to the VDJdb dataset, comprising 32,703 non-redundant TCR sequences. The predicted structures are available for download at [link](https://immunefold.s3.amazonaws.com/VDJdb.tar.gz).
 
+
+## Citation
+T. Zhu*, M. Ren*, Z. He, S. Tao, M. Li, D. Bu, H. Zhang. Accurate structure prediction of immune proteins using parameter-efficient transfer learning.
+
+## Acknowledgements
+We adapted the code of the language model ESM2 to directly handle position offsets for proteins with multiple chains. We thank AlphaFold and ESMFold for sharing their code with the community, which are very helpful to us in developing ImmuneFold
+
+
+
+
